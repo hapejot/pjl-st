@@ -1,4 +1,9 @@
-use st::{compiler::compile, init_tracing, parser::topdown::parse_eval};
+use st::{
+    compiler::{VariableAllocation, compile_method},
+    init_tracing,
+    parser::topdown::parse_eval,
+};
+use tracing::trace;
 
 #[test]
 fn test_block() {
@@ -10,7 +15,7 @@ fn test_block() {
         }
         Ok(result) => {
             init_tracing();
-            compile(&result);
+            compile_method(vec![], vec![], &result);
         }
     }
 }
@@ -25,7 +30,7 @@ fn test_simple_add() {
         }
         Ok(result) => {
             init_tracing();
-            compile(&result);
+            compile_method(vec![], vec![], &result);
         }
     }
 }
@@ -40,7 +45,7 @@ fn test_complex_expression() {
         }
         Ok(result) => {
             init_tracing();
-            compile(&result);
+            compile_method(vec![], vec![], &result);
         }
     }
 }
@@ -55,7 +60,59 @@ fn test_statements() {
             panic!();
         }
         Ok(result) => {
-            compile(&result);
+            compile_method(vec![], vec![], &result);
         }
     }
+}
+
+#[test]
+fn test_statements_with_block() {
+    let src = "|a b x| a := 10. b := 20. x := 0. ^[:a| x := a + b]";
+    init_tracing();
+    match parse_eval(src) {
+        Err(e) => {
+            println!("{}", e);
+            panic!();
+        }
+        Ok(result) => {
+            let m = compile_method(vec![], vec![], &result).unwrap();
+            trace!("Compiled method: {:#?}", m);
+        }
+    }
+}
+
+#[test]
+fn test_var_allocation() {
+    let mut va = VariableAllocation::new();
+    assert!(va.add("@result").is_ok());
+    assert_eq!(va.get("@result"), Some(0));
+
+    assert!(va.add("a").is_ok());
+    assert_eq!(va.get("a"), Some(1));
+
+    assert!(va.add("b").is_ok());
+    assert_eq!(va.get("b"), Some(2));
+
+    assert!(va.add("@result").is_err()); // duplicate
+}
+
+#[test]
+fn test_nested_var_allocation() {
+    let mut va = VariableAllocation::new();
+    assert!(va.add("a").is_ok());
+    assert_eq!(va.get("a"), Some(0));
+
+    {
+        let mut inner_va = va.create_child().unwrap();
+        assert!(inner_va.add("b").is_ok());
+        assert_eq!(inner_va.get("b"), Some(1));
+        assert_eq!(inner_va.get("a"), Some(0));
+        assert_eq!(inner_va.get("c"), None);
+        assert_eq!(inner_va.add("a"), Ok(2));
+
+        assert_eq!(inner_va.get("a"), Some(2));
+    }
+
+    assert_eq!(va.get("b"), None);
+    assert_eq!(va.get("c"), None);
 }

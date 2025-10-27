@@ -1,13 +1,30 @@
-use std::{fmt::Display, sync::Arc};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    fs::File,
+    io::Read,
+    sync::{Arc, Mutex},
+    vec,
+};
 
-use crate::memory::Value;
+use tracing::trace;
+
+use crate::{
+    compiler::compile_method,
+    get_smalltalk_file_path,
+    memory::{SmalltalkClass, SmalltalkObject, Value},
+    parser::topdown::{SmalltalkNode, SmalltalkParser, parse_eval},
+};
 
 /// Three-address code instruction
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Instruction {
     // Basic operations
     /// Load immediate value into register: LOAD_IMM dst, value
     LoadImm { dst: usize, value: Value },
+
+    /// load the receiver into the register: LOAD_RECEIVER dst
+    LoadReceiver { dst: usize },
 
     /// Load variable into register: LOAD_VAR dst, var_name
     LoadGlobal { dst: usize, var_name: &'static str },
@@ -71,10 +88,10 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Instruction::LoadImm { dst, value } => {
-                write!(f, "LOAD_IMM r{}, {:?}", dst, value)
+                write!(f, "r{} <- '{:?}'", dst, value)
             }
             Instruction::Move { dst, src } => {
-                write!(f, "MOVE r{}, r{}", dst, src)
+                write!(f, "r{} <- r{}", dst, src)
             }
             Instruction::CallMethod {
                 dst,
@@ -84,16 +101,20 @@ impl Display for Instruction {
             } => {
                 write!(
                     f,
-                    "CALL_METHOD r{}, r{} -> {}({})",
+                    "r{} <- {} r{} {}",
                     dst,
-                    receiver,
                     selector,
+                    receiver,
                     args.iter()
                         .map(|a| format!("r{}", a))
                         .collect::<Vec<String>>()
                         .join(", ")
                 )
             }
+            Instruction::StoreInstanceVar { src, index } => {
+                write!(f, "ivar[{}] <- r{}", index, src)
+            }
+            Instruction::LoadGlobal { dst, var_name } => write!(f, "r{} <- {}", dst, var_name),
             _ => write!(f, "{:?}", self),
         }
     }
@@ -118,16 +139,417 @@ pub struct CompiledBlock {
 }
 
 #[derive(Debug, Clone)]
-pub struct MethodExecution {
-    pub code: CompiledMethod,
+pub struct Execution {
+    pub vm: &'static VirtualMachine,
+    pub home: Option<Arc<Execution>>,
+    pub code: CompiledBlock,
     pub ip: usize,
     pub registers: Vec<Value>,
 }
 
 #[derive(Debug, Clone)]
-pub struct BlockExecution {
-    pub home: Arc<MethodExecution>,
-    pub code: CompiledBlock,
-    pub ip: usize,
-    pub registers: Vec<Value>,
+pub struct VirtualMachine {
+    integer_class: Value,
+    meta_class: Value,
+    st: Value,
+}
+
+fn integer_add(_vm: &mut Execution, receiver: Value, args: Vec<Value>) -> Result<Value, String> {
+    if args.len() != 1 {
+        return Err("Integer addition requires 1 argument".into());
+    }
+    match (&receiver, &args[0]) {
+        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
+        _ => Err("Integer addition requires integer arguments".into()),
+    }
+}
+
+fn meta_class_new(
+    _vm: &mut Execution,
+    receiver: Value,
+    _args: Vec<Value>,
+) -> Result<Value, String> {
+    match receiver {
+        Value::Class(cls) => {
+            let obj = SmalltalkObject::new(cls.clone());
+            Ok(Value::Object(obj))
+        }
+        _ => Err("MetaClass new called on non-class value".into()),
+    }
+}
+
+impl Execution {
+    pub fn new(
+        vm: &'static VirtualMachine,
+        receiver: Value,
+        args: Vec<Value>,
+        code: CompiledMethod,
+    ) -> Self {
+        let mut register = vec![Value::Undefined, receiver];
+        register.extend(args);
+        Self {
+            vm,
+            home: None,
+            code: CompiledBlock {
+                instructions: code.instructions,
+                parameter_count: code.parameter_count,
+            },
+            ip: 0,
+            registers: register,
+        }
+    }
+
+    pub fn set(&mut self, reg: usize, value: Value) {
+        if reg >= self.registers.len() {
+            self.registers.resize(reg + 1, Value::Undefined);
+        }
+        self.registers[reg] = value;
+    }
+
+    pub fn get(&self, reg: usize) -> Value {
+        if reg >= self.registers.len() {
+            Value::Undefined
+        } else {
+            self.registers[reg].clone()
+        }
+    }
+
+    pub fn execute(&mut self) -> Result<Value, String> {
+        let mut ip = 0;
+        let instructions = self.code.instructions.clone();
+        while ip < instructions.len() {
+            let instr = &instructions[ip];
+            self.execute_instruction(instr)?;
+            ip += 1;
+        }
+        self.dump_registers();
+        Ok(self.registers[0].clone())
+    }
+
+    fn dump_registers(&self) {
+        for (idx, reg) in self.registers.iter().enumerate() {
+            trace!("r{}: {}", idx, reg);
+        }
+    }
+
+    fn execute_instruction(&mut self, instr: &Instruction) -> Result<(), String> {
+        trace!("EXECUTE: {}", instr);
+        match instr {
+            Instruction::LoadImm { dst, value } => {
+                self.set(*dst, value.clone());
+                Ok(())
+            }
+            Instruction::LoadReceiver { dst } => {
+                todo!()
+            }
+            Instruction::LoadGlobal { dst, var_name } => {
+                self.set(*dst, self.vm.get_global(var_name));
+                Ok(())
+            }
+            Instruction::StoreLocal { src, var_name } => todo!(),
+            Instruction::LoadInstanceVar { dst, index } => {
+                if let Value::Object(smalltalk_object) = &self.registers[1] {
+                    let value = smalltalk_object.get_instance_var(*index);
+                    self.set(*dst, value);
+                    Ok(())
+                } else {
+                    self.dump_registers();
+                    Err("LOAD_IVAR: Receiver is not an object".into())
+                }
+            }
+            Instruction::StoreInstanceVar { src, index } => {
+                let value = self.get(*src);
+                if let Value::Object(smalltalk_object) = &self.registers[1] {
+                    smalltalk_object.set_instance_var(*index, value);
+                    Ok(())
+                } else {
+                    self.dump_registers();
+                    Err("STORE_IVAR: Receiver is not an object".into())
+                }
+            }
+            Instruction::Move { dst, src } => {
+                let value = self.get(*src);
+                self.set(*dst, value);
+                Ok(())
+            }
+            Instruction::CallMethod {
+                dst,
+                receiver,
+                args,
+                selector,
+            } => {
+                let r = self.get(*receiver);
+                let send_args = args.iter().map(|a| self.get(*a)).collect::<Vec<_>>();
+                trace!(
+                    "args: {}",
+                    send_args
+                        .iter()
+                        .map(|a| format!("{}", a))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                trace!("resolve class for {r}");
+                let c = self.lookup_class(&r)?;
+                trace!("lookup method {selector} in  {c}");
+                let m = self.lookup_method_in_class(c, selector)?;
+                match m {
+                    Value::NativeMethod(func) => {
+                        let result = func(self, r, send_args)?;
+                        self.set(*dst, result);
+                        Ok(())
+                    }
+                    Value::Method(cm) => {
+                        let mut exec = Execution::new(self.vm, r, send_args, cm.clone());
+                        trace!("start executing method {}", selector);
+                        let result = exec.execute()?;
+                        self.set(*dst, result);
+                        trace!("done executing method {}", selector);
+                        Ok(())
+                    }
+                    _ => Err("Only native methods are supported in this VM version".into()),
+                }
+            }
+            Instruction::Push { src } => todo!(),
+            Instruction::Pop { dst } => todo!(),
+            Instruction::Return { src } => {
+                let value = self.get(*src);
+                self.set(0, value.clone());
+                trace!("RETURN: {}", value);
+                Ok(())
+            }
+            Instruction::CreateBlock { dst, prog_id } => todo!(),
+            Instruction::CallBlock { dst, block_reg } => todo!(),
+            Instruction::CallBlockWithArgs {
+                dst,
+                block_reg,
+                args,
+            } => todo!(),
+            Instruction::Nop => Ok(()),
+            Instruction::End => todo!(),
+        }
+    }
+
+    fn lookup_class(&self, r: &Value) -> Result<Value, String> {
+        match r {
+            Value::String(_) => todo!(),
+            Value::Integer(_) => Ok(self.vm.integer_class.clone()),
+            Value::Float(_) => todo!(),
+            Value::Boolean(_) => todo!(),
+            Value::Object(smalltalk_object) => {
+                let class_value = smalltalk_object.class();
+                Ok(class_value.into())
+            }
+            Value::Dictionary(hash_map) => todo!(),
+            Value::Array(values) => todo!(),
+            Value::Method(compiled_method) => todo!(),
+            Value::NativeMethod(_) => todo!(),
+            Value::Class(_) => Ok(self.vm.meta_class.clone()),
+            Value::Undefined => todo!(),
+        }
+    }
+
+    fn lookup_method_in_class(&self, c: Value, selector: &str) -> Result<Value, String> {
+        match c {
+            Value::Class(cls) => {
+                if let Some(m) = cls.lookup_method(selector) {
+                    Ok(m.clone())
+                } else {
+                    Err(format!("Method '{}' not found", selector))
+                }
+            }
+            _ => Err("Invalid class value".into()),
+        }
+    }
+}
+
+impl VirtualMachine {
+    pub fn new() -> Self {
+        let integer_class = SmalltalkClass::new("Integer", vec![]);
+
+        integer_class.insert_method("+", Value::NativeMethod(integer_add));
+        // integer_methods.insert("-", Value::Method(Arc::new(CompiledMethod::default())));
+        // integer_methods.insert("*", Value::Method(Arc::new(CompiledMethod::default())));
+        // integer_methods.insert("/", Value::Method(Arc::new(CompiledMethod::default())));
+
+        let mut st = HashMap::new();
+        st.insert("Integer", integer_class.clone().into());
+
+        let meta_class = SmalltalkClass::new("MetaClass", vec![]);
+        meta_class.insert_method("new", Value::NativeMethod(meta_class_new));
+        Self {
+            integer_class: integer_class.into(),
+            meta_class: meta_class.into(),
+            st: Value::Dictionary(Arc::new(Mutex::new(st))),
+        }
+    }
+
+    pub fn execute_method(&'static self, method: CompiledMethod) -> Result<Value, String> {
+        let mut exec = Execution::new(self, Value::Undefined, vec![], method);
+        exec.execute()
+    }
+
+    pub fn define_class(
+        &self,
+        name: &'static str,
+        instance_vars: Vec<&'static str>,
+    ) -> Result<(), String> {
+        self.st
+            .as_dictionary()?
+            .lock()
+            .unwrap()
+            .insert(name, SmalltalkClass::new(name, instance_vars).into());
+        Ok(())
+    }
+
+    pub fn define_method(
+        &self,
+        class_name: &'static str,
+        selector: &'static str,
+        parameter_names: Vec<&'static str>,
+        src: &'static str,
+    ) -> Result<(), String> {
+        trace!(
+            "Defining method {}>>{} with params {:?} from source: {}",
+            class_name, selector, parameter_names, src
+        );
+
+        let node = parse_eval(src)?;
+
+        self.define_method_from_node(class_name, selector, parameter_names, node)
+    }
+
+    fn define_method_from_node(
+        &self,
+        class_name: &'static str,
+        selector: &'static str,
+        parameter_names: Vec<&'static str>,
+        node: crate::parser::topdown::SmalltalkNode,
+    ) -> Result<(), String> {
+        let class_value = {
+            let s = self.st.as_dictionary()?;
+            s.lock().unwrap().get(class_name).cloned().unwrap()
+        };
+        match class_value {
+            Value::Class(cls) => {
+                let cm = compile_method(cls.instance_vars(), parameter_names, &node)?;
+                for (i, inst) in cm.instructions.iter().enumerate() {
+                    trace!("{:04}: {}", i, inst);
+                }
+                cls.insert_method(selector, cm.into());
+            }
+            _ => {
+                return Err(format!("Class '{}' not found", class_name));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn get_global(&self, var_name: &str) -> Value {
+        let value = {
+            let s = self.st.as_dictionary().unwrap();
+            s.lock().unwrap().get(var_name).cloned().unwrap()
+        };
+        value
+    }
+
+    pub fn compile_file(&self, arg_1: &str, arg_2: &str) -> Result<(), String> {
+        let src = {
+            let file_path = get_smalltalk_file_path("kernel", "Point.st");
+            let mut f = File::open(&file_path)
+                .expect(&format!("Failed to open file: {}", file_path.display()));
+            let mut src = String::new();
+            f.read_to_string(&mut src).expect("Failed to read file");
+            src
+        };
+
+        let mut parser = SmalltalkParser::new(&src);
+
+        while parser.current_token() == "IDENTIFIER" {
+            let class_def = parser.parse_class_definition()?;
+            match class_def {
+                SmalltalkNode::Message {
+                    receiver,
+                    selector: "extend",
+                    ..
+                } => {
+                    if let SmalltalkNode::Identifier(classname) = *receiver {
+                        trace!("extending class {}", classname);
+                        parser.expect("[")?;
+                        process_body(&mut parser, classname)?;
+                    }
+                }
+                SmalltalkNode::Message {
+                    receiver,
+                    selector: "subclass:",
+                    arguments,
+                } => {
+                    if let (SmalltalkNode::Identifier(parent), SmalltalkNode::Identifier(child)) =
+                        (*receiver, arguments.first().unwrap())
+                    {
+                        trace!("Defining class {} as subclass of {}", child, parent);
+                        parser.expect("[")?;
+                        let inst_vars = parser.parse_temporaries()?;
+                        trace!("Instance variables: {:?}", inst_vars);
+                        let cat = parser.optional_category()?;
+                        let com = parser.optional_comment()?;
+                        trace!("Category: {:?}", cat);
+                        trace!("Comment: {:?}", com);
+                        process_body(&mut parser, *child)?;
+                    }
+                }
+                x => {
+                    println!("Parsed class definition: {:#?}", x);
+                    return Err("Expected class definition".into());
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+
+fn process_body(parser: &mut SmalltalkParser, child: &'static str) -> Result<(), String> {
+    loop {
+        match parser.current_token() {
+            "IDENTIFIER" if parser.current_value() == child => {
+                let (c, s) = parser.parse_class_reference()?;
+                trace!("Class reference: {} {}", c, s);
+                let (sel, params) = parser.parse_method_pattern()?;
+                trace!("Method pattern: {} {:?}", sel, params);
+                parser.expect("[")?;
+                let body = parser.parse_eval()?;
+                parser.expect("]")?;
+            }
+            "IDENTIFIER" => {
+                let ident = parser.current_value();
+                trace!("Identifier: {}", ident);
+                parser.advance();
+                if parser.current_token() == "ASSIGN" {
+                    parser.advance();
+                    let expr = parser.parse_primary()?;
+                    trace!("Assignment to {}: {:?}", ident, expr);
+                } else {
+                trace!("Method pattern: {} []", ident);
+                parser.expect("[")?;
+                let body = parser.parse_eval()?;
+                parser.expect("]")?;
+                }
+            }
+            "KEYWORD" | "BINARY" => {
+                let (sel, params) = parser.parse_method_pattern()?;
+                trace!("Method pattern: {} {:?}", sel, params);
+                parser.expect("[")?;
+                let body = parser.parse_eval()?;
+                parser.expect("]")?;
+            }
+            "]" => {
+                trace!("end of class definition");
+                parser.expect("]")?;
+                break;
+            }
+            _ => todo!(),
+        }
+    }
+    Ok(())
 }

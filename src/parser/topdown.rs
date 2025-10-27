@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc, sync::Arc};
+use std::{collections::HashMap, rc::Rc};
 
 use pjl_static_strings::StringTable;
 use santiago::lexer::{Lexeme, lex};
@@ -16,9 +16,8 @@ pub fn parse_eval(src: &str) -> Result<SmalltalkNode, ParseError> {
     parser.parse_eval()
 }
 
-
 /// Simplified Smalltalk AST node
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum SmalltalkNode {
     /// Variable identifier
     Identifier(&'static str),
@@ -122,25 +121,30 @@ impl SmalltalkParser {
         p
     }
 
-    fn current_token(&self) -> &'static str {
+    pub fn current_token(&self) -> &'static str {
         self.current_kind
     }
+
+    pub fn current_value(&self) -> &'static str {
+        self.current_raw
+    }
+
     #[instrument(skip(self))]
-    fn advance(&mut self) -> &'static str {
+    pub fn advance(&mut self) -> &'static str {
         if self.position >= self.tokens.len() {
             self.current_kind = "EOF";
             self.current_raw = "EOF";
-            return self.current_kind;   
+            return self.current_kind;
         }
         let t = self.tokens[self.position].clone();
         self.current_kind = StringTable::get(t.kind.as_str());
         self.current_raw = StringTable::get(t.raw.as_str());
-            self.position += 1;
+        self.position += 1;
         trace!("{}", self.current_kind);
         self.current_kind
     }
 
-    fn expect(&mut self, expected: &str) -> Result<(), String> {
+    pub fn expect(&mut self, expected: &str) -> Result<(), String> {
         if self.current_token() == expected {
             self.advance();
             Ok(())
@@ -155,6 +159,7 @@ impl SmalltalkParser {
 
     /// parsing a statement to evaluate
     pub fn parse_eval(&mut self) -> Result<SmalltalkNode, ParseError> {
+        let cat = self.optional_category().unwrap();
         let temporaries = self.parse_temporaries()?;
         let r = self.parse_statements().map_err(|e| self.error(e));
         if let Ok(SmalltalkNode::Statements(_, s)) = r {
@@ -280,7 +285,7 @@ impl SmalltalkParser {
     #[allow(dead_code)]
     #[instrument(skip(self))]
     fn parse_message_send(&mut self, receiver: SmalltalkNode) -> Result<SmalltalkNode, String> {
-        match self.current_token().clone() {
+        match self.current_token() {
             "IDENTIFIER" => {
                 let selector = self.current_raw;
                 // Unary message
@@ -329,8 +334,7 @@ impl SmalltalkParser {
 
     /// Parse primary expressions (literals, identifiers, blocks, parentheses)
     #[instrument(skip(self))]
-    fn parse_primary(&mut self) -> Result<SmalltalkNode, String> {
-
+    pub fn parse_primary(&mut self) -> Result<SmalltalkNode, String> {
         match self.current_token() {
             "IDENTIFIER" => {
                 let r = SmalltalkNode::Identifier(self.current_raw);
@@ -339,6 +343,12 @@ impl SmalltalkParser {
             }
             "INT" => {
                 let v = Value::Integer(self.current_raw.parse::<i64>().unwrap());
+                self.advance();
+                Ok(SmalltalkNode::Value(v))
+            }
+            "STRING" => {
+                let s = &self.current_raw[1..self.current_raw.len() - 1]; // Remove quotes
+                let v = Value::String(StringTable::get(s));
                 self.advance();
                 Ok(SmalltalkNode::Value(v))
             }
@@ -372,10 +382,13 @@ impl SmalltalkParser {
 
                 Ok(SmalltalkNode::Array(elements))
             }
-            _ => Err(format!(
-                "Unexpected token in primary: {:?}",
-                self.current_token()
-            )),
+            _ => {
+                trace!("current pos in primary: {}", self.position);
+                Err(format!(
+                    "Unexpected token in primary: {:?}",
+                    self.current_token()
+                ))
+            }
         }
     }
 
@@ -582,7 +595,7 @@ impl SmalltalkParser {
 
     /// Parse method pattern (selector and parameters)
     /// Handles unary, binary, and keyword methods
-    fn parse_method_pattern(&mut self) -> Result<(&'static str, Vec<&'static str>), String> {
+    pub fn parse_method_pattern(&mut self) -> Result<(&'static str, Vec<&'static str>), String> {
         match self.current_token() {
             "IDENTIFIER" => {
                 let selector = self.current_raw;
@@ -637,7 +650,7 @@ impl SmalltalkParser {
     }
 
     /// Parse temporaries declaration: | temp1 temp2 |
-    fn parse_temporaries(&mut self) -> Result<Vec<&'static str>, ParseError> {
+    pub fn parse_temporaries(&mut self) -> Result<Vec<&'static str>, ParseError> {
         if self.current_token() == "|" {
             self.advance(); // consume '|'
 
@@ -699,7 +712,7 @@ impl SmalltalkParser {
                     println!("parsing class definition");
                     // Skip class definition header
                     self.advance();
-                    let attr = self.parse_attributes()?;
+                    let _attr = self.parse_attributes()?;
                     // let name = StringTable::get(attr.get("name").unwrap().as_str().unwrap());
                     let name = "UnnamedClass";
                     result.push(SmalltalkNode::ClassDefinition {
@@ -839,8 +852,7 @@ impl SmalltalkParser {
     }
 
     /// Parse class reference: ClassName [class] >>
-    #[allow(dead_code)]
-    fn parse_class_reference(&mut self) -> Result<(String, bool), String> {
+    pub fn parse_class_reference(&mut self) -> Result<(String, bool), String> {
         // Parse class name
         let class_name = if "IDENTIFIER" == self.current_token() {
             let result = self.current_raw.to_string();
@@ -862,8 +874,11 @@ impl SmalltalkParser {
             false
         };
 
-        // Expect '>>' operator
-        self.expect(">>")?;
+        if self.current_kind == "BINARY" && self.current_raw == ">>" {
+            self.advance();
+        } else {
+            return Err(self.error_msg("Expected '>>' after class reference"));
+        }
 
         Ok((class_name, is_class_side))
     }
@@ -881,5 +896,29 @@ impl SmalltalkParser {
         let r = self.parse_statements()?;
         self.expect("]")?;
         Ok(r)
+    }
+
+    pub(crate) fn parse_class_definition(&mut self) -> Result<SmalltalkNode, String> {
+        self.parse_expression()
+    }
+
+    pub(crate) fn optional_category(&mut self) -> Result<Option<String>, String> {
+        if self.current_token() == "CATEGORY" {
+            let result = self.current_raw.to_string();
+            self.advance();
+            return Ok(Some(result));
+        } else {
+            return Ok(None);
+        }
+    }
+
+    pub(crate) fn optional_comment(&mut self) -> Result<Option<String>, String> {
+        if self.current_token() == "COMMENT" {
+            let result = self.current_raw.to_string();
+            self.advance();
+            return Ok(Some(result));
+        } else {
+            return Ok(None);
+        }
     }
 }
