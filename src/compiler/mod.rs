@@ -166,30 +166,34 @@ impl SmalltalkCompiler {
                     Ok(dst)
                 }
             },
-            SmalltalkNode::Message {
-                receiver,
-                selector,
-                arguments,
-            } => {
+            SmalltalkNode::MessageInvoke { receiver, messages } => {
                 let dst = match dst {
                     Some(d) => d,
                     None => self.allocate_register(),
                 };
                 let r = self.compile_node(None, receiver)?;
-                let mut args = vec![];
-                for arg in arguments {
-                    args.push(self.compile_node(None, arg)?);
+                for x in messages {
+                    if let SmalltalkNode::Message {
+                        selector,
+                        arguments,
+                    } = x
+                    {
+                        let mut args = vec![];
+                        for arg in arguments {
+                            args.push(self.compile_node(None, arg)?);
+                        }
+                        let inst = Instruction::CallMethod {
+                            dst,
+                            receiver: r,
+                            args: args.clone(),
+                            selector,
+                        };
+                        for a in args.iter() {
+                            self.free_register(*a);
+                        }
+                        self.add_instruction(inst);
+                    }
                 }
-                let inst = Instruction::CallMethod {
-                    dst,
-                    receiver: r,
-                    args: args.clone(),
-                    selector,
-                };
-                for a in args.iter() {
-                    self.free_register(*a);
-                }
-                self.add_instruction(inst);
                 Ok(dst)
             }
             SmalltalkNode::Value(value) => {
@@ -226,6 +230,10 @@ impl SmalltalkCompiler {
                         return Err(format!("Variable {} not found", variable));
                     }
                 }
+            }
+            SmalltalkNode::CascadeReceiver => {
+                self.add_instruction(Instruction::Nop);
+                Ok(dst.unwrap_or(0))
             }
             x => {
                 todo!("{:?}", x);

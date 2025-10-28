@@ -7,12 +7,12 @@ use std::{
     vec,
 };
 
-use tracing::trace;
+use tracing::{instrument, trace};
 
 use crate::{
     compiler::compile_method,
     get_smalltalk_file_path,
-    memory::{SmalltalkClass, SmalltalkObject, Value},
+    memory::{SmalltalkClass, SmalltalkObject, Value, get_meta_name},
     parser::topdown::{SmalltalkNode, SmalltalkParser, parse_eval},
 };
 
@@ -185,7 +185,7 @@ impl Execution {
         args: Vec<Value>,
         code: CompiledMethod,
     ) -> Self {
-        let mut register = vec![Value::Undefined, receiver];
+        let mut register = vec![receiver.clone(), receiver.clone()];
         register.extend(args);
         Self {
             vm,
@@ -214,6 +214,7 @@ impl Execution {
         }
     }
 
+    #[instrument(skip(self))]
     pub fn execute(&mut self) -> Result<Value, String> {
         let mut ip = 0;
         let instructions = self.code.instructions.clone();
@@ -300,10 +301,8 @@ impl Execution {
                     }
                     Value::Method(cm) => {
                         let mut exec = Execution::new(self.vm, r, send_args, cm.clone());
-                        trace!("start executing method {}", selector);
                         let result = exec.execute()?;
                         self.set(*dst, result);
-                        trace!("done executing method {}", selector);
                         Ok(())
                     }
                     _ => Err("Only native methods are supported in this VM version".into()),
@@ -334,6 +333,7 @@ impl Execution {
             Value::String(_) => todo!(),
             Value::Integer(_) => Ok(self.vm.integer_class.clone()),
             Value::Float(_) => todo!(),
+            Value::Character(_) => todo!(),
             Value::Boolean(_) => todo!(),
             Value::Object(smalltalk_object) => {
                 let class_value = smalltalk_object.class();
@@ -343,7 +343,7 @@ impl Execution {
             Value::Array(values) => todo!(),
             Value::Method(compiled_method) => todo!(),
             Value::NativeMethod(_) => todo!(),
-            Value::Class(_) => Ok(self.vm.meta_class.clone()),
+            Value::Class(cls) => Ok(Value::Class(cls.meta())),
             Value::Undefined => todo!(),
         }
     }
@@ -354,6 +354,14 @@ impl Execution {
                 if let Some(m) = cls.lookup_method(selector) {
                     Ok(m.clone())
                 } else {
+                    let mut parent = cls.parent();
+                    while let Some(p) = parent {
+                        if let Some(m) = p.lookup_method(selector) {
+                            return Ok(m.clone());
+                        }
+                        trace!("Method {} not found in {}, checking parent", selector, p);
+                        parent = p.parent();
+                    }
                     Err(format!("Method '{}' not found", selector))
                 }
             }
@@ -364,7 +372,9 @@ impl Execution {
 
 impl VirtualMachine {
     pub fn new() -> Self {
-        let integer_class = SmalltalkClass::new("Integer", vec![]);
+        let object_class = SmalltalkClass::new("Object", None, vec![]);
+        let number_class = SmalltalkClass::new("Number", Some(object_class.clone()), vec![]);
+        let integer_class = SmalltalkClass::new("Integer", Some(number_class.clone()), vec![]);
 
         integer_class.insert_method("+", Value::NativeMethod(integer_add));
         // integer_methods.insert("-", Value::Method(Arc::new(CompiledMethod::default())));
@@ -373,9 +383,13 @@ impl VirtualMachine {
 
         let mut st = HashMap::new();
         st.insert("Integer", integer_class.clone().into());
+        st.insert("Number", number_class.clone().into());
+        st.insert("Object", object_class.clone().into());
 
-        let meta_class = SmalltalkClass::new("MetaClass", vec![]);
-        meta_class.insert_method("new", Value::NativeMethod(meta_class_new));
+        let meta_class = SmalltalkClass::new("MetaClass", None, vec![]);
+        meta_class.insert_method("basicNew", Value::NativeMethod(meta_class_new));
+        object_class.set_meta(meta_class.clone());
+
         Self {
             integer_class: integer_class.into(),
             meta_class: meta_class.into(),
@@ -391,13 +405,26 @@ impl VirtualMachine {
     pub fn define_class(
         &self,
         name: &'static str,
+        parent: Option<&'static str>,
         instance_vars: Vec<&'static str>,
     ) -> Result<(), String> {
-        self.st
-            .as_dictionary()?
-            .lock()
-            .unwrap()
-            .insert(name, SmalltalkClass::new(name, instance_vars).into());
+        let parent = match parent {
+            Some(pname) => {
+                let s = self.st.as_dictionary()?;
+                match s.lock().unwrap().get(pname) {
+                    Some(Value::Class(cls)) => Some(cls.clone()),
+                    _ => {
+                        return Err(format!("Parent class '{}' not found", pname));
+                    }
+                }
+            }
+            None => None,
+        };
+
+        self.st.as_dictionary()?.lock().unwrap().insert(
+            name,
+            SmalltalkClass::new(name, parent, instance_vars).into(),
+        );
         Ok(())
     }
 
@@ -415,22 +442,31 @@ impl VirtualMachine {
 
         let node = parse_eval(src)?;
 
-        self.define_method_from_node(class_name, selector, parameter_names, node)
+        self.define_method_from_node(class_name, false, selector, parameter_names, node)
     }
 
     fn define_method_from_node(
         &self,
         class_name: &'static str,
+        meta: bool,
         selector: &'static str,
         parameter_names: Vec<&'static str>,
         node: crate::parser::topdown::SmalltalkNode,
     ) -> Result<(), String> {
         let class_value = {
             let s = self.st.as_dictionary()?;
-            s.lock().unwrap().get(class_name).cloned().unwrap()
+            s.lock()
+                .unwrap()
+                .get(class_name)
+                .cloned()
+                .expect(&format!("Class '{}' not found", class_name))
         };
         match class_value {
-            Value::Class(cls) => {
+            Value::Class(mut cls) => {
+                if meta {
+                    cls = cls.meta();
+                }
+
                 let cm = compile_method(cls.instance_vars(), parameter_names, &node)?;
                 for (i, inst) in cm.instructions.iter().enumerate() {
                     trace!("{:04}: {}", i, inst);
@@ -468,34 +504,43 @@ impl VirtualMachine {
         while parser.current_token() == "IDENTIFIER" {
             let class_def = parser.parse_class_definition()?;
             match class_def {
-                SmalltalkNode::Message {
-                    receiver,
-                    selector: "extend",
-                    ..
-                } => {
+                SmalltalkNode::MessageInvoke { receiver, messages }
+                    if matches!(
+                        messages.first(),
+                        Some(&SmalltalkNode::Message {
+                            selector: "extend",
+                            arguments: _
+                        })
+                    ) =>
+                {
                     if let SmalltalkNode::Identifier(classname) = *receiver {
                         trace!("extending class {}", classname);
                         parser.expect("[")?;
-                        process_body(&mut parser, classname)?;
+                        self.process_body(&mut parser, classname)?;
                     }
                 }
-                SmalltalkNode::Message {
-                    receiver,
-                    selector: "subclass:",
-                    arguments,
-                } => {
-                    if let (SmalltalkNode::Identifier(parent), SmalltalkNode::Identifier(child)) =
-                        (*receiver, arguments.first().unwrap())
+                SmalltalkNode::MessageInvoke { receiver, messages } => {
+                    if let Some(SmalltalkNode::Message {
+                        selector,
+                        arguments,
+                    }) = messages.first()
                     {
-                        trace!("Defining class {} as subclass of {}", child, parent);
-                        parser.expect("[")?;
-                        let inst_vars = parser.parse_temporaries()?;
-                        trace!("Instance variables: {:?}", inst_vars);
-                        let cat = parser.optional_category()?;
-                        let com = parser.optional_comment()?;
-                        trace!("Category: {:?}", cat);
-                        trace!("Comment: {:?}", com);
-                        process_body(&mut parser, *child)?;
+                        if let (
+                            SmalltalkNode::Identifier(parent),
+                            SmalltalkNode::Identifier(child),
+                        ) = (*receiver, arguments.first().unwrap())
+                        {
+                            trace!("Defining class {} as subclass of {}", child, parent);
+                            parser.expect("[")?;
+                            let inst_vars = parser.parse_temporaries()?;
+                            trace!("Instance variables: {:?}", inst_vars);
+                            let cat = parser.optional_category()?;
+                            let com = parser.optional_comment()?;
+                            trace!("Category: {:?}", cat);
+                            trace!("Comment: {:?}", com);
+                            self.define_class(*child, Some(parent), inst_vars).unwrap();
+                            self.process_body(&mut parser, *child)?;
+                        }
                     }
                 }
                 x => {
@@ -506,50 +551,55 @@ impl VirtualMachine {
         }
         Ok(())
     }
-}
-
-
-fn process_body(parser: &mut SmalltalkParser, child: &'static str) -> Result<(), String> {
-    loop {
-        match parser.current_token() {
-            "IDENTIFIER" if parser.current_value() == child => {
-                let (c, s) = parser.parse_class_reference()?;
-                trace!("Class reference: {} {}", c, s);
-                let (sel, params) = parser.parse_method_pattern()?;
-                trace!("Method pattern: {} {:?}", sel, params);
-                parser.expect("[")?;
-                let body = parser.parse_eval()?;
-                parser.expect("]")?;
-            }
-            "IDENTIFIER" => {
-                let ident = parser.current_value();
-                trace!("Identifier: {}", ident);
-                parser.advance();
-                if parser.current_token() == "ASSIGN" {
-                    parser.advance();
-                    let expr = parser.parse_primary()?;
-                    trace!("Assignment to {}: {:?}", ident, expr);
-                } else {
-                trace!("Method pattern: {} []", ident);
-                parser.expect("[")?;
-                let body = parser.parse_eval()?;
-                parser.expect("]")?;
+    fn process_body(
+        &self,
+        parser: &mut SmalltalkParser,
+        class_name: &'static str,
+    ) -> Result<(), String> {
+        loop {
+            match parser.current_token() {
+                "IDENTIFIER" if parser.current_value() == class_name => {
+                    let (c, s) = parser.parse_class_reference()?;
+                    let (sel, params) = parser.parse_method_pattern()?;
+                    trace!("Method pattern: {} {:?}", sel, params);
+                    parser.expect("[")?;
+                    let body = parser.parse_eval()?;
+                    parser.expect("]")?;
+                    self.define_method_from_node(class_name, s, sel, params, body)?;
+                    trace!("Class reference: {} {}", c, s);
                 }
+                "IDENTIFIER" => {
+                    let ident = parser.current_value();
+                    trace!("Identifier: {}", ident);
+                    parser.advance();
+                    if parser.current_token() == "ASSIGN" {
+                        parser.advance();
+                        let expr = parser.parse_primary()?;
+                        trace!("Assignment to {}: {:?}", ident, expr);
+                    } else {
+                        trace!("Method pattern: {} []", ident);
+                        parser.expect("[")?;
+                        let body = parser.parse_eval()?;
+                        parser.expect("]")?;
+                        self.define_method_from_node(class_name, false, ident, vec![], body)?;
+                    }
+                }
+                "KEYWORD" | "BINARY" => {
+                    let (sel, params) = parser.parse_method_pattern()?;
+                    trace!("Method pattern: {} {:?}", sel, params);
+                    parser.expect("[")?;
+                    let body = parser.parse_eval()?;
+                    parser.expect("]")?;
+                    self.define_method_from_node(class_name, false, sel, params, body)?;
+                }
+                "]" => {
+                    trace!("end of class definition");
+                    parser.expect("]")?;
+                    break;
+                }
+                _ => todo!(),
             }
-            "KEYWORD" | "BINARY" => {
-                let (sel, params) = parser.parse_method_pattern()?;
-                trace!("Method pattern: {} {:?}", sel, params);
-                parser.expect("[")?;
-                let body = parser.parse_eval()?;
-                parser.expect("]")?;
-            }
-            "]" => {
-                trace!("end of class definition");
-                parser.expect("]")?;
-                break;
-            }
-            _ => todo!(),
         }
+        Ok(())
     }
-    Ok(())
 }

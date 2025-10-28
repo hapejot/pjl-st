@@ -48,11 +48,11 @@ pub fn init_tracing() {
         "st=trace,st::parser=warn,st::compiler=trace,st::vm=trace".into()
     });
 
-    tracing_subscriber::registry()
+    let _ = tracing_subscriber::registry()
         .with(env_filter)
         .with(tracing_subscriber::fmt::layer().with_span_events(
             tracing_subscriber::fmt::format::FmtSpan::ENTER
                 | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
         ))
-        .init();
+        .try_init();
 }

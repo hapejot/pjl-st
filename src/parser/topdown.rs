@@ -24,8 +24,6 @@ pub enum SmalltalkNode {
     /// Symbol literal (#symbol)
     Symbol(&'static str),
     /// Character literal ($a)
-    Character(char),
-    /// String literal
     Value(Value),
     /// Array literal #[...]
     Array(Vec<SmalltalkNode>),
@@ -36,8 +34,11 @@ pub enum SmalltalkNode {
         body: Box<SmalltalkNode>,
     },
     /// Message expression (receiver selector: arg1 with: arg2)
-    Message {
+    MessageInvoke {
         receiver: Box<SmalltalkNode>,
+        messages: Vec<SmalltalkNode>,
+    },
+    Message {
         selector: &'static str,
         arguments: Vec<SmalltalkNode>,
     },
@@ -66,6 +67,7 @@ pub enum SmalltalkNode {
         attr: Value,
         superclass: Option<&'static str>,
     },
+    CascadeReceiver,
 }
 /// Parser error with location information
 #[derive(Debug, Clone)]
@@ -254,9 +256,24 @@ impl SmalltalkParser {
         // Parse message chain
         let rs = self.parse_cascade_message(receiver)?;
         if rs.len() > 0 {
-            let mut r = vec![r];
-            r.extend(rs);
-            return Ok(SmalltalkNode::Statements(vec![], r));
+            if let SmalltalkNode::MessageInvoke {
+                receiver,
+                mut messages,
+            } = r
+            {
+                for x in rs {
+                    if let SmalltalkNode::MessageInvoke {
+                        receiver: _,
+                        messages: mut ms,
+                    } = x
+                    {
+                        messages.append(&mut ms);
+                    }
+                }
+                return Ok(SmalltalkNode::MessageInvoke { receiver, messages });
+            } else {
+                todo!("Should not reach here in parse_basic_expression")
+            }
         }
         Ok(r)
     }
@@ -275,7 +292,7 @@ impl SmalltalkParser {
         let mut messages = vec![];
         while matches!(self.current_token(), "SEMICOLON") {
             self.advance(); // consume ';'
-            let next_message = self.parse_messages(receiver.clone())?;
+            let next_message = self.parse_messages(SmalltalkNode::CascadeReceiver)?;
             messages.push(next_message);
         }
         Ok(messages)
@@ -290,10 +307,12 @@ impl SmalltalkParser {
                 let selector = self.current_raw;
                 // Unary message
                 self.advance();
-                Ok(SmalltalkNode::Message {
+                Ok(SmalltalkNode::MessageInvoke {
                     receiver: Box::new(receiver),
-                    selector,
-                    arguments: vec![],
+                    messages: vec![SmalltalkNode::Message {
+                        selector,
+                        arguments: vec![],
+                    }],
                 })
             }
             "BINARY" => {
@@ -301,10 +320,12 @@ impl SmalltalkParser {
                 // Binary message
                 self.advance();
                 let argument = self.parse_primary()?;
-                Ok(SmalltalkNode::Message {
+                Ok(SmalltalkNode::MessageInvoke {
                     receiver: Box::new(receiver),
-                    selector,
-                    arguments: vec![argument],
+                    messages: vec![SmalltalkNode::Message {
+                        selector,
+                        arguments: vec![argument],
+                    }],
                 })
             }
             "KEYWORD" => {
@@ -322,10 +343,12 @@ impl SmalltalkParser {
                     arguments.push(self.parse_primary()?);
                 }
 
-                Ok(SmalltalkNode::Message {
+                Ok(SmalltalkNode::MessageInvoke {
                     receiver: Box::new(receiver),
-                    selector: StringTable::get(&selector),
-                    arguments,
+                    messages: vec![SmalltalkNode::Message {
+                        selector: StringTable::get(&selector),
+                        arguments,
+                    }],
                 })
             }
             _ => Err(self.error_msg("Expected message selector")),
@@ -358,7 +381,9 @@ impl SmalltalkParser {
                 Ok(r)
             }
             "CHAR" => {
-                let r = SmalltalkNode::Character(self.current_raw.chars().nth(1).unwrap());
+                let r = SmalltalkNode::Value(Value::Character(
+                    self.current_raw.chars().nth(1).unwrap(),
+                ));
                 self.advance();
                 Ok(r)
             }
@@ -495,10 +520,12 @@ impl SmalltalkParser {
                 }
                 new_arguments.push(arg);
             }
-            SmalltalkNode::Message {
+            SmalltalkNode::MessageInvoke {
                 receiver: Box::new(r),
-                selector: StringTable::get(&selector),
-                arguments: new_arguments,
+                messages: vec![SmalltalkNode::Message {
+                    selector: StringTable::get(&selector),
+                    arguments: new_arguments,
+                }],
             }
         } else {
             todo!("Should not reach here in parse_keyword_message")
@@ -509,10 +536,12 @@ impl SmalltalkParser {
         if "IDENTIFIER" == self.current_token() {
             let selector = self.current_raw;
             self.advance();
-            let r = SmalltalkNode::Message {
+            let r = SmalltalkNode::MessageInvoke {
                 receiver: Box::new(r.clone()),
-                selector,
-                arguments: vec![],
+                messages: vec![SmalltalkNode::Message {
+                    selector,
+                    arguments: vec![],
+                }],
             };
             r
         } else {
@@ -528,10 +557,12 @@ impl SmalltalkParser {
             while matches!(self.current_token(), "IDENTIFIER") {
                 argument = self.parse_unary_message(argument);
             }
-            let r = SmalltalkNode::Message {
+            let r = SmalltalkNode::MessageInvoke {
                 receiver: Box::new(receiver),
-                selector,
-                arguments: vec![argument],
+                messages: vec![SmalltalkNode::Message {
+                    selector,
+                    arguments: vec![argument],
+                }],
             };
             r
         } else {

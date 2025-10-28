@@ -32,7 +32,6 @@
  ======================================================================"
 
 
-
 Object subclass: Point [
     | x y |
     
@@ -306,7 +305,6 @@ Object subclass: Point [
 ]
 
 
-
 Number extend [
 
     @ y [

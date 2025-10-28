@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    vec,
 };
 
 use pjl_static_strings::StringTable;
@@ -59,10 +60,30 @@ impl SmalltalkClass {
         self.0.lock().unwrap().methods.get(selector).cloned()
     }
 
-    pub(crate) fn new(name: &'static str, vars: Vec<&'static str>) -> Self {
+    pub(crate) fn new(
+        name: &'static str,
+        parent: Option<SmalltalkClass>,
+        vars: Vec<&'static str>,
+    ) -> Self {
+        let metaname = get_meta_name(name);
+
+        let meta_parent = match &parent {
+            Some(p) => Some(p.meta()),
+            None => None,
+        };
+
+        let metacls = SmalltalkClass(Arc::new(Mutex::new(SmalltalkClassData {
+            name: metaname,
+            parent: meta_parent,
+            meta: None,
+            methods: HashMap::new(),
+            vars: vec![],
+        })));
+
         let cls = SmalltalkClass(Arc::new(Mutex::new(SmalltalkClassData {
             name,
-            parent: None,
+            parent,
+            meta: Some(metacls),
             methods: HashMap::new(),
             vars,
         })));
@@ -78,10 +99,28 @@ impl SmalltalkClass {
     pub(crate) fn instance_vars(&self) -> Vec<&'static str> {
         self.0.lock().unwrap().vars.clone()
     }
+
+    pub(crate) fn parent(&self) -> Option<SmalltalkClass> {
+        self.0.lock().unwrap().parent.clone()
+    }
+
+    pub(crate) fn meta(&self) -> SmalltalkClass {
+        self.0.lock().unwrap().meta.clone().unwrap()
+    }
+
+    pub(crate) fn set_meta(&self, meta_class: SmalltalkClass) {
+        let mut data = self.0.lock().unwrap();
+        data.meta = Some(meta_class);
+    }
+}
+
+pub fn get_meta_name(name: &'static str) -> &'static str {
+    StringTable::get(&format!("@{}", name))
 }
 #[derive(Debug, Clone)]
 pub struct SmalltalkClassData {
-    pub parent: Option<SmalltalkObject>,
+    pub parent: Option<SmalltalkClass>,
+    pub meta: Option<SmalltalkClass>,
     pub methods: HashMap<&'static str, Value>,
     name: &'static str,
     vars: Vec<&'static str>,
@@ -93,6 +132,7 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
+    Character(char),
     Object(SmalltalkObject),
     Dictionary(Arc<Mutex<HashMap<&'static str, Value>>>),
     Array(Arc<Mutex<Vec<Value>>>),
@@ -157,6 +197,7 @@ impl std::fmt::Display for Value {
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
+            Value::Character(c) => write!(f, "${}", c),
             Value::Dictionary(_) => write!(f, "<Dictionary>"),
             Value::Array(_) => write!(f, "<Array>"),
             Value::Method(_) => write!(f, "<Method>"),
