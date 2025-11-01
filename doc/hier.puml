@@ -1,0 +1,328 @@
+@startuml SmalltalkClassHierarchy
+
+left to right direction
+
+
+class VM.String {
+    shape: #character
+    category: Collections-Text
+}
+
+class VM.MethodInfo {
+    I provide information about particular methods.  I can produce the category
+    that a method was filed under, and can be used to access the source
+    code of the method.
+}
+
+class VM.MethodContext {
+    My instances represent an actively executing method.  They record various
+    bits of information about the execution environment, and contain the
+    execution stack.
+}
+
+class VM.ContextPart {
+    My instances represent executing Smalltalk code, which represent the local
+environment of executable code. They contain a stack and also provide some
+methods that can be used in inspection or debugging.
+}
+
+class VM.Behavior {
+I am the parent class of all "class" type methods.  My instances know
+about the subclass/superclass relationships between classes, contain
+the description that instances are created from, and hold the method
+dictionary that''s associated with each class.  I provide methods for
+compiling methods, modifying the class inheritance hierarchy, examining the
+method dictionary, and iterating over the class hierarchy.
+-- Methods --
+addInstVarName
+removeInstVarName
+instanceVariableNames
+parseInstanceVariableString
+parseVariableString
+createGetMethod
+createSetMethod
+methodDictionary
+selectorsAndMethodsDo
+methodDictionary
+addSelector
+removeSelector
+formattedSourceStringAt
+compile
+compileAllSubclasses
+recompile
+decompile
+edit
+compileAll
+evalString
+evaluate
+superclass
+addSubclass
+removeSubclass
+selectors
+allSelectors
+lookupSelector
+lookupAllSelectors
+compiledMethodAt
+>>
+selectorAt
+parseTreeFor
+sourceCodeAt
+allInstances
+instanceCount
+indexOfInstVar
+instVarNames
+subclassInstVarNames
+allInstVarNames
+classVarNames
+allClassVarNames
+}
+
+class VM.ClassDescription {
+    My instances provide methods that access classes by category, and
+    allow whole categories of classes to be filed out to external disk
+    files.
+    -- Methods --
+    fileOutSelector: selector to: fileName
+    fileOutSelector: selector toStream: aFileStream
+    fileOut: fileName
+}
+
+class IO.FilePath {
+    I expose the syntax of file names, including paths.  I know how to
+    manipulate such a path by splitting it into its components.  In addition,
+    I expose information about files (both real and virtual) such as their
+    size and timestamps.
+-- Methods --
+}
+
+class IO.FileDescriptor {
+My instances are what conventional programmers think of as files.
+My instance creation methods accept the name of a disk file (or any named
+file object, such as /dev/rmt0 on UNIX or MTA0: on VMS).  In addition,
+they accept a virtual filesystem path like `configure.gz#ugz'' which can
+be used to transparently extract or decompress files from archives, or
+do arbitrary processing on the files.
+-- Static Methods --
+open:mode: - Open fileName in the required mode - answered by #append, #create,
+     #readWrite, #read or #write - and fail if the file cannot be opened.
+     Else answer a new IO.FileStream. For mode anyway you can use any
+     standard C non-binary fopen mode.  fileName can be a `virtual
+     filesystem' path, including URLs and '#' suffixes that are
+     inspected by the virtual filesystem layers and replaced with
+     tasks such as un-gzipping a file or extracting a file from an
+     archive.
+
+     The file will be automatically closed upon GC if the object is not
+     referenced anymore, but it is better to close it as soon as you're
+     finished with it anyway, using #close. To keep a file open even when
+     no references exist anymore, send it #removeToBeFinalized
+}
+
+class VM.Class {
+I am THE class object.  My instances are the classes of the system.
+I provide information commonly attributed to classes: namely, the
+class name, class comment (you wouldn''t be reading this if it
+weren''t for me), a list of the instance variables of the class, and
+the class category.
+}
+
+AbstractNamespace <|-- BindingDictionary
+AlreadyDefined <|-- InvalidArgument
+ArchiveFile <|-- IO.FileWrapper
+ArchiveMember <|-- IO.FilePath
+ArgumentOutOfRange <|-- InvalidArgument
+ArithmeticError <|-- Error
+Association <|-- LookupKey
+BadReturn <|-- VMError
+Bag <|-- VM.Collection
+BindingDictionary <|-- Dictionary
+CallinProcess <|-- Process
+CInterfaceError <|-- PrimitiveFailed
+CollectingStream <|-- Stream
+ConcatenatedStream <|-- Stream
+Date <|-- VM.Magnitude
+DateTime <|-- Date
+DebugInformation <|-- VM.Object
+DeferredVariableBinding <|-- LookupKey
+Delay <|-- VM.Object
+DelayedAdaptor <|-- PluggableAdaptor
+Dictionary <|-- HashedCollection
+DirectedMessage <|-- Message
+Directory <|-- VM.Object
+DirPackage <|-- ExternalPackage
+DirPackageGroup <|-- PackageGroup
+DisabledPackage <|-- Package
+DLD <|-- VM.Object
+Duration <|-- Time
+DynamicVariable <|-- VM.Object
+EmptyCollection <|-- InvalidValue
+EndOfStream <|-- Notification
+Error <|-- Exception
+Exception <|-- VM.Object
+ExceptionSet <|-- VM.Object
+ExternalPackage <|-- PackageInfo
+FailedMatchRegexResults <|-- RegexResults
+FilteringStream <|-- Stream
+Fraction <|-- VM.Number
+Generator <|-- Stream
+Getopt <|-- VM.Object
+Halt <|-- Exception
+HashedCollection <|-- VM.Collection
+HomedAssociation <|-- Association
+IdentityDictionary <|-- LookupTable
+IdentitySet <|-- Set
+IndexOutOfRange <|-- ArgumentOutOfRange
+Interval <|-- VM.ArrayedCollection
+InvalidArgument <|-- InvalidValue
+InvalidProcessState <|-- InvalidValue
+InvalidSize <|-- InvalidArgument
+InvalidState <|-- InvalidValue
+InvalidValue <|-- Error
+IO.File <|-- IO.FilePath
+IO.FileDescriptor <|-- Stream
+IO.FileError <|-- PrimitiveFailed
+IO.FilePath <|-- VM.Object
+IO.FileSegment <|-- VM.Object
+IO.FileStream <|-- IO.FileDescriptor
+IO.FileWrapper <|-- IO.FilePath
+IO.ReadStream <|-- PositionableStream
+IO.ReadWriteStream <|-- WriteStream
+LargeArray <|-- LargeArrayedCollection
+LargeArrayedCollection <|-- VM.ArrayedCollection
+LargeArraySubpart <|-- VM.Magnitude
+LargeByteArray <|-- LargeArrayedCollection
+LargeWordArray <|-- LargeArrayedCollection
+LimitedStream <|-- Stream
+LineStream <|-- Stream
+Link <|-- VM.Object
+LinkedList <|-- VM.SequenceableCollection
+LookupKey <|-- VM.Magnitude
+LookupTable <|-- Dictionary
+MappedCollection <|-- VM.Collection
+MatchingRegexResults <|-- RegexResults
+Memory <|-- VM.Object
+Message <|-- VM.Object
+MessageLookup <|-- Message
+MessageNotUnderstood <|-- Error
+MethodDictionary <|-- IdentityDictionary
+MustBeBoolean <|-- WrongClass
+MutationError <|-- Error
+Namespace <|-- AbstractNamespace
+NoRunnableProcess <|-- VMError
+NotEnoughElements <|-- Error
+NotFound <|-- InvalidArgument
+Notification <|-- Exception
+NotImplemented <|-- Error
+NotIndexable <|-- InvalidValue
+NotYetImplemented <|-- NotImplemented
+NullValueHolder <|-- ValueAdaptor
+ObjectMemory <|-- VM.Object
+OneOfEachStream <|-- Stream
+OrderedCollection <|-- VM.SequenceableCollection
+Package <|-- PackageInfo
+PackageContainer <|-- PackageGroup
+PackageDirectories <|-- PackageGroup
+PackageDirectory <|-- PackageContainer
+PackageGroup <|-- VM.Object
+PackageInfo <|-- VM.Object
+PackageLoader <|-- VM.Object
+PackageNotAvailable <|-- NotFound
+PackageSkip <|-- Notification
+PeekableStream <|-- Stream
+PluggableAdaptor <|-- ValueAdaptor
+Point <|-- VM.Object
+PositionableStream <|-- Stream
+PrimitiveFailed <|-- VMError
+Process <|-- Link
+ProcessBeingTerminated <|-- Notification
+ProcessEnvironment <|-- VM.Object
+ProcessorScheduler <|-- VM.Object
+ProcessTerminated <|-- InvalidValue
+ProcessVariable <|-- LookupKey
+Promise <|-- ValueHolder
+Random <|-- Stream
+ReadOnlyObject <|-- InvalidValue
+Rectangle <|-- VM.Object
+RecursionLock <|-- VM.Object
+RecursiveFileWrapper <|-- IO.FileWrapper
+Regex <|-- VM.Object
+RegexResults <|-- VM.Object
+RootNamespace <|-- AbstractNamespace
+RoundRobinStream <|-- Stream
+RunArray <|-- OrderedCollection
+ScaledDecimal <|-- VM.Number
+Semaphore <|-- LinkedList
+Set <|-- HashedCollection
+SharedQueue <|-- VM.Object
+ShouldNotImplement <|-- NotImplemented
+SortedCollection <|-- OrderedCollection
+StarPackage <|-- ExternalPackage
+Stat <|-- VM.Object
+StoredZipMember <|-- TmpFileArchiveMember
+Stream <|-- VM.Iterable
+SubclassResponsibility <|-- ShouldNotImplement
+SymLink <|-- Link
+SystemDictionary <|-- RootNamespace
+TestPackage <|-- Package
+TextCollector <|-- Stream
+Time <|-- VM.Magnitude
+TimeoutNotification <|-- Notification
+TmpFileArchiveMember <|-- ArchiveMember
+UndefinedObject <|-- VM.Object
+UnhandledException <|-- Exception
+URIResolver <|-- VM.Object
+URL <|-- VM.Object
+UserInterrupt <|-- VMError
+ValueAdaptor <|-- VM.Object
+ValueHolder <|-- ValueAdaptor
+VariableBinding <|-- HomedAssociation
+VerificationError <|-- VMError
+Version <|-- VM.Object
+VM.Array <|-- VM.ArrayedCollection
+VM.ArrayedCollection <|-- VM.SequenceableCollection
+VM.Behavior <|-- VM.Object
+VM.BlockClosure <|-- VM.Object
+VM.BlockContext <|-- VM.ContextPart
+VM.Boolean <|-- VM.Object
+VM.ByteArray <|-- VM.ArrayedCollection
+VM.Character <|-- VM.Magnitude
+VM.CharacterArray <|-- VM.ArrayedCollection
+VM.Class <|-- VM.ClassDescription
+VM.ClassDescription <|-- Behavior
+VM.Collection <|-- VM.Iterable
+VM.CompiledBlock <|-- VM.CompiledCode
+VM.CompiledCode <|-- VM.ArrayedCollection
+VM.CompiledMethod <|-- VM.CompiledCode
+VM.ContextPart <|-- VM.Object
+VM.Continuation <|-- VM.Object
+VM.False <|-- VM.Boolean
+VM.Float <|-- VM.Number
+VM.Integer <|-- VM.Number
+VM.Iterable <|-- VM.Object
+VM.Magnitude <|-- VM.Object
+VM.Metaclass <|-- VM.ClassDescription
+VM.MethodContext <|-- VM.ContextPart
+VM.MethodInfo <|-- VM.Object
+VM.Number <|-- VM.Magnitude
+VM.SequenceableCollection <|-- VM.Collection
+VM.String <|-- VM.CharacterArray
+VM.Symbol <|-- VM.String
+VM.True <|-- VM.Boolean
+VM.WordArray <|-- VM.ArrayedCollection
+VMError <|-- Error
+Warning <|-- Notification
+WeakArray <|-- VM.Array
+WeakIdentitySet <|-- WeakSet
+WeakKeyDictionary <|-- Dictionary
+WeakKeyIdentityDictionary <|-- WeakKeyDictionary
+WeakSet <|-- Set
+WeakValueIdentityDictionary <|-- WeakValueLookupTable
+WeakValueLookupTable <|-- LookupTable
+WriteStream <|-- PositionableStream
+WrongArgumentCount <|-- PrimitiveFailed
+WrongClass <|-- InvalidValue
+WrongMessageSent <|-- ShouldNotImplement
+ZeroDivide <|-- ArithmeticError
+ZipFile <|-- ArchiveFile
+
+@enduml

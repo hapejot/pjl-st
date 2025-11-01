@@ -45,7 +45,7 @@ pub fn init_tracing() {
     // Create an environment filter that can be controlled via RUST_LOG
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         // Default filter if RUST_LOG is not set
-        "st=trace,st::parser=warn,st::compiler=trace,st::vm=trace".into()
+        "st=warn,st::parser=warn,st::compiler=trace,st::vm=trace".into()
     });
 
     let _ = tracing_subscriber::registry()

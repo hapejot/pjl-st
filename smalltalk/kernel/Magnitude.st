@@ -90,7 +90,7 @@ map to a number line.  My instances can be compared with < and >.'>
     max: aMagnitude [
 	"Returns the greatest object between the receiver and aMagnitude"
 
-	<category: 'misc methods'>
+    <category: 'misc methods'>
 	^self > aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
     ]
 ]

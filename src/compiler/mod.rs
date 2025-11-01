@@ -1,9 +1,13 @@
-use std::vec;
+use std::{
+    sync::{Arc, Mutex},
+    vec,
+};
 
 use pjl_static_strings::StringTable;
-use tracing::trace;
+use tracing::{error, instrument, trace};
 
 use crate::{
+    memory::Value,
     parser::topdown::SmalltalkNode,
     vm::{CompiledBlock, CompiledMethod, Instruction},
 };
@@ -111,7 +115,9 @@ impl SmalltalkCompiler {
 
     fn free_register(&mut self, _reg: usize) {}
 
+    #[instrument(skip(self, node))]
     fn compile_node(&mut self, dst: Option<usize>, node: &SmalltalkNode) -> Result<usize, String> {
+        trace!(node = ?node, "Compiling node");
         match node {
             SmalltalkNode::Block {
                 parameters,
@@ -123,6 +129,7 @@ impl SmalltalkCompiler {
                     None => self.allocate_register(),
                 };
                 let mut block = SmalltalkCompiler::new();
+                block.instance_vars = self.instance_vars.clone();
                 block.var_allocation = self.var_allocation.create_child()?;
                 let block_dst = 0; // allocate first slot for result
                 for x in parameters {
@@ -154,17 +161,27 @@ impl SmalltalkCompiler {
                     }
                     None => Ok(index),
                 },
-                None => {
-                    let dst = match dst {
-                        Some(d) => d,
-                        None => self.allocate_register(),
-                    };
-                    self.add_instruction(Instruction::LoadGlobal {
-                        dst,
-                        var_name: name,
-                    });
-                    Ok(dst)
-                }
+                None => match self.instance_vars.iter().position(|x| x == name) {
+                    Some(index) => {
+                        let dst = match dst {
+                            Some(d) => d,
+                            None => self.allocate_register(),
+                        };
+                        self.add_instruction(Instruction::LoadInstanceVar { dst, index });
+                        return Ok(dst);
+                    }
+                    None => {
+                        let dst = match dst {
+                            Some(d) => d,
+                            None => self.allocate_register(),
+                        };
+                        self.add_instruction(Instruction::LoadGlobal {
+                            dst,
+                            var_name: name,
+                        });
+                        Ok(dst)
+                    }
+                },
             },
             SmalltalkNode::MessageInvoke { receiver, messages } => {
                 let dst = match dst {
@@ -196,6 +213,17 @@ impl SmalltalkCompiler {
                 }
                 Ok(dst)
             }
+            SmalltalkNode::Symbol(s) => {
+                let dst = match dst {
+                    Some(d) => d,
+                    None => self.allocate_register(),
+                };
+                self.add_instruction(Instruction::LoadImm {
+                    dst,
+                    value: Value::String(*s),
+                });
+                Ok(dst)
+            }
             SmalltalkNode::Value(value) => {
                 let dst = match dst {
                     Some(d) => d,
@@ -204,6 +232,27 @@ impl SmalltalkCompiler {
                 self.add_instruction(Instruction::LoadImm {
                     dst,
                     value: value.clone(),
+                });
+                Ok(dst)
+            }
+            SmalltalkNode::Array(a) => {
+                let dst = match dst {
+                    Some(d) => d,
+                    None => self.allocate_register(),
+                };
+                let elements = a
+                    .iter()
+                    .map(|x| {
+                        if let SmalltalkNode::Value(v) = x {
+                            v.clone()
+                        } else {
+                            Value::Undefined
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                self.add_instruction(Instruction::LoadImm {
+                    dst,
+                    value: Value::Array(Arc::new(Mutex::new(elements))),
                 });
                 Ok(dst)
             }
@@ -227,12 +276,20 @@ impl SmalltalkCompiler {
                         self.add_instruction(Instruction::StoreInstanceVar { src: r, index });
                         Ok(r)
                     } else {
+                        // if let Some(index) =
+                        error!("assignment to {} from {:?} failed", variable, value);
+                        error!("var allocation {:?}", self.var_allocation);
+                        error!("instance vars {:?}", self.instance_vars);
                         return Err(format!("Variable {} not found", variable));
                     }
                 }
             }
             SmalltalkNode::CascadeReceiver => {
                 self.add_instruction(Instruction::Nop);
+                Ok(dst.unwrap_or(0))
+            }
+            SmalltalkNode::Nil => {
+                // don't do anything, this happens when an empty block is defined.
                 Ok(dst.unwrap_or(0))
             }
             x => {
@@ -258,6 +315,7 @@ impl SmalltalkCompiler {
     }
 }
 
+#[instrument(skip(node))]
 pub fn compile_method(
     instance_vars: Vec<&'static str>,
     par: Vec<&'static str>,

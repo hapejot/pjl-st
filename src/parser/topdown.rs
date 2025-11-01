@@ -2,18 +2,18 @@ use std::{collections::HashMap, rc::Rc};
 
 use pjl_static_strings::StringTable;
 use santiago::lexer::{Lexeme, lex};
-use tracing::{instrument, trace};
+use tracing::{error, instrument, trace};
 
-use crate::{memory::Value, parser::lexer::lexer_rules};
+use crate::{memory::Value, parser::lexer::{Tokens, lexer_rules, tokenize}};
 
 pub fn parse(src: &str) -> Result<Vec<SmalltalkNode>, Box<dyn std::error::Error>> {
-    let mut parser = SmalltalkParser::new(src);
+    let mut parser = SmalltalkParser::new(src)?;
     Ok(parser.parse_file()?)
 }
 
-pub fn parse_eval(src: &str) -> Result<SmalltalkNode, ParseError> {
-    let mut parser = SmalltalkParser::new(src);
-    parser.parse_eval()
+pub fn parse_eval(src: &str) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
+    let mut parser = SmalltalkParser::new(src)?;
+    Ok(parser.parse_eval()?)
 }
 
 /// Simplified Smalltalk AST node
@@ -101,7 +101,7 @@ impl From<ParseError> for String {
 }
 
 pub struct SmalltalkParser {
-    tokens: Vec<Token>,
+    tokens: Tokens,
     current_kind: &'static str,
     current_raw: &'static str,
     position: usize,
@@ -110,9 +110,9 @@ pub struct SmalltalkParser {
 type Token = Rc<Lexeme>;
 
 impl SmalltalkParser {
-    pub fn new(src: &str) -> Self {
+    pub fn new(src: &str) -> Result<Self, String> {
         let lexer = lexer_rules();
-        let lexemes = lex(&lexer, src).unwrap();
+        let lexemes = tokenize(&lexer, src).map_err(|x| x.to_string())?;
         let mut p = SmalltalkParser {
             tokens: lexemes,
             position: 0,
@@ -120,7 +120,7 @@ impl SmalltalkParser {
             current_raw: "",
         };
         p.advance();
-        p
+        Ok(p)
     }
 
     pub fn current_token(&self) -> &'static str {
@@ -131,7 +131,7 @@ impl SmalltalkParser {
         self.current_raw
     }
 
-    #[instrument(skip(self))]
+    // #[instrument(skip(self))]
     pub fn advance(&mut self) -> &'static str {
         if self.position >= self.tokens.len() {
             self.current_kind = "EOF";
@@ -160,10 +160,11 @@ impl SmalltalkParser {
     }
 
     /// parsing a statement to evaluate
-    pub fn parse_eval(&mut self) -> Result<SmalltalkNode, ParseError> {
-        let cat = self.optional_category().unwrap();
+    pub fn parse_eval(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
+        let _pragmas = self.pragmas().unwrap();
         let temporaries = self.parse_temporaries()?;
-        let r = self.parse_statements().map_err(|e| self.error(e));
+        let _pragmas = self.pragmas().unwrap();
+        let r = self.parse_statements();
         if let Ok(SmalltalkNode::Statements(_, s)) = r {
             return Ok(SmalltalkNode::Statements(temporaries, s));
         }
@@ -187,7 +188,7 @@ impl SmalltalkParser {
 
     /// Parse a sequence of statements separated by dots
     #[instrument(skip(self))]
-    fn parse_statements(&mut self) -> Result<SmalltalkNode, String> {
+    fn parse_statements(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         let mut statements = Vec::new();
 
         while !matches!(self.current_token(), "EOF" | "]") {
@@ -212,16 +213,12 @@ impl SmalltalkParser {
             }
         }
 
-        if statements.len() == 1 {
-            Ok(statements.into_iter().next().unwrap())
-        } else {
-            Ok(SmalltalkNode::Statements(vec![], statements))
-        }
+        Ok(SmalltalkNode::Statements(vec![], statements))
     }
 
     /// Parse a single expression (assignment, return, or message expression)
     #[instrument(skip(self))]
-    fn parse_expression(&mut self) -> Result<SmalltalkNode, String> {
+    fn parse_expression(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         // Check for assignment
         if "IDENTIFIER" == self.current_token() {
             let var_name = self.current_raw;
@@ -249,7 +246,7 @@ impl SmalltalkParser {
 
     /// Parse a message expression with optional cascading
     #[instrument(skip(self))]
-    fn parse_basic_expression(&mut self) -> Result<SmalltalkNode, String> {
+    fn parse_basic_expression(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         let receiver = self.parse_primary()?;
 
         let r = self.parse_messages(receiver.clone())?;
@@ -288,7 +285,7 @@ impl SmalltalkParser {
     fn parse_cascade_message(
         &mut self,
         receiver: SmalltalkNode,
-    ) -> Result<Vec<SmalltalkNode>, String> {
+    ) -> Result<Vec<SmalltalkNode>, Box<dyn std::error::Error>> {
         let mut messages = vec![];
         while matches!(self.current_token(), "SEMICOLON") {
             self.advance(); // consume ';'
@@ -301,7 +298,10 @@ impl SmalltalkParser {
     /// Parse a message send (unary, binary, or keyword)
     #[allow(dead_code)]
     #[instrument(skip(self))]
-    fn parse_message_send(&mut self, receiver: SmalltalkNode) -> Result<SmalltalkNode, String> {
+    fn parse_message_send(
+        &mut self,
+        receiver: SmalltalkNode,
+    ) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         match self.current_token() {
             "IDENTIFIER" => {
                 let selector = self.current_raw;
@@ -351,13 +351,13 @@ impl SmalltalkParser {
                     }],
                 })
             }
-            _ => Err(self.error_msg("Expected message selector")),
+            _ => Err(self.error_msg("Expected message selector").into()),
         }
     }
 
     /// Parse primary expressions (literals, identifiers, blocks, parentheses)
     #[instrument(skip(self))]
-    pub fn parse_primary(&mut self) -> Result<SmalltalkNode, String> {
+    pub fn parse_primary(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         match self.current_token() {
             "IDENTIFIER" => {
                 let r = SmalltalkNode::Identifier(self.current_raw);
@@ -366,6 +366,11 @@ impl SmalltalkParser {
             }
             "INT" => {
                 let v = Value::Integer(self.current_raw.parse::<i64>().unwrap());
+                self.advance();
+                Ok(SmalltalkNode::Value(v))
+            }
+            "FLOAT" => {
+                let v = Value::Float(self.current_raw.parse::<f64>().unwrap());
                 self.advance();
                 Ok(SmalltalkNode::Value(v))
             }
@@ -397,29 +402,69 @@ impl SmalltalkParser {
             "#" => {
                 // Array literal
                 self.advance();
-                self.expect("[")?;
-
-                let mut elements = Vec::new();
-                while !matches!(self.current_token(), "]") {
-                    elements.push(self.parse_primary()?);
+                match self.current_token() {
+                    "[" => self.parse_array_literal("[", "]"), // byte array
+                    "(" => self.parse_array_literal("(", ")"), // regular array
+                    _ => todo!(),
                 }
-                self.expect("]")?;
-
-                Ok(SmalltalkNode::Array(elements))
+            }
+            "{" => {
+                // array literal with dynmic elements separated by dots
+                self.parse_array_literal_dyn()
             }
             _ => {
-                trace!("current pos in primary: {}", self.position);
+                for idx in self.position - 5..self.position + 5 {
+                    if let Some(token) = self.tokens.get(idx) {
+                        error!("Token[{}]: {:?}", idx, token);
+                    }
+                }
+
                 Err(format!(
-                    "Unexpected token in primary: {:?}",
-                    self.current_token()
-                ))
+                    "Unexpected token in primary: {:}:[{}] in {}",
+                    self.current_token(),
+                    self.current_raw,
+                    self.position
+                )
+                .into())
             }
         }
     }
 
+    #[instrument(skip(self))]
+    fn parse_array_literal_dyn(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
+        self.expect("{")?;
+        let mut elements = vec![];
+        while self.current_token() != "}" {
+            elements.push(self.parse_basic_expression()?);
+            if self.current_token() == "." {
+                self.advance();
+            }
+        }
+        self.expect("}")?;
+        Ok(SmalltalkNode::Array(elements))
+    }
+
+    #[instrument(skip(self))]
+    fn parse_array_literal(
+        &mut self,
+        open: &str,
+        close: &str,
+    ) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
+        self.expect(open)?;
+        let mut elements = vec![];
+        while self.current_token() != close {
+            elements.push(self.parse_primary()?);
+            //     if self.current_token() == "." {
+            //         self.advance();
+            //     }
+        }
+        self.expect(close)?;
+        Ok(SmalltalkNode::Array(elements))
+    }
+
     /// Parse a block literal [arg | body]
     #[instrument(skip(self))]
-    fn parse_block(&mut self) -> Result<SmalltalkNode, String> {
+    fn parse_block(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         self.expect("[")?;
 
         let mut parameters = Vec::new();
@@ -431,11 +476,11 @@ impl SmalltalkParser {
                 parameters.push(self.current_raw);
                 self.advance();
             } else {
-                return Err("Expected parameter name after ':'".to_string());
+                return Err("Expected parameter name after ':'".into());
             }
         }
 
-        let temps = if matches!(self.current_token(), "|") {
+        let temps = if matches!(self.current_raw, "|") {
             self.advance();
             self.parse_temporaries()?
         } else {
@@ -448,8 +493,10 @@ impl SmalltalkParser {
         } else {
             self.parse_statements()?
         };
-        if matches!(self.current_token(), "|") {
-            return Err(self.error_msg("parameter names need to be prefixed with ':'"));
+        if matches!(self.current_raw, "|") {
+            return Err(self
+                .error_msg("parameter names need to be prefixed with ':'")
+                .into());
         }
         self.expect("]")?;
 
@@ -460,7 +507,7 @@ impl SmalltalkParser {
         })
     }
 
-    pub fn tokens(&self) -> &[Token] {
+    pub fn tokens(&self) -> &Tokens {
         &self.tokens
     }
 
@@ -489,7 +536,7 @@ impl SmalltalkParser {
     }
 
     /// Get context around current position showing tokens
-    fn get_context(&self, radius: usize) -> String {
+    pub fn get_context(&self, radius: usize) -> String {
         let start = self.position.saturating_sub(radius);
         let end = (self.position + radius).min(self.tokens.len());
 
@@ -503,7 +550,10 @@ impl SmalltalkParser {
         context
     }
 
-    fn parse_keyword_message(&mut self, receiver: SmalltalkNode) -> SmalltalkNode {
+    fn parse_keyword_message(
+        &mut self,
+        receiver: SmalltalkNode,
+    ) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         let r = receiver;
         if matches!(self.current_token(), "KEYWORD") {
             let mut new_arguments = vec![];
@@ -511,22 +561,22 @@ impl SmalltalkParser {
             while "KEYWORD" == self.current_token() {
                 selector.push_str(self.current_raw);
                 self.advance();
-                let mut arg = self.parse_primary().unwrap();
+                let mut arg = self.parse_primary()?;
                 while matches!(self.current_token(), "IDENTIFIER") {
                     arg = self.parse_unary_message(arg);
                 }
                 while matches!(self.current_token(), "BINARY") {
-                    arg = self.parse_binary_message(arg);
+                    arg = self.parse_binary_message(arg)?;
                 }
                 new_arguments.push(arg);
             }
-            SmalltalkNode::MessageInvoke {
+            Ok(SmalltalkNode::MessageInvoke {
                 receiver: Box::new(r),
                 messages: vec![SmalltalkNode::Message {
                     selector: StringTable::get(&selector),
                     arguments: new_arguments,
                 }],
-            }
+            })
         } else {
             todo!("Should not reach here in parse_keyword_message")
         }
@@ -549,11 +599,14 @@ impl SmalltalkParser {
         }
     }
 
-    fn parse_binary_message(&mut self, receiver: SmalltalkNode) -> SmalltalkNode {
+    fn parse_binary_message(
+        &mut self,
+        receiver: SmalltalkNode,
+    ) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         if "BINARY" == self.current_token() {
             let selector = self.current_raw;
             self.advance();
-            let mut argument = self.parse_primary().unwrap();
+            let mut argument = self.parse_primary()?;
             while matches!(self.current_token(), "IDENTIFIER") {
                 argument = self.parse_unary_message(argument);
             }
@@ -564,13 +617,16 @@ impl SmalltalkParser {
                     arguments: vec![argument],
                 }],
             };
-            r
+            Ok(r)
         } else {
             todo!("Should not reach here in parse_binary_message")
         }
     }
 
-    fn parse_messages(&mut self, receiver: SmalltalkNode) -> Result<SmalltalkNode, String> {
+    fn parse_messages(
+        &mut self,
+        receiver: SmalltalkNode,
+    ) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         let mut r = receiver;
         match self.current_token() {
             "IDENTIFIER" => {
@@ -578,24 +634,24 @@ impl SmalltalkParser {
                     r = self.parse_unary_message(r);
                 }
                 while matches!(self.current_token(), "BINARY") {
-                    r = self.parse_binary_message(r);
+                    r = self.parse_binary_message(r)?;
                 }
                 if matches!(self.current_token(), "KEYWORD") {
-                    r = self.parse_keyword_message(r);
+                    r = self.parse_keyword_message(r)?;
                 }
                 Ok(r)
             }
             "BINARY" => {
                 while matches!(self.current_token(), "BINARY") {
-                    r = self.parse_binary_message(r);
+                    r = self.parse_binary_message(r)?;
                 }
                 if matches!(self.current_token(), "KEYWORD") {
-                    r = self.parse_keyword_message(r);
+                    r = self.parse_keyword_message(r)?;
                 }
                 Ok(r)
             }
             "KEYWORD" => {
-                r = self.parse_keyword_message(r);
+                r = self.parse_keyword_message(r)?;
                 Ok(r)
             }
             _ => return Ok(r),
@@ -682,7 +738,7 @@ impl SmalltalkParser {
 
     /// Parse temporaries declaration: | temp1 temp2 |
     pub fn parse_temporaries(&mut self) -> Result<Vec<&'static str>, ParseError> {
-        if self.current_token() == "|" {
+        if self.current_raw == "|" {
             self.advance(); // consume '|'
 
             let mut temporaries = vec![];
@@ -692,7 +748,7 @@ impl SmalltalkParser {
                 self.advance();
             }
 
-            if matches!(self.current_token(), "|") {
+            if matches!(self.current_raw, "|") {
                 self.advance(); // consume closing '|'
                 Ok(temporaries)
             } else {
@@ -729,7 +785,7 @@ impl SmalltalkParser {
         }
     }
 
-    pub(crate) fn parse_file(&mut self) -> Result<Vec<SmalltalkNode>, String> {
+    pub(crate) fn parse_file(&mut self) -> Result<Vec<SmalltalkNode>, Box<dyn std::error::Error>> {
         let mut _attributes = None;
         let mut result = vec![];
         while self.current_token() != "EOF" {
@@ -775,9 +831,9 @@ impl SmalltalkParser {
                                     continue;
                                 }
                                 _ => {
-                                    return Err(
-                                        self.error_msg("Expected superclass name after 'subclass'")
-                                    );
+                                    return Err(self
+                                        .error_msg("Expected superclass name after 'subclass'")
+                                        .into());
                                 }
                             }
                         }
@@ -787,11 +843,11 @@ impl SmalltalkParser {
                             if ">>" == self.current_raw {
                                 self.advance();
                             } else {
-                                return Err(self.error_msg("Expected '>>' after 'class'"));
+                                return Err(self.error_msg("Expected '>>' after 'class'").into());
                             }
                         }
                         _ => {
-                            return Err(self.error_msg("Expected '>>' after class name"));
+                            return Err(self.error_msg("Expected '>>' after class name").into());
                         }
                     }
                     let (selector, parameters) = self.parse_pattern()?;
@@ -812,10 +868,12 @@ impl SmalltalkParser {
                     });
                 }
                 _ => {
-                    return Err(self.error_msg(&format!(
-                        "Unexpected token in file: {:?}",
-                        self.current_token()
-                    )));
+                    return Err(self
+                        .error_msg(&format!(
+                            "Unexpected token in file: {:?}",
+                            self.current_token()
+                        ))
+                        .into());
                 }
             }
         }
@@ -915,7 +973,7 @@ impl SmalltalkParser {
     }
 
     /// Parse method body (Pharo format: actual Smalltalk code)
-    fn parse_method_body(&mut self) -> Result<SmalltalkNode, String> {
+    fn parse_method_body(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         self.expect("[")?;
         let _temporaries = self.parse_temporaries()?;
 
@@ -929,27 +987,20 @@ impl SmalltalkParser {
         Ok(r)
     }
 
-    pub(crate) fn parse_class_definition(&mut self) -> Result<SmalltalkNode, String> {
+    pub(crate) fn parse_class_definition(
+        &mut self,
+    ) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
         self.parse_expression()
     }
 
-    pub(crate) fn optional_category(&mut self) -> Result<Option<String>, String> {
-        if self.current_token() == "CATEGORY" {
+    pub(crate) fn pragmas(&mut self) -> Result<Vec<String>, String> {
+        let mut pragmas = Vec::new();
+        while self.current_token() == "PRAGMA" {
             let result = self.current_raw.to_string();
             self.advance();
-            return Ok(Some(result));
-        } else {
-            return Ok(None);
+            trace!("pragma {result}");
+            pragmas.push(result);
         }
-    }
-
-    pub(crate) fn optional_comment(&mut self) -> Result<Option<String>, String> {
-        if self.current_token() == "COMMENT" {
-            let result = self.current_raw.to_string();
-            self.advance();
-            return Ok(Some(result));
-        } else {
-            return Ok(None);
-        }
+        return Ok(pragmas);
     }
 }

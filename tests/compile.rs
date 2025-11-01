@@ -15,13 +15,13 @@ fn test_block() {
         }
         Ok(result) => {
             init_tracing();
-            compile_method(vec![], vec![], &result);
+            compile_method(vec![], vec![], &result).unwrap();
         }
     }
 }
 
 #[test]
-fn test_simple_add() {
+fn test_simple_add_compile() {
     let src = "1+2";
     match parse_eval(src) {
         Err(e) => {
@@ -30,7 +30,7 @@ fn test_simple_add() {
         }
         Ok(result) => {
             init_tracing();
-            compile_method(vec![], vec![], &result);
+            compile_method(vec![], vec![], &result).unwrap();
         }
     }
 }
@@ -45,7 +45,7 @@ fn test_complex_expression() {
         }
         Ok(result) => {
             init_tracing();
-            compile_method(vec![], vec![], &result);
+            compile_method(vec![], vec![], &result).unwrap();
         }
     }
 }
@@ -60,7 +60,7 @@ fn test_statements() {
             panic!();
         }
         Ok(result) => {
-            compile_method(vec![], vec![], &result);
+            compile_method(vec![], vec![], &result).unwrap();
         }
     }
 }

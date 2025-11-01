@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    error::Error,
     fmt::Display,
     fs::File,
     io::Read,
@@ -12,9 +13,24 @@ use tracing::{instrument, trace};
 use crate::{
     compiler::compile_method,
     get_smalltalk_file_path,
-    memory::{SmalltalkClass, SmalltalkObject, Value, get_meta_name},
+    memory::{SmalltalkClass, SmalltalkObject, Value},
     parser::topdown::{SmalltalkNode, SmalltalkParser, parse_eval},
 };
+
+#[derive(Debug)]
+enum RuntimeError {
+    GlobalNotFound(&'static str),
+}
+
+impl Error for RuntimeError {}
+
+impl Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuntimeError::GlobalNotFound(var_name) => write!(f, "Global name {} not defined", var_name),
+        }
+    }
+}
 
 /// Three-address code instruction
 #[derive(Debug, Clone)]
@@ -150,6 +166,7 @@ pub struct Execution {
 #[derive(Debug, Clone)]
 pub struct VirtualMachine {
     integer_class: Value,
+    float_class: Value,
     meta_class: Value,
     st: Value,
 }
@@ -215,7 +232,7 @@ impl Execution {
     }
 
     #[instrument(skip(self))]
-    pub fn execute(&mut self) -> Result<Value, String> {
+    pub fn execute(&mut self) -> Result<Value, Box<dyn Error>> {
         let mut ip = 0;
         let instructions = self.code.instructions.clone();
         while ip < instructions.len() {
@@ -233,7 +250,7 @@ impl Execution {
         }
     }
 
-    fn execute_instruction(&mut self, instr: &Instruction) -> Result<(), String> {
+    fn execute_instruction(&mut self, instr: &Instruction) -> Result<(), Box<dyn Error>> {
         trace!("EXECUTE: {}", instr);
         match instr {
             Instruction::LoadImm { dst, value } => {
@@ -244,7 +261,7 @@ impl Execution {
                 todo!()
             }
             Instruction::LoadGlobal { dst, var_name } => {
-                self.set(*dst, self.vm.get_global(var_name));
+                self.set(*dst, self.vm.get_global(var_name)?);
                 Ok(())
             }
             Instruction::StoreLocal { src, var_name } => todo!(),
@@ -332,7 +349,7 @@ impl Execution {
         match r {
             Value::String(_) => todo!(),
             Value::Integer(_) => Ok(self.vm.integer_class.clone()),
-            Value::Float(_) => todo!(),
+            Value::Float(_) => Ok(self.vm.float_class.clone()),
             Value::Character(_) => todo!(),
             Value::Boolean(_) => todo!(),
             Value::Object(smalltalk_object) => {
@@ -375,7 +392,7 @@ impl VirtualMachine {
         let object_class = SmalltalkClass::new("Object", None, vec![]);
         let number_class = SmalltalkClass::new("Number", Some(object_class.clone()), vec![]);
         let integer_class = SmalltalkClass::new("Integer", Some(number_class.clone()), vec![]);
-
+        let float_class = SmalltalkClass::new("Float", Some(number_class.clone()), vec![]);
         integer_class.insert_method("+", Value::NativeMethod(integer_add));
         // integer_methods.insert("-", Value::Method(Arc::new(CompiledMethod::default())));
         // integer_methods.insert("*", Value::Method(Arc::new(CompiledMethod::default())));
@@ -392,12 +409,13 @@ impl VirtualMachine {
 
         Self {
             integer_class: integer_class.into(),
+            float_class: float_class.into(),
             meta_class: meta_class.into(),
             st: Value::Dictionary(Arc::new(Mutex::new(st))),
         }
     }
 
-    pub fn execute_method(&'static self, method: CompiledMethod) -> Result<Value, String> {
+    pub fn execute_method(&'static self, method: CompiledMethod) -> Result<Value, Box<dyn Error>> {
         let mut exec = Execution::new(self, Value::Undefined, vec![], method);
         exec.execute()
     }
@@ -421,10 +439,19 @@ impl VirtualMachine {
             None => None,
         };
 
-        self.st.as_dictionary()?.lock().unwrap().insert(
-            name,
-            SmalltalkClass::new(name, parent, instance_vars).into(),
-        );
+        {
+            let dict = self.st.as_dictionary()?;
+            if let Ok(ref mut dict) = dict.lock() {
+                if dict.contains_key(name) {
+                    trace!("Class {} already defined", name);
+                } else {
+                    dict.insert(
+                        name,
+                        SmalltalkClass::new(name, parent, instance_vars).into(),
+                    );
+                }
+            }
+        }
         Ok(())
     }
 
@@ -440,7 +467,7 @@ impl VirtualMachine {
             class_name, selector, parameter_names, src
         );
 
-        let node = parse_eval(src)?;
+        let node = parse_eval(src).map_err(|e| format!("Failed to parse method body: {}", e))?;
 
         self.define_method_from_node(class_name, false, selector, parameter_names, node)
     }
@@ -481,25 +508,20 @@ impl VirtualMachine {
         Ok(())
     }
 
-    fn get_global(&self, var_name: &str) -> Value {
+    fn get_global(&self, var_name: &'static str) -> Result<Value, Box<dyn std::error::Error>> {
         let value = {
-            let s = self.st.as_dictionary().unwrap();
-            s.lock().unwrap().get(var_name).cloned().unwrap()
+            let s = self.st.as_dictionary()?;
+            s.lock()
+                .unwrap()
+                .get(var_name)
+                .cloned()
+                .ok_or(RuntimeError::GlobalNotFound(var_name))?
         };
-        value
+        Ok(value)
     }
 
-    pub fn compile_file(&self, arg_1: &str, arg_2: &str) -> Result<(), String> {
-        let src = {
-            let file_path = get_smalltalk_file_path("kernel", "Point.st");
-            let mut f = File::open(&file_path)
-                .expect(&format!("Failed to open file: {}", file_path.display()));
-            let mut src = String::new();
-            f.read_to_string(&mut src).expect("Failed to read file");
-            src
-        };
-
-        let mut parser = SmalltalkParser::new(&src);
+    pub fn compile_src(&self, src: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut parser = SmalltalkParser::new(&src)?;
 
         while parser.current_token() == "IDENTIFIER" {
             let class_def = parser.parse_class_definition()?;
@@ -521,7 +543,7 @@ impl VirtualMachine {
                 }
                 SmalltalkNode::MessageInvoke { receiver, messages } => {
                     if let Some(SmalltalkNode::Message {
-                        selector,
+                        selector: _,
                         arguments,
                     }) = messages.first()
                     {
@@ -534,11 +556,12 @@ impl VirtualMachine {
                             parser.expect("[")?;
                             let inst_vars = parser.parse_temporaries()?;
                             trace!("Instance variables: {:?}", inst_vars);
-                            let cat = parser.optional_category()?;
-                            let com = parser.optional_comment()?;
-                            trace!("Category: {:?}", cat);
-                            trace!("Comment: {:?}", com);
-                            self.define_class(*child, Some(parent), inst_vars).unwrap();
+                            let _o = parser.pragmas()?;
+                            if parent == "nil" {
+                                self.define_class(*child, None, inst_vars).unwrap();
+                            } else {
+                                self.define_class(*child, Some(parent), inst_vars).unwrap();
+                            }
                             self.process_body(&mut parser, *child)?;
                         }
                     }
@@ -551,11 +574,31 @@ impl VirtualMachine {
         }
         Ok(())
     }
+
+    #[instrument(skip(self))]
+    pub fn compile_file(
+        &self,
+        package: &str,
+        file: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let src = {
+            let file_path = get_smalltalk_file_path(package, file);
+            let mut f = File::open(&file_path)
+                .expect(&format!("Failed to open file: {}", file_path.display()));
+            let mut src = String::new();
+            f.read_to_string(&mut src).expect("Failed to read file");
+            src
+        };
+
+        trace!("content length: {}", src.len());
+        self.compile_src(&src)
+    }
+
     fn process_body(
         &self,
         parser: &mut SmalltalkParser,
         class_name: &'static str,
-    ) -> Result<(), String> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         loop {
             match parser.current_token() {
                 "IDENTIFIER" if parser.current_value() == class_name => {
@@ -576,6 +619,8 @@ impl VirtualMachine {
                         parser.advance();
                         let expr = parser.parse_primary()?;
                         trace!("Assignment to {}: {:?}", ident, expr);
+                        parser.expect(".")?;
+                        self.define_class_variable(class_name, ident, expr)?;
                     } else {
                         trace!("Method pattern: {} []", ident);
                         parser.expect("[")?;
@@ -597,9 +642,37 @@ impl VirtualMachine {
                     parser.expect("]")?;
                     break;
                 }
-                _ => todo!(),
+                x => {
+                    todo!("token: {x}\n{}", parser.get_context(5));
+                }
             }
         }
         Ok(())
+    }
+
+    fn define_class_variable(
+        &self,
+        class_name: &'static str,
+        ident: &'static str,
+        _expr: SmalltalkNode,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if let Value::Class(cls) = self.get_class(class_name)? {
+            cls.meta().insert_variable(ident)?;
+        }
+        Ok(())
+    }
+
+    fn get_class(&self, class_name: &str) -> Result<Value, Box<dyn std::error::Error>> {
+        let dict = self.st.as_dictionary()?;
+        if let Ok(dict) = dict.lock() {
+            let c = dict.get(class_name);
+            if let Some(c) = c {
+                Ok(c.clone())
+            } else {
+                Err("class not found".into())
+            }
+        } else {
+            Err("class not found".into())
+        }
     }
 }

@@ -57,7 +57,21 @@ pub struct SmalltalkObjectData {
 pub struct SmalltalkClass(Arc<Mutex<SmalltalkClassData>>);
 impl SmalltalkClass {
     pub(crate) fn lookup_method(&self, selector: &str) -> Option<Value> {
-        self.0.lock().unwrap().methods.get(selector).cloned()
+        let r = self.0.lock().unwrap().methods.get(selector).cloned();
+        if r.is_none() {
+            trace!("Method {} not found in {:?}", selector, self.method_names());
+        }
+        r
+    }
+
+    pub fn method_names(&self) -> Vec<&'static str> {
+        self.0
+            .lock()
+            .unwrap()
+            .methods
+            .keys()
+            .cloned()
+            .collect::<Vec<&'static str>>()
     }
 
     pub(crate) fn new(
@@ -93,6 +107,10 @@ impl SmalltalkClass {
     pub(crate) fn insert_method(&self, arg: &'static str, integer_add: Value) {
         let mut methods = self.0.lock().unwrap();
         trace!("Inserting method {}", arg);
+        trace!(
+            "Available methods before insert: {:?}",
+            methods.methods.keys()
+        );
         (*methods).methods.insert(arg, integer_add);
     }
 
@@ -111,6 +129,14 @@ impl SmalltalkClass {
     pub(crate) fn set_meta(&self, meta_class: SmalltalkClass) {
         let mut data = self.0.lock().unwrap();
         data.meta = Some(meta_class);
+    }
+
+    pub(crate) fn insert_variable(
+        &self,
+        ident: &'static str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        self.0.lock().unwrap().vars.push(ident);
+        Ok(())
     }
 }
 
