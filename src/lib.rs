@@ -5,6 +5,7 @@ pub mod compiler;
 pub mod memory;
 pub mod parser;
 pub mod vm;
+pub mod debug;
 
 /// Get the project root directory (where Cargo.toml is located)
 pub fn get_project_root() -> PathBuf {
@@ -45,7 +46,7 @@ pub fn init_tracing() {
     // Create an environment filter that can be controlled via RUST_LOG
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         // Default filter if RUST_LOG is not set
-        "st=warn,st::parser=warn,st::compiler=trace,st::vm=trace".into()
+        "st=warn,st::parser=warn,st::compiler=warn,st::vm=warn".into()
     });
 
     let _ = tracing_subscriber::registry()

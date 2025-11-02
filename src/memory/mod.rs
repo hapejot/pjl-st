@@ -20,11 +20,11 @@ impl SmalltalkObject {
     }
 
     pub fn class(&self) -> SmalltalkClass {
-        self.0.lock().unwrap().class.clone()
+        self.0.try_lock().unwrap().class.clone()
     }
 
     pub fn set_instance_var(&self, index: usize, value: Value) {
-        let mut data = self.0.lock().unwrap();
+        let mut data = self.0.try_lock().unwrap();
         if index >= data.values.len() {
             data.values.resize(index + 1, Value::Undefined);
         }
@@ -33,7 +33,7 @@ impl SmalltalkObject {
     }
 
     pub fn get_instance_var(&self, index: usize) -> Value {
-        let data = self.0.lock().unwrap();
+        let data = self.0.try_lock().unwrap();
         if index >= data.values.len() {
             Value::Undefined
         } else {
@@ -42,7 +42,7 @@ impl SmalltalkObject {
     }
 
     pub fn get_instance_vars(&self) -> Vec<Value> {
-        let data = self.0.lock().unwrap();
+        let data = self.0.try_lock().unwrap();
         data.values.clone()
     }
 }
@@ -57,7 +57,7 @@ pub struct SmalltalkObjectData {
 pub struct SmalltalkClass(Arc<Mutex<SmalltalkClassData>>);
 impl SmalltalkClass {
     pub(crate) fn lookup_method(&self, selector: &str) -> Option<Value> {
-        let r = self.0.lock().unwrap().methods.get(selector).cloned();
+        let r = self.0.try_lock().unwrap().methods.get(selector).cloned();
         if r.is_none() {
             trace!("Method {} not found in {:?}", selector, self.method_names());
         }
@@ -66,7 +66,7 @@ impl SmalltalkClass {
 
     pub fn method_names(&self) -> Vec<&'static str> {
         self.0
-            .lock()
+            .try_lock()
             .unwrap()
             .methods
             .keys()
@@ -105,7 +105,7 @@ impl SmalltalkClass {
     }
 
     pub(crate) fn insert_method(&self, arg: &'static str, integer_add: Value) {
-        let mut methods = self.0.lock().unwrap();
+        let mut methods = self.0.try_lock().unwrap();
         trace!("Inserting method {}", arg);
         trace!(
             "Available methods before insert: {:?}",
@@ -115,19 +115,19 @@ impl SmalltalkClass {
     }
 
     pub(crate) fn instance_vars(&self) -> Vec<&'static str> {
-        self.0.lock().unwrap().vars.clone()
+        self.0.try_lock().unwrap().vars.clone()
     }
 
     pub(crate) fn parent(&self) -> Option<SmalltalkClass> {
-        self.0.lock().unwrap().parent.clone()
+        self.0.try_lock().unwrap().parent.clone()
     }
 
     pub(crate) fn meta(&self) -> SmalltalkClass {
-        self.0.lock().unwrap().meta.clone().unwrap()
+        self.0.try_lock().unwrap().meta.clone().unwrap()
     }
 
     pub(crate) fn set_meta(&self, meta_class: SmalltalkClass) {
-        let mut data = self.0.lock().unwrap();
+        let mut data = self.0.try_lock().unwrap();
         data.meta = Some(meta_class);
     }
 
@@ -135,7 +135,7 @@ impl SmalltalkClass {
         &self,
         ident: &'static str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        self.0.lock().unwrap().vars.push(ident);
+        self.0.try_lock().unwrap().vars.push(ident);
         Ok(())
     }
 }
@@ -163,8 +163,9 @@ pub enum Value {
     Dictionary(Arc<Mutex<HashMap<&'static str, Value>>>),
     Array(Arc<Mutex<Vec<Value>>>),
     Method(CompiledMethod),
-    NativeMethod(fn(&mut Execution, Value, Vec<Value>) -> Result<Value, String>),
+    NativeMethod(fn(&Execution, Value, Vec<Value>) -> Result<Value, Box<dyn std::error::Error>>),
     Class(SmalltalkClass),
+    Execution(Execution),
     Undefined,
 }
 impl Value {
@@ -228,7 +229,8 @@ impl std::fmt::Display for Value {
             Value::Array(_) => write!(f, "<Array>"),
             Value::Method(_) => write!(f, "<Method>"),
             Value::NativeMethod(_) => write!(f, "<NativeMethod>"),
-            Value::Class(c) => write!(f, "<Class {}>", c.0.lock().unwrap().name),
+            Value::Class(c) => write!(f, "<Class {}>", c.0.try_lock().unwrap().name),
+            Value::Execution(_) => write!(f, "<Execution>"),
             Value::Undefined => write!(f, "undefined"),
         }
     }
@@ -236,7 +238,7 @@ impl std::fmt::Display for Value {
 
 impl std::fmt::Display for SmalltalkClass {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let data = self.0.lock().unwrap();
+        let data = self.0.try_lock().unwrap();
         write!(f, "Class {}", data.name)
     }
 }

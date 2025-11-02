@@ -330,17 +330,16 @@ pub fn compile_method(
     let r = c.compile_node(Some(0), node)?;
     trace!("Compiled code [{r}]");
     c.dump_to_trace();
-    let m = CompiledMethod {
-        instructions: c.code,
-        blocks: c
-            .blocks
+    let m = CompiledMethod::new(
+        c.code,
+        c.blocks
             .into_iter()
             .map(|b| CompiledBlock {
                 instructions: b.code,
                 parameter_count: b.var_allocation.allocation.len(),
             })
             .collect(),
-        parameter_count: c.var_allocation.allocation.len(),
-    };
+        c.var_allocation.allocation.len(),
+    );
     return Ok(m);
 }

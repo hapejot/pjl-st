@@ -59,6 +59,21 @@ fn read_point_file() {
 
 
 #[test]
+fn block_eval() {
+    let src = "  | adder1 adder2 |
+        adder1 := [:x :y | x + y ].
+        adder2 := [:x | adder1 value: 1 value: x].
+        ^adder2 value: 2";
+    init_tracing();
+
+    let vm = Box::leak(Box::new(VirtualMachine::new()));
+    let cm = compile_method(vec![], vec![], &parse_eval(src).unwrap()).unwrap();
+    let result = vm.execute_method(cm).unwrap();
+    assert_eq!("3", format!("{}", result));    
+}
+
+
+#[test]
 fn recursive_factorial() {
     let src = r#"  | factorial |
         factorial := [:n| n = 1 ifTrue: [1] ifFalse: [(factorial value: n - 1) * n]].

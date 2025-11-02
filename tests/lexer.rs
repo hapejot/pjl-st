@@ -13,6 +13,25 @@ fn weird_identifier() {
     }
 }
 
+
+#[test]
+fn assignments_and_blocks() {
+    let input =   "| adder1 adder2 |
+        adder1 := [:x :y | x + y ].
+        adder2 := [:x | adder1 value: 1 value: x].
+        ^adder2 value: 2";
+    let rules = lexer_rules();
+    let l = tokenize(&rules, input).unwrap();
+    let exp = vec!["|", "adder1", "adder2", "|", 
+                            "adder1", ":=", "[", ":", "x", ":", "y", "|", "x", "+", "y", "]", ".", 
+                            "adder2", ":=", "[", ":", "x", "|", "adder1", "value:", "1", "value:", "x", "]", ".", 
+                            "^", "adder2", "value:", "2"];
+    for (i, e) in exp.iter().enumerate() {
+        let x = l[i].clone();
+        assert_eq!(&x.raw, e, "{}: {}", i, &x.position);
+    }
+}
+
 #[test]
 fn convert_to_string() {
     let input = "([:x |

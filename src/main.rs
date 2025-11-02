@@ -46,7 +46,9 @@ fn main() {
 fn run_main(args: Args) -> Result<(), Box<dyn std::error::Error + 'static>> {
     let boot_src = std::fs::read_to_string(args.boot_file).unwrap();
     let boot = serde_yaml::from_str::<serde_yaml::Value>(&boot_src).unwrap();
+    let debugger = Box::leak(Box::new(st::debug::terminal::TerminalDebugger::new()));
     let vm = Box::leak(Box::new(st::vm::VirtualMachine::new()));
+    vm.set_debugger(debugger);
     if let Some(boot_map) = boot.as_mapping() {
         for (package, value) in boot_map {
             if let Some(files) = value.as_sequence() {
