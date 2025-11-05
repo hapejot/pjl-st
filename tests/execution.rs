@@ -20,6 +20,7 @@ fn test_execution() {
 
 
     let x = e2.registers();
+    assert_eq!(x.len(), 3);
 
 
     e.set(0, Value::Integer(55));

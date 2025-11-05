@@ -605,7 +605,7 @@ impl Execution {
         exec.ip += 1;
     }
 
-    pub(crate) fn registers(&self) -> Vec<String> {
+    pub fn registers(&self) -> Vec<String> {
         match self.home() {
             Some(home) => {
                 let mut r = home.registers();
