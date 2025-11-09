@@ -659,7 +659,7 @@ the class category.'>
 
         | superclassSpaces env |
         env := aNamespace.
-        self withAllSuperclassesDo: [:behavior || classSpaces |
+        self withAllSuperclassesDo: [:behavior | | classSpaces |
 	    aBlock value: behavior classPool.
 
 	    "Extract the spaces of this class from superclassSpaces into

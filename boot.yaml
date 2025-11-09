@@ -4,3 +4,11 @@ kernel:
 - Number.st
 - Integer.st
 - Point.st
+- Iterable.st
+- Collection.st
+- SeqCollect.st
+- Arraycoll.st
+- Interval.st
+- Boolean.st
+- True.st
+- False.st

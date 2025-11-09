@@ -66,7 +66,7 @@ pub fn lexer_rules() -> LexerRules {
         "DEFAULT" | "FLOAT" = pattern r"-?[0-9]+\.[0-9]+";
         "DEFAULT" | "IDENTIFIER" = pattern r"[a-zA-Z_][a-zA-Z_0-9]*";
         "DEFAULT" | "IDENTIFIER" = pattern r"[a-zA-Z_][a-zA-Z_0-9]*[.][a-zA-Z_][a-zA-Z_0-9]*";
-        "DEFAULT" | "SYMBOL" = pattern r"#[a-zA-Z_][a-zA-Z_0-9]*";
+        "DEFAULT" | "SYMBOL" = pattern r"#[a-zA-Z_][a-zA-Z_0-9:]*";
         "DEFAULT" | "SYMBOL" = pattern r"#[-%&,*+/<=>?@\\~!|][-%&,*+/<=>?@\\~!|]?";
         "DEFAULT" | "KEYWORD" = pattern r"[a-zA-Z_][a-zA-Z_0-9]*:";
         "DEFAULT" | "STRING" = pattern r"'[^']*'";

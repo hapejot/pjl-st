@@ -39,7 +39,7 @@ fn main() {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }
-        _ => {},
+        _ => {}
     }
 }
 
@@ -70,14 +70,14 @@ fn run_main(args: Args) -> Result<(), Box<dyn std::error::Error + 'static>> {
         println!("Please provide an input file or an expression to evaluate.");
         return Ok(());
     };
-    let cm = compile_method(vec![], vec![], &parse_eval(&src).unwrap())?;
+    let cm = st::compiler::compile_statements(&parse_eval(&src).unwrap())?;
     execute(vm, cm)
 }
 
 #[instrument(skip(vm, cm))]
 fn execute(
     vm: &'static mut st::vm::VirtualMachine,
-    cm: st::vm::CompiledMethod,
+    cm: st::vm::block::CompiledMethod,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let result = vm.execute_method(cm)?;
     println!("{}", result);

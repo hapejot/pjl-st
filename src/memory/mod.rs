@@ -7,7 +7,7 @@ use std::{
 use pjl_static_strings::StringTable;
 use tracing::trace;
 
-use crate::vm::{CompiledMethod, Execution};
+use crate::vm::{block::CompiledMethod, execution::Execution};
 
 #[derive(Debug, Clone)]
 pub struct SmalltalkObject(Arc<Mutex<SmalltalkObjectData>>);
@@ -122,6 +122,10 @@ impl SmalltalkClass {
         self.0.try_lock().unwrap().parent.clone()
     }
 
+    pub fn name(&self) -> &'static str {
+        self.0.try_lock().unwrap().name
+    }
+
     pub(crate) fn meta(&self) -> SmalltalkClass {
         self.0.try_lock().unwrap().meta.clone().unwrap()
     }
@@ -167,6 +171,7 @@ pub enum Value {
     Class(SmalltalkClass),
     Execution(Execution),
     Undefined,
+    Nil,
 }
 impl Value {
     pub(crate) fn as_dictionary(&self) -> Result<Arc<Mutex<HashMap<&'static str, Value>>>, String> {
@@ -232,6 +237,7 @@ impl std::fmt::Display for Value {
             Value::Class(c) => write!(f, "<Class {}>", c.0.try_lock().unwrap().name),
             Value::Execution(_) => write!(f, "<Execution>"),
             Value::Undefined => write!(f, "undefined"),
+            Value::Nil => write!(f, "nil"),
         }
     }
 }

@@ -4,7 +4,10 @@ use pjl_static_strings::StringTable;
 use santiago::lexer::{Lexeme, lex};
 use tracing::{error, instrument, trace};
 
-use crate::{memory::Value, parser::lexer::{Tokens, lexer_rules, tokenize}};
+use crate::{
+    memory::Value,
+    parser::lexer::{Tokens, lexer_rules, tokenize},
+};
 
 pub fn parse(src: &str) -> Result<Vec<SmalltalkNode>, Box<dyn std::error::Error>> {
     let mut parser = SmalltalkParser::new(src)?;
@@ -418,14 +421,13 @@ impl SmalltalkParser {
                         error!("Token[{}]: {:?}", idx, token);
                     }
                 }
-
-                Err(format!(
-                    "Unexpected token in primary: {:}:[{}] in {}",
-                    self.current_token(),
-                    self.current_raw,
-                    self.position
-                )
-                .into())
+                Err(self
+                    .error(format!(
+                        "Unexpected token in primary: {:}:[{}] ",
+                        self.current_token(),
+                        self.current_raw
+                    ))
+                    .into())
             }
         }
     }

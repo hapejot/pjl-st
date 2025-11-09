@@ -11,7 +11,7 @@ use std::{
 };
 
 
-use crate::vm::Execution;
+use crate::vm::execution::Execution;
 
 use super::Debugger;
 
@@ -22,7 +22,7 @@ impl TerminalDebugger {
         TerminalDebugger(Mutex::new(TerminalDebuggerData {
             step_mode: true,
             show_registers: true,
-            context_lines: 3,
+            context_lines: 12,
         }))
     }
 }
@@ -122,9 +122,9 @@ impl TerminalDebuggerData {
         queue!(stdout, Print("\nInstructions:\n"))?;
 
         // Calculate range of instructions to show
-        let context = self.context_lines;
+        let context = self.context_lines / 2;
         let start = current_ip.saturating_sub(context);
-        let end = (current_ip + context + 1).min(instructions.len());
+        let end = (start + self.context_lines).min(instructions.len());
 
         for (i, instruction) in instructions.iter().enumerate().take(end).skip(start) {
             if i == current_ip {
