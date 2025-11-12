@@ -82,7 +82,7 @@ impl SmalltalkClass {
         let metaname = get_meta_name(name);
 
         let meta_parent = match &parent {
-            Some(p) => Some(p.meta()),
+            Some(p) => Some(p.meta().class()),
             None => None,
         };
 
@@ -93,11 +93,11 @@ impl SmalltalkClass {
             methods: HashMap::new(),
             vars: vec![],
         })));
-
+        let metaobj = SmalltalkObject::new(metacls.clone());
         let cls = SmalltalkClass(Arc::new(Mutex::new(SmalltalkClassData {
             name,
             parent,
-            meta: Some(metacls),
+            meta: Some(metaobj),
             methods: HashMap::new(),
             vars,
         })));
@@ -126,13 +126,14 @@ impl SmalltalkClass {
         self.0.try_lock().unwrap().name
     }
 
-    pub(crate) fn meta(&self) -> SmalltalkClass {
+    pub(crate) fn meta(&self) -> SmalltalkObject {
         self.0.try_lock().unwrap().meta.clone().unwrap()
     }
 
     pub(crate) fn set_meta(&self, meta_class: SmalltalkClass) {
+        let meta_obj = SmalltalkObject::new(meta_class.clone());
         let mut data = self.0.try_lock().unwrap();
-        data.meta = Some(meta_class);
+        data.meta = Some(meta_obj);
     }
 
     pub(crate) fn insert_variable(
@@ -150,7 +151,7 @@ pub fn get_meta_name(name: &'static str) -> &'static str {
 #[derive(Debug, Clone)]
 pub struct SmalltalkClassData {
     pub parent: Option<SmalltalkClass>,
-    pub meta: Option<SmalltalkClass>,
+    pub meta: Option<SmalltalkObject>,
     pub methods: HashMap<&'static str, Value>,
     name: &'static str,
     vars: Vec<&'static str>,

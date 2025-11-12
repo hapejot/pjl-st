@@ -1,5 +1,5 @@
 use clap::Parser;
-use st::{compiler::compile_method, parser::topdown::parse_eval};
+use st::{parser::topdown::parse_eval};
 use tracing::instrument;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 

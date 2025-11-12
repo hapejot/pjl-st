@@ -75,7 +75,7 @@ impl Execution {
             }
             Register::Result => {
                 self.internal_set_register(0, value);
-            }            
+            }
             _ => {
                 panic!("Invalid register {:?}", reg);
             }
@@ -133,7 +133,7 @@ impl Execution {
         }
     }
 
-    #[tracing::instrument(skip(self))]
+    // #[tracing::instrument(skip(self))]
     pub fn execute(&self) -> Result<Value, Box<dyn Error>> {
         let (instructions, debugger) = {
             let exec = self.0.try_lock().unwrap();
@@ -189,13 +189,33 @@ impl Execution {
             }
             Instruction::StoreLocal { src, var_name } => todo!(),
             Instruction::LoadInstanceVar { dst, index } => {
-                if let Some(Value::Object(smalltalk_object)) = self.get(Register::Receiver) {
-                    let value = smalltalk_object.get_instance_var(*index);
-                    self.set(*dst, value);
-                    Ok(())
+                if let Some(rec) = self.get(Register::Receiver) {
+                    match rec {
+                        Value::String(_) => todo!(),
+                        Value::Integer(_) => todo!(),
+                        Value::Float(_) => todo!(),
+                        Value::Boolean(_) => todo!(),
+                        Value::Character(_) => todo!(),
+                        Value::Object(smalltalk_object) => {
+                            let value = smalltalk_object.get_instance_var(*index);
+                            self.set(*dst, value);
+                            Ok(())
+                        }
+                        Value::Dictionary(mutex) => todo!(),
+                        Value::Array(mutex) => todo!(),
+                        Value::Method(compiled_method) => todo!(),
+                        Value::NativeMethod(_) => todo!(),
+                        Value::Class(smalltalk_class) => {
+                            let value = smalltalk_class.meta().get_instance_var(*index);
+                            self.set(*dst, value);
+                            Ok(())
+                        }
+                        Value::Execution(execution) => todo!(),
+                        Value::Undefined => todo!(),
+                        Value::Nil => todo!(),
+                    }
                 } else {
-                    self.dump_registers();
-                    Err("LOAD_IVAR: Receiver is not an object".into())
+                    Err("LOAD_IVAR: Receiver is not defined".into())
                 }
             }
             Instruction::StoreInstanceVar { src, index } => {
@@ -336,7 +356,7 @@ impl Execution {
             Value::Array(values) => todo!(),
             Value::Method(compiled_method) => todo!(),
             Value::NativeMethod(_) => todo!(),
-            Value::Class(cls) => Ok(Value::Class(cls.meta())),
+            Value::Class(cls) => Ok(Value::Class(cls.meta().class())),
             Value::Execution(e) => Ok(self.vm().execution_class.clone()),
             Value::Undefined => todo!(),
             Value::Nil => self.vm().get_class("Nil"),
@@ -353,13 +373,17 @@ impl Execution {
                     let mut backtrace = vec![cls.name()];
                     while let Some(p) = parent {
                         if let Some(m) = p.lookup_method(selector) {
+                            trace!("found method {} in {}", selector, p.name());
                             return Ok(m.clone());
                         }
                         backtrace.push(p.name());
-                        trace!("Method {} not found in {}, checking parent {:?}", selector, p, p.parent());
                         parent = p.parent();
                     }
-                    Err(format!("Method '{}' not found in classes: {:}", selector, backtrace.join(", ")))
+                    Err(format!(
+                        "Method '{}' not found in classes: {:}",
+                        selector,
+                        backtrace.join(", ")
+                    ))
                 }
             }
             _ => Err("Invalid class value".into()),

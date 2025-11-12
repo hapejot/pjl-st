@@ -1,5 +1,5 @@
 use st::{
-    compiler::{VariableAllocation, compile_method, compile_statements},
+    compiler::{VariableAllocation, compile_statements},
     init_tracing,
     parser::topdown::parse_eval,
     time_and_trace,
@@ -16,7 +16,7 @@ fn test_block() {
         }
         Ok(result) => {
             init_tracing();
-            compile_method(vec![], vec![], &result).unwrap();
+            compile_statements(&result).unwrap();
         }
     }
 }
@@ -31,7 +31,7 @@ fn test_simple_add_compile() {
         }
         Ok(result) => {
             init_tracing();
-            compile_method(vec![], vec![], &result).unwrap();
+            compile_statements(&result).unwrap();
         }
     }
 }
@@ -46,7 +46,7 @@ fn test_complex_expression() {
         }
         Ok(result) => {
             init_tracing();
-            compile_method(vec![], vec![], &result).unwrap();
+            compile_statements(&result).unwrap();
         }
     }
 }

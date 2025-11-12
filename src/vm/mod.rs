@@ -205,12 +205,19 @@ fn meta_class_new(
 impl VirtualMachine {
     pub fn new() -> Self {
         let object_class = SmalltalkClass::new("Object", None, vec![]);
+        let meta_class = SmalltalkClass::new("Behavior", Some(object_class.clone()), vec![ "superClass", "methodDictionary", "instanceSpec", "subClasses", "instanceVariables" ]);
+        let class_description =
+            SmalltalkClass::new("ClassDescription", Some(meta_class.clone()), vec![]);
+        let class_class = SmalltalkClass::new("Class", Some(class_description.clone()), vec![ "name", "comment", "category", "environment", "classVariables", "sharedPools", "pragmaHandlers" ]);
+        object_class.set_meta(class_class.clone());
+
         let number_class = SmalltalkClass::new("Number", Some(object_class.clone()), vec![]);
         let integer_class = SmalltalkClass::new("Integer", Some(number_class.clone()), vec![]);
         let float_class = SmalltalkClass::new("Float", Some(number_class.clone()), vec![]);
         let execution_class = SmalltalkClass::new("Execution", Some(object_class.clone()), vec![]);
         let nil_class = SmalltalkClass::new("Nil", Some(object_class.clone()), vec![]);
-        let undefined_class = SmalltalkClass::new("UndefinedObject", Some(object_class.clone()), vec![]);
+        let undefined_class =
+            SmalltalkClass::new("UndefinedObject", Some(object_class.clone()), vec![]);
 
         integer_class.insert_method("+", Value::NativeMethod(integer_add));
         integer_class.insert_method("-", Value::NativeMethod(integer_sub));
@@ -225,18 +232,24 @@ impl VirtualMachine {
         // integer_methods.insert("-", Value::Method(Arc::new(CompiledMethod::default())));
         // integer_methods.insert("*", Value::Method(Arc::new(CompiledMethod::default())));
         // integer_methods.insert("/", Value::Method(Arc::new(CompiledMethod::default())));
+        // -------------------------------------------------------
+        // initialize smalltalk dictionary
 
         let mut st = HashMap::new();
+
+        st.insert("Object", object_class.clone().into());
+        st.insert("Behavior", meta_class.clone().into());
+        st.insert("ClassDescription", class_description.clone().into());
+        st.insert("Class", class_class.clone().into());
+
         st.insert("Integer", integer_class.clone().into());
         st.insert("Number", number_class.clone().into());
-        st.insert("Object", object_class.clone().into());
         st.insert("Execution", execution_class.clone().into());
         st.insert("Nil", nil_class.clone().into());
         st.insert("nil", Value::Nil);
         st.insert("UndefinedObject", undefined_class.clone().into());
-        let meta_class = SmalltalkClass::new("Behavior", None, vec![]);
         meta_class.insert_method("basicNew", Value::NativeMethod(meta_class_new));
-        object_class.set_meta(meta_class.clone());
+        // object_class.set_meta(meta_class.clone());
         st.insert("Behavior", meta_class.clone().into());
 
         Self {
@@ -329,9 +342,9 @@ impl VirtualMachine {
         match class_value {
             Value::Class(mut cls) => {
                 if meta {
-                    cls = cls.meta();
+                    cls = cls.meta().class();
                 }
-
+                trace!("compiling for {}", cls.name());
                 let cm = compile_method(cls.instance_vars(), parameter_names, &node)?;
                 for (i, inst) in cm.instructions().iter().enumerate() {
                     trace!("{:04}: {}", i, inst);
@@ -499,7 +512,7 @@ impl VirtualMachine {
         _expr: SmalltalkNode,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Value::Class(cls) = self.get_class(class_name)? {
-            cls.meta().insert_variable(ident)?;
+            cls.meta().class().insert_variable(ident)?;
         }
         Ok(())
     }
@@ -525,7 +538,7 @@ impl VirtualMachine {
     ) -> Result<CompiledMethod, Box<dyn std::error::Error>> {
         let cls = self.get_class(class_name)?;
         if let Value::Class(cls) = cls {
-            if let Some(Value::Method(method)) = cls.meta().lookup_method(selector) {
+            if let Some(Value::Method(method)) = cls.meta().class().lookup_method(selector) {
                 Ok(method.clone())
             } else {
                 Err("method not found".into())

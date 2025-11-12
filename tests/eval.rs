@@ -1,9 +1,8 @@
 use core::time;
 
 use st::{
-    compiler::{compile_method, compile_statements},
+    compiler::{compile_statements},
     init_tracing,
-    memory::Value,
     parser::topdown::parse_eval,
     time_and_print, time_and_trace, time_execution,
     vm::VirtualMachine,
@@ -13,7 +12,7 @@ use tracing::trace;
 #[test]
 fn eval_simple_add() {
     let src = "^1+2";
-    let cm = compile_method(vec![], vec![], &parse_eval(src).unwrap()).unwrap();
+    let cm = compile_statements( &parse_eval(src).unwrap()).unwrap();
     let vm = Box::leak(Box::new(VirtualMachine::new()));
     init_tracing();
     let result = &vm.execute_method(cm).unwrap();
@@ -38,7 +37,7 @@ fn create_class_with_method() {
         .unwrap();
 
     let src = "^17 @ 42";
-    let cm = compile_method(vec![], vec![], &parse_eval(src).unwrap()).unwrap();
+    let cm = compile_statements(&parse_eval(src).unwrap()).unwrap();
     let result = vm.execute_method(cm).unwrap();
     assert_eq!(format!("{}", result), "<Object Class Point [17, 42]>");
 }
@@ -61,7 +60,7 @@ fn read_point_file() {
     }
 
     let src = "^(17 @ 42)+1";
-    let cm = compile_method(vec![], vec![], &parse_eval(src).unwrap()).unwrap();
+    let cm = compile_statements(&parse_eval(src).unwrap()).unwrap();
     init_tracing();
     let result = vm.execute_method(cm).unwrap();
     assert_eq!(format!("{}", result), "<Object Class Point [18, 43]>");
@@ -76,7 +75,7 @@ fn block_eval() {
     init_tracing();
 
     let vm = Box::leak(Box::new(VirtualMachine::new()));
-    let cm = compile_method(vec![], vec![], &parse_eval(src).unwrap()).unwrap();
+    let cm = compile_statements(&parse_eval(src).unwrap()).unwrap();
     let result = vm.execute_method(cm).unwrap();
     assert_eq!("3", format!("{}", result));
 }
@@ -91,7 +90,7 @@ fn equal_objects() {
     vm.compile_file("kernel", "Magnitude.st").unwrap();
     vm.compile_file("kernel", "Number.st").unwrap();
     vm.compile_file("kernel", "Integer.st").unwrap();
-    let cm = compile_method(vec![], vec![], &parse_eval(src).unwrap()).unwrap();
+    let cm = compile_statements(&parse_eval(src).unwrap()).unwrap();
     let result = vm.execute_method(cm).unwrap();
     assert_eq!("false", format!("{}", result));
 }

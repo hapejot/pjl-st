@@ -69,7 +69,7 @@ pub fn lexer_rules() -> LexerRules {
         "DEFAULT" | "SYMBOL" = pattern r"#[a-zA-Z_][a-zA-Z_0-9:]*";
         "DEFAULT" | "SYMBOL" = pattern r"#[-%&,*+/<=>?@\\~!|][-%&,*+/<=>?@\\~!|]?";
         "DEFAULT" | "KEYWORD" = pattern r"[a-zA-Z_][a-zA-Z_0-9]*:";
-        "DEFAULT" | "STRING" = pattern r"'[^']*'";
+        "DEFAULT" | "STRING" = pattern r"'([^']|'')*'";
         // "DEFAULT" | "CATEGORY" = pattern r"<category: *'[^']*'>" => |lexer| lexer.take_and_map(|s| {
         //     let s = &s["<category:".len()..s.len() - 1].trim();
         //     let s = s.trim_matches('\'');
@@ -89,7 +89,7 @@ pub fn lexer_rules() -> LexerRules {
             s.to_string()
         });
          // "DEFAULT" | "LOCAL" = pattern r":[a-zA-Z_][a-zA-Z_0-9]*";
-        "DEFAULT" | "COMMENT" = pattern "\"[^\"]*\"" => |l| l.skip();
+        "DEFAULT" | "COMMENT" = pattern "\"([^\"]|\"\")*\"" => |l| l.skip();
         "DEFAULT" | ":" = string ":";
         "DEFAULT" | "END_OF_CHUNK" = string "!";
         "DEFAULT" | "." = string ".";
