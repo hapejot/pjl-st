@@ -180,14 +180,14 @@ impl Execution {
                 self.set(*dst, value.clone());
                 Ok(())
             }
-            Instruction::LoadReceiver { dst } => {
+            Instruction::LoadReceiver { dst: _dst } => {
                 todo!()
             }
             Instruction::LoadGlobal { dst, var_name } => {
                 self.set(*dst, self.get_global(var_name)?);
                 Ok(())
             }
-            Instruction::StoreLocal { src, var_name } => todo!(),
+            Instruction::StoreLocal { src: _src, var_name: _var_name } => todo!(),
             Instruction::LoadInstanceVar { dst, index } => {
                 if let Some(rec) = self.get(Register::Receiver) {
                     match rec {
@@ -201,16 +201,16 @@ impl Execution {
                             self.set(*dst, value);
                             Ok(())
                         }
-                        Value::Dictionary(mutex) => todo!(),
-                        Value::Array(mutex) => todo!(),
-                        Value::Method(compiled_method) => todo!(),
+                        Value::Dictionary(_mutex) => todo!(),
+                        Value::Array(_mutex) => todo!(),
+                        Value::Method(_compiled_method) => todo!(),
                         Value::NativeMethod(_) => todo!(),
                         Value::Class(smalltalk_class) => {
                             let value = smalltalk_class.meta().get_instance_var(*index);
                             self.set(*dst, value);
                             Ok(())
                         }
-                        Value::Execution(execution) => todo!(),
+                        Value::Execution(_execution) => todo!(),
                         Value::Undefined => todo!(),
                         Value::Nil => todo!(),
                     }
@@ -258,12 +258,7 @@ impl Execution {
                 self.execute_create_block(*dst, *prog_id)?;
                 Ok(())
             }
-            Instruction::CallBlock { dst, block_reg } => todo!(),
-            Instruction::CallBlockWithArgs {
-                dst,
-                block_reg,
-                args,
-            } => todo!(),
+            Instruction::CallBlock { dst: _dst, block_reg: _block_reg } => todo!(),
             Instruction::Nop => Ok(()),
             x => todo!("{x}"),
         }
@@ -352,12 +347,12 @@ impl Execution {
                 let class_value = smalltalk_object.class();
                 Ok(class_value.into())
             }
-            Value::Dictionary(hash_map) => todo!(),
-            Value::Array(values) => todo!(),
-            Value::Method(compiled_method) => todo!(),
+            Value::Dictionary(_hash_map) => todo!(),
+            Value::Array(_values) => todo!(),
+            Value::Method(_compiled_method) => todo!(),
             Value::NativeMethod(_) => todo!(),
             Value::Class(cls) => Ok(Value::Class(cls.meta().class())),
-            Value::Execution(e) => Ok(self.vm().execution_class.clone()),
+            Value::Execution(_e) => Ok(self.vm().execution_class.clone()),
             Value::Undefined => todo!(),
             Value::Nil => self.vm().get_class("Nil"),
         }

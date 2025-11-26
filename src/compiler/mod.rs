@@ -1,7 +1,7 @@
 use pjl_static_strings::StringTable;
 use std::io::Write;
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     sync::{Arc, Mutex},
     vec,
 };
@@ -123,7 +123,7 @@ impl SmalltalkCompiler {
         Register::Number(0, q)
     }
 
-    fn free_register(&mut self, reg: Register) {}
+    fn free_register(&mut self, _reg: Register) {}
 
     #[instrument(skip(self, node))]
     fn compile_node(
@@ -342,6 +342,7 @@ impl SmalltalkCompiler {
         self.code.push(inst);
     }
 
+    #[allow(dead_code)]
     pub fn dump_to_trace(&self) {
         trace!("Compiled Method:");
 
@@ -381,14 +382,15 @@ pub fn compile_statements(node: &SmalltalkNode) -> Result<CompiledMethod, String
 
 fn dummy(
     _vm: &crate::vm::execution::Execution,
-    receiver: Value,
-    args: Vec<Value>,
+    _receiver: Value,
+    _args: Vec<Value>,
 ) -> Result<Value, Box<dyn std::error::Error>> {
     Ok(Value::Undefined)
 }
 
+#[allow(dead_code)]
 fn sample_method(
-    vm: &crate::vm::execution::Execution,
+    _vm: &crate::vm::execution::Execution,
     receiver: Value,
     args: Vec<Value>,
 ) -> Result<Value, Box<dyn std::error::Error>> {

@@ -1,7 +1,6 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use pjl_static_strings::StringTable;
-use santiago::lexer::{Lexeme, lex};
 use tracing::{error, instrument, trace};
 
 use crate::{
@@ -111,8 +110,6 @@ pub struct SmalltalkParser {
     current_raw: &'static str,
     position: usize,
 }
-
-type Token = Rc<Lexeme>;
 
 impl SmalltalkParser {
     pub fn new(src: &str) -> Result<Self, String> {

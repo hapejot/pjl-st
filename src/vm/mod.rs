@@ -1,7 +1,7 @@
 use crate::{
     debug::Debugger,
     vm::{
-        block::{CompiledBlock, CompiledMethod},
+        block::CompiledMethod,
         error::RuntimeError,
         execution::Execution,
         register::Register,
@@ -10,7 +10,6 @@ use crate::{
 use std::{
     collections::HashMap,
     error::Error,
-    fmt::Display,
     fs::File,
     io::Read,
     sync::{Arc, Mutex},
@@ -142,7 +141,8 @@ fn integer_ge(_vm: &Execution, receiver: Value, args: Vec<Value>) -> Result<Valu
     }
 }
 
-fn object_eq(_vm: &Execution, receiver: Value, args: Vec<Value>) -> Result<Value, Box<dyn Error>> {
+#[allow(dead_code)]
+fn object_eq(_vm: &Execution, _receiver: Value, args: Vec<Value>) -> Result<Value, Box<dyn Error>> {
     if args.len() != 1 {
         return Err("Integer greater than requires 1 argument".into());
     }
@@ -162,7 +162,7 @@ fn integer_eq(_vm: &Execution, receiver: Value, args: Vec<Value>) -> Result<Valu
 fn execution_value0(
     _vm: &Execution,
     receiver: Value,
-    args: Vec<Value>,
+    _args: Vec<Value>,
 ) -> Result<Value, Box<dyn Error>> {
     match receiver {
         Value::Execution(a) => a.execute(),

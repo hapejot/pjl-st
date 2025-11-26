@@ -17,7 +17,7 @@ fn test_grammar() {
 
 #[test]
 fn class_variables() {
-    let mut vm = Box::leak(Box::new(VirtualMachine::new()));
+    let vm = Box::leak(Box::new(VirtualMachine::new()));
     let src = r#"
 nil subclass: Object [
     
@@ -39,5 +39,5 @@ All classes in the system are subclasses of me.'>
     ] ]
 "#;
     init_tracing();
-    let r = vm.compile_src(src);
+    let _r = vm.compile_src(src);
 }

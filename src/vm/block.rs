@@ -11,6 +11,7 @@ pub struct CompiledBlock {
     pub depth: usize,
 }
 impl CompiledBlock {
+    #[allow(dead_code)]
     pub(crate) fn dump_to_trace(&self) {
         self.instructions.iter().enumerate().for_each(|(i, inst)| {
             trace!("  {:04}: {}", i, inst);
