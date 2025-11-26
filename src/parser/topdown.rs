@@ -71,7 +71,9 @@ pub enum SmalltalkNode {
         superclass: Option<&'static str>,
     },
     CascadeReceiver,
+    Primitive(&'static str, Option<Box<SmalltalkNode>>),
 }
+
 /// Parser error with location information
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -164,14 +166,22 @@ impl SmalltalkParser {
 
     /// parsing a statement to evaluate
     pub fn parse_eval(&mut self) -> Result<SmalltalkNode, Box<dyn std::error::Error>> {
-        let _pragmas = self.pragmas().unwrap();
+        let mut pragmas = self.pragmas().unwrap();
         let temporaries = self.parse_temporaries()?;
-        let _pragmas = self.pragmas().unwrap();
-        let r = self.parse_statements();
-        if let Ok(SmalltalkNode::Statements(_, s)) = r {
-            return Ok(SmalltalkNode::Statements(temporaries, s));
+        pragmas.extend(self.pragmas().unwrap());
+        let primitive = pragmas
+            .iter()
+            .filter(|p| p.starts_with("primitive: "))
+            .map(|p| p.trim_start_matches("primitive: "))
+            .nth(0);
+        let mut r = self.parse_statements()?;
+        if let SmalltalkNode::Statements(_, s) = r {
+            r = SmalltalkNode::Statements(temporaries, s);
         }
-        r
+        if let Some(p) = primitive {
+            r = SmalltalkNode::Primitive(p, Some(Box::new(r)));
+        }
+        Ok(r)
     }
 
     /// Create an error message with location information
@@ -995,10 +1005,10 @@ impl SmalltalkParser {
         self.parse_expression()
     }
 
-    pub(crate) fn pragmas(&mut self) -> Result<Vec<String>, String> {
+    pub(crate) fn pragmas(&mut self) -> Result<Vec<&'static str>, String> {
         let mut pragmas = Vec::new();
         while self.current_token() == "PRAGMA" {
-            let result = self.current_raw.to_string();
+            let result: &'static str = self.current_raw;
             self.advance();
             trace!("pragma {result}");
             pragmas.push(result);

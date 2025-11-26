@@ -17,6 +17,7 @@ use std::{
     vec,
 };
 
+use pjl_st_macros::st_primitive;
 use tracing::{instrument, trace};
 
 use crate::{
@@ -54,6 +55,16 @@ impl std::fmt::Debug for VirtualMachine {
             .finish()
     }
 }
+
+
+#[st_primitive]
+fn st_integer_add(v1: Value, v2:Value) -> Result<Value, Box<dyn Error>> {
+    match (v1, v2) {
+        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
+        _ => Err("Integer addition requires integer arguments".into()),
+    }
+}
+
 
 fn integer_add(
     _vm: &Execution,
@@ -205,10 +216,32 @@ fn meta_class_new(
 impl VirtualMachine {
     pub fn new() -> Self {
         let object_class = SmalltalkClass::new("Object", None, vec![]);
-        let meta_class = SmalltalkClass::new("Behavior", Some(object_class.clone()), vec![ "superClass", "methodDictionary", "instanceSpec", "subClasses", "instanceVariables" ]);
+        let meta_class = SmalltalkClass::new(
+            "Behavior",
+            Some(object_class.clone()),
+            vec![
+                "superClass",
+                "methodDictionary",
+                "instanceSpec",
+                "subClasses",
+                "instanceVariables",
+            ],
+        );
         let class_description =
             SmalltalkClass::new("ClassDescription", Some(meta_class.clone()), vec![]);
-        let class_class = SmalltalkClass::new("Class", Some(class_description.clone()), vec![ "name", "comment", "category", "environment", "classVariables", "sharedPools", "pragmaHandlers" ]);
+        let class_class = SmalltalkClass::new(
+            "Class",
+            Some(class_description.clone()),
+            vec![
+                "name",
+                "comment",
+                "category",
+                "environment",
+                "classVariables",
+                "sharedPools",
+                "pragmaHandlers",
+            ],
+        );
         object_class.set_meta(class_class.clone());
 
         let number_class = SmalltalkClass::new("Number", Some(object_class.clone()), vec![]);
@@ -312,7 +345,7 @@ impl VirtualMachine {
         selector: &'static str,
         parameter_names: Vec<&'static str>,
         src: &'static str,
-    ) -> Result<(), String> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         trace!(
             "Defining method {}>>{} with params {:?} from source: {}",
             class_name, selector, parameter_names, src
@@ -330,7 +363,7 @@ impl VirtualMachine {
         selector: &'static str,
         parameter_names: Vec<&'static str>,
         node: crate::parser::topdown::SmalltalkNode,
-    ) -> Result<(), String> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let class_value = {
             let s = self.st.as_dictionary()?;
             s.try_lock()
@@ -346,13 +379,15 @@ impl VirtualMachine {
                 }
                 trace!("compiling for {}", cls.name());
                 let cm = compile_method(cls.instance_vars(), parameter_names, &node)?;
-                for (i, inst) in cm.instructions().iter().enumerate() {
-                    trace!("{:04}: {}", i, inst);
+                if let Value::Method(cm) = &cm {
+                    for (i, inst) in cm.instructions().iter().enumerate() {
+                        trace!("{:04}: {}", i, inst);
+                    }
                 }
                 cls.insert_method(selector, cm.into());
             }
             _ => {
-                return Err(format!("Class '{}' not found", class_name));
+                return Err(format!("Class '{}' not found", class_name).into());
             }
         }
 
@@ -407,7 +442,10 @@ impl VirtualMachine {
                             parser.expect("[")?;
                             let inst_vars = parser.parse_temporaries()?;
                             trace!("Instance variables: {:?}", inst_vars);
-                            let _o = parser.pragmas()?;
+                            let pragmas = parser.pragmas()?;
+                            if pragmas.iter().any(|p| p.starts_with("primitive: ")) {
+                                todo!("handle primitive")
+                            }
                             if parent == "nil" {
                                 self.define_class(*child, None, inst_vars).unwrap();
                             } else {

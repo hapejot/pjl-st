@@ -1,9 +1,10 @@
+use pjl_static_strings::StringTable;
+use std::io::Write;
 use std::{
+    fs::{File, OpenOptions},
     sync::{Arc, Mutex},
     vec,
 };
-
-use pjl_static_strings::StringTable;
 use tracing::{error, instrument, trace};
 
 use crate::{
@@ -378,23 +379,59 @@ pub fn compile_statements(node: &SmalltalkNode) -> Result<CompiledMethod, String
     return Ok(m);
 }
 
+fn dummy(
+    _vm: &crate::vm::execution::Execution,
+    receiver: Value,
+    args: Vec<Value>,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    Ok(Value::Undefined)
+}
+
+fn sample_method(
+    vm: &crate::vm::execution::Execution,
+    receiver: Value,
+    args: Vec<Value>,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    if args.len() != 1 {
+        return Err("Integer addition requires 1 argument".into());
+    }
+    match (&receiver, &args[0]) {
+        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
+        _ => Err("Integer addition requires integer arguments".into()),
+    }
+}
+
+
+
 #[instrument(skip(node))]
 pub fn compile_method(
     instance_vars: Vec<&'static str>,
     par: Vec<&'static str>,
     node: &SmalltalkNode,
-) -> Result<CompiledMethod, String> {
+) -> Result<Value, Box<dyn std::error::Error>> {
     let mut c = SmalltalkCompiler::new();
     c.instance_vars = instance_vars;
     for p in par {
         c.var_allocation.add(p)?;
     }
+
     // c.add_instruction(Instruction::Move {
     //     dst: Register::Result,
     //     src: Register::Receiver,
     // });
-    let _r = c.compile_node(None, node)?;
 
-    let m = CompiledMethod::new(c.code, c.blocks, c.var_allocation.allocation.len());
-    return Ok(m);
+    if let SmalltalkNode::Primitive(p, _) = node {
+        let mut f = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(true)
+            .open("primitive.log")?;
+        writeln!(f, "{p}")?;
+        return Ok(Value::NativeMethod(dummy));
+    } else {
+        let _r = c.compile_node(None, node)?;
+
+        let m = CompiledMethod::new(c.code, c.blocks, c.var_allocation.allocation.len());
+        return Ok(Value::Method(m));
+    }
 }

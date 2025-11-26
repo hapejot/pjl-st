@@ -260,52 +260,61 @@ For example, in some implementations it is not possible to distinguish a pool fr
 More generally, it is not possible to synthesize the original initialization expressions for global variables.
 It is only possible to produce expressions
 that reproduce their current values.
+
 Lack of a program definition in traditional Smalltalk environments leads to an undue reliance on the virtual image. Images
 can become obsolete or broken. Because the program is encoded in the image, the program is in danger of becoming
 inaccessible if the image becomes outmoded or corrupt.
+
 Smalltalk's imperative program construction model also requires that the same virtual image be used both for program
 creation and program delivery. This makes it very difficult to support situations where the development must be performed in
 a computing environment that is different from the target execution environment.
+
 Because of the issues identified above this standard has chosen to use a declarative model to define Smalltalk programs.
 This requires the introduction of additional declarative abstractions to the language for program elements that previously
 had only been defined in terms of implementation artifacts. All elements of a Smalltalk program are described existentially at
 a level of abstraction that does not overly constrain implementations of the language. The meaning of such a Smalltalk
 program should be understandable solely from the definition of the program without actually executing a program
 construction processor or making use of a pre-initialized execution environment.
+
 The use of a declarative specification model has little direct impact upon Smalltalk programmers. Even though Smalltalk has
 traditionally been implemented using an imperative program description model, the perception of most Smalltalk
 programmers is of a declarative model. This is because Smalltalk programmers typically create and edit programs using a
 browser that presents the classes that make up the program in a declarative style.
+
 With the declarative language model the use of reflection is not required (although it is permitted) in order to define a
 Smalltalk program. The following are a few other implementation assumptions made about the traditional execution
 environment for Smalltalk programs that are eliminated using this declarative model:
-• A system dictionary exists.
-• All classes, globals, and pools are in this system dictionary.
-• Pools are realized using dictionaries.
-• Global and pool variables are represented as associations.
 
+- A system dictionary exists.
+- All classes, globals, and pools are in this system dictionary.
+- Pools are realized using dictionaries.
+- Global and pool variables are represented as associations.
+- Each class has an associated metaclass.
+- Methods are objects.
 
-
-• Each class has an associated metaclass.
-• Methods are objects.
 It is possible to create an implementation that conforms to this standard that contradicts none of these assumptions.
 However, it is equally possible to create a conforming implementation where none of the assumptions is true.
 
-3.1 Computational Model of Smalltalk Execution
+## Computational Model of Smalltalk Execution
+
 A Smalltalk program is a means for describing a dynamic computational process. This section
 defines the entities that exist in the computational environment of Smalltalk programs.
 A variable is a computational entity that stores a single reference (the value of the variable) to an
 object.
+
 A message is a request to perform a designated computation. An object is a computational entity
 that is capable of responding to a well defined set of messages. An object may also encapsulate
 some (possibly mutable) state.
 An object responds to a message by executing a method. Each method is identified by an
 associated method selector. A behavior is the set of methods used by an object to respond to
 messages.
+
 A method consists of a sequence of expressions. Program execution proceeds by sequentially
 evaluating the expressions in one of more methods. There are three types of expressions:
 assignments, message sends, and returns.
+
 An assignment changes the value of a variable.
+
 A message send causes execution of the currently active method to be temporarily suspended and
 for program execution to continue starting with the first expression of another method. A message
 send directs a message to an object. The object is called the receiver of the message. A message
@@ -314,15 +323,18 @@ When an object receives a message, the method selector of the message is used to
 method from the object's behavior that corresponds to the selector. The method becomes the new
 locus of execution. Special processing takes place if the receiver's behavior does not include a
 method corresponding to the message's method selector.
+
 A return terminates execution of a method and causes execution to resume within the method that
 executed the message send that activated the method containing the return. Execution continues
 immediately following the message send expression. The return provides a value (an object
 reference) that becomes the value of the message send.
+
 Within the text that defines a Smalltalk program, identifiers, called variable names, are used to refer
 to variables. A variable name is bound to a variable over some extent of the program definition.
 The extent within a program of such a binding is called the scope of the variable. The only
 operations a program may perform upon a variable are to access its current value or to assign it a
 new value.
+
 The encapsulated state of an object consists of a (possibly empty) set of variables. Such variables
 are called instance variables. Normally each variable is bound to an associated instance variable
 name. The state of an object may also include a set of unnamed instance variables that are
@@ -332,17 +344,17 @@ execution entities that exist independently of any objects. Variables that are n
 are called discrete variables. A discrete variable whose scope is the entire program is a global
 variable. Other types of discrete variables are pool variables, class variables, and temporary
 variables.
+
 The objects that exist during program execution consist of both statically created objects and
 dynamically created objects. A statically created object is an individual object that is explicitly
-
-
-
 defined by the text of a Smalltalk program. Typically these are either literals or class objects. Some
 statically created objects are bound to an object name within some scope. Such objects are called
 named objects. The most commonly occurring named objects are class objects.
+
 Dynamically created objects are not individually defined by the program, instead they are
 dynamically created as a side effect of the execution of a method. Dynamically created objects do
 not have names. They are typically referenced as the value of a variable.
+
 Smalltalk does not provide an explicit mechanism for destroying objects. Conceptually, once an
 object is created it continues to exist for the duration of the program's execution. In practice, many
 objects are used for only a portion of a program's execution and then logically ignored. Smalltalk
@@ -352,28 +364,34 @@ execution each object must continue to exist, preserving its state, for as long 
 execute any statement that may reference a variable having that object as its value. The garbage
 collector is free to reclaim the resources associated with any object when it can prove that
 continued execution of the program will never reference that object.
+
 Immediately prior to the execution of a Smalltalk program all statically created objects are in their
 initial state as defined by the Smalltalk program and the values of all discrete variables are
 undefined. Execution proceeds by sequentially executing each initializer in the order specified by
 the program definition. If a program accesses any variable that has not been explicitly initialized
 either by an initializer or by an assignment statement its value will be the object named nil.
+
 Rationale
+
 The vast majority of Smalltalk application programs do not utilize the reflective capabilities available in traditional Smalltalk
 implementations. For this reason, we view such reflective capabilities as artifacts primarily used in the implementation of
 incremental program facilities and do not mandate their presence in all Smalltalk implementations. Given this view, the
 standard execution model only needs to define the entities that are part of a programmer's view of a running Smalltalk
 program. These are variables and objects with state and behavior. Implementation artifacts such as compiled methods,
 method dictionaries, or associations representing variables are excluded.
+
 Class objects have no special significance other than having names and having behaviors and state distinct from that of
 their associated instance objects. Unlike classic Smalltalk definitions [Goldberg83], they are not defined as being the
 containers or implementers of their instances' behavior. The techniques used to implement the behavior of objects is left to
 the implementers. Finally, because classes are not specified as the implementers of behavior, metaclasses are not needed
 to provide the behavior of class objects.
 
-3.2 The Syntax of Smalltalk Programs
+## The Syntax of Smalltalk Programs
+
 The Smalltalk programming language provides the notation for defining Smalltalk programs. The
 previous section defined the computational elements of such a program. This section defines the
 notation.
+
 Traditionally, Smalltalk has not had an explicit notation for describing an entire program. An explicit
 syntax definition has been used for certain program elements, such as methods, but the manner in
 which such elements were structured into a complete program was defined by the various
@@ -390,11 +408,9 @@ The notation for Smalltalk programs are defined by three inter-related specifica
 grammar specifies the valid sequences of individual characters that make of the tokens of the
 Smalltalk language. These token serve as the "atoms" out of which Smalltalk program definitions
 are constructed. The method grammar specifies the concrete syntax for creating methods and
-
-
-
 initializers from tokens. The abstract program grammar specifies the abstract syntax of a complete
 Smalltalk program.
+
 The lexical grammar defines a concrete syntax for tokens and the method grammar and for
 methods and initializers. They define a single, specific language for defining such entities. The
 abstract program grammar does not define a concrete syntax. Instead, it specifies the logical
@@ -402,9 +418,9 @@ structure of a Smalltalk program and identifies optional and required program el
 A variant of Extended Backus-Naur Form (EBNF) is used to define each of the three grammars.
 The symbols that make up the productions of the grammar are either identifiers that name syntactic
 categories or literal tokens enclosed in single quotes. The names of syntactic categories of the
-program grammar are enclosed by double angle brackets (for example:<<progamElement>>). The
+program grammar are enclosed by double angle brackets (for example:\<\<progamElement>>). The
 names of syntactic categories of the method grammar are enclosed by single angle brackets (for
-example: <assignment>). Identifiers that are neither quoted or enclosed by angle brackets are
+example: \<assignment>). Identifiers that are neither quoted or enclosed by angle brackets are
 names of syntactic categories of the lexical grammar (for example: identifier). Productions of the
 abstract program grammar may reference symbols of either the method grammar or lexical
 grammar. Productions of the method grammar may reference symbols of the token grammar.
@@ -412,12 +428,17 @@ Within productions, alternatives are separated by a vertical bar ('|'), and typi
 lines. Optional symbols are enclosed in square brackets ('[' and ']'). Symbols may also be grouped
 using parenthesis. The plus sign ('+') following a symbol or group of symbols indicates one or more
 repetitions; an asterisk ('*') indicates zero or more repetitions. For example: the following rule:
-['('] <statement>+ [')']
+
+``` 
+['('] \<statement>+ [')']
+```
+
 defines a sequence of one or more statements that are optionally enclosed in parentheses.
 Within the concrete lexical and method grammar, the ordering elements of the elements of a
 product define a required syntactic ordering. Within the abstract program grammar, the ordering of
 the elements of a production do not define or imply any such syntactic ordering The productions of
 the abstract program syntax are only used to define the constituent elements of a program.
+
 Ordering and other structural attributes are a characteristic of concrete program syntax and except
 for the "Smalltalk Interchange Format" are outside of the scope of this standard. An optional
 symbol in an abstract program grammar production identifies a program element that is optionally
@@ -425,45 +446,55 @@ present. Repeat symbols indicate that multiple instances of the program element 
 The occurrence of a lexical grammar or method grammar symbol in a production of the abstract
 program grammar means that any concrete form of the abstract production must include the
 concrete language element produced by the symbol's production.
-Abstract grammar identifiers that are in italics (for example, <<flag>>) are "atoms" that do not have
+
+Abstract grammar identifiers that are in italics (for example, \<\<flag>>) are "atoms" that do not have
 further structure or contain any lexical or method grammar elements. Typically such identifiers
 correspond to optional attributes of program element definitions. Any concrete program syntax
 must provide a mechanism for specifying these attributes.
-3.3 Smalltalk Abstract Program Grammar
 
-3.3.1 Program DefinitionThe definition of Smalltalk programs consists of a sequence of program
+## Smalltalk Abstract Program Grammar
+
+### Program Definition
+
+The definition of Smalltalk programs consists of a sequence of program
 element definitions. The program element definitions define all discrete variables, statically created
 objects and the behaviors of all objects that will take part in the computation. In addition, the
 program definition specifies the order of dynamic initialization for all program elements.
-<<Smalltalk program>> ::= <<program element>>+ <<initialization ordering>>
-<<program element>> ::= <<class definition>> |
-<<global definition>> |
-<<pool definition>> |
-<<program initializer definition>>
-The concrete syntax, representation, and character encoding of a <<Smalltalk program>> is
 
+``` 
+\<\<Smalltalk program>> ::= \<\<program element>>+ \<\<initialization ordering>>
+\<\<program element>> ::= \<\<class definition>> |
+\<\<global definition>> |
+\<\<pool definition>> |
+\<\<program initializer definition>>
+```
 
-
+The concrete syntax, representation, and character encoding of a \<\<Smalltalk program>> is
 implementation defined. A concrete program representation may define syntax for grouping or
-structuring subsequences of <<program elements>> into individual storage units. Such units must
-be logically composable into a valid <<Smalltalk program>>.
-The <<program element>> clause of a <<Smalltalk program>> logically includes the definitions of
+structuring subsequences of \<\<program elements>> into individual storage units. Such units must
+be logically composable into a valid \<\<Smalltalk program>>.
+
+The \<\<program element>> clause of a \<\<Smalltalk program>> logically includes the definitions of
 any standard or implementation program elements used by the program. An implementation may
 define a mechanism for the automatic inclusions of such definitions.
+
 Some program elements define an identifier as a global name that uniquely identifies the program
 element. These global names exist in a single global name scope that is in the scope of every
-<<program element>> within the program. Each global name must be uniquely defined by a single
-<<program element>>. It is erroneous if two or more <<program element>>definitions use the
-same identifier as a global name. The ordering of the <<program element>>definitions should have
-no affect upon the visibility of global names. A <<program element>> may reference any global
-name regardless of whether the definition of the global name proceeds or follows the <<program
+\<\<program element>> within the program. Each global name must be uniquely defined by a single
+\<\<program element>>. It is erroneous if two or more \<\<program element>>definitions use the
+same identifier as a global name. The ordering of the \<\<program element>>definitions should have
+no affect upon the visibility of global names. A \<\<program element>> may reference any global
+name regardless of whether the definition of the global name proceeds or follows the \<\<program
 element>>.
-The <<initialization ordering>> defines the order in which the initialization of each individual
-<<program element>>. will occur. Program execution begins with the execution of the initializer of
-the first <<program element>> and proceeds by executing, in turn, the initializer of each
-subsequent <<program element>>. Execution of the program terminates after completion of the
-initializer of the last <<program element>>.
-3.3.1.1 Name Scopes
+
+The \<\<initialization ordering>> defines the order in which the initialization of each individual
+\<\<program element>>. will occur. Program execution begins with the execution of the initializer of
+the first \<\<program element>> and proceeds by executing, in turn, the initializer of each
+subsequent \<\<program element>>. Execution of the program terminates after completion of the
+initializer of the last \<\<program element>>.
+
+#### Name Scopes
+
 Within a program definition identifiers, called names, are used to refer to various entities. Such a
 name is said to be bound to an entity. An occurrence of the name within the program definition is
 interpreted as a reference to the entity to which the name is bound. The association between a
@@ -473,6 +504,7 @@ available to some portion of the Smalltalk program definition. A reference to a 
 in a program definition is resolved to the specific binding of the name that exists in the scope that is
 available at that point. The binding of a name within a scope may be specified as an error binding.
 Any reference to a name which resolves to an error binding is erroneous.
+
 A name scope may be defined as a composition of other, already defined, name scopes. Two
 name scopes are composed by specifying one of them as the outer scope and the other as the
 inner scope. The set of names in such a composite scope is the union of all the names in the outer
@@ -485,51 +517,50 @@ In this document, an algebraic notation is sometimes used to define composite sc
 operator is used to define a composite scope where the scope on the left of the "+" is the outer
 scope and the scope on the right of the "+" is the inner scope. Parenthesis are used to specify
 complex composite scopes. For example, the expression:
+
+```
 (outer + middle) + inner
+```
+
 describe a composite scope whose outer scope is itself a composite.
-A <<Smalltalk program>> introduces a name scope, called the global scope, that is available to all
+
+A \<\<Smalltalk program>> introduces a name scope, called the global scope, that is available to all
 parts of the program. The global scope is a composite scope whose outer scope is called the
 extension scope and whose inner scope is called the global definition scope. The global definition
-scope contains name that are explicitly defined by <<program element>> definitions. The extension
+scope contains name that are explicitly defined by \<\<program element>> definitions. The extension
 scope exists so that Smalltalk implementations may provide predefined global name bindings. The
-mechanism, if any, for adding name bindings to the extension scope of a <<Smalltalk program>>
+mechanism, if any, for adding name bindings to the extension scope of a \<\<Smalltalk program>>
 is unspecified.
-
-
 
 Global names introduced as part of the implementation of the standard class library or as part of an
 implementation's extended class library have the potential of interfering with the portability of user
 programs. A standard conforming program might not be portable to an implementation if that
 implementation defines a global that is the same name as one of the program's global.
 Rationale
+
 The extension scope exists so that any implementation specified predefined names may be defined a scope that is
 shadowed by all other scopes. This enhances program portability between implementations by ensuring that any
 coincidental explicit definition of a name will take precedence over any implementation specific binding of the same name.
 Three ways to deal with the global name clashes were discussed:
-1.
 
-Recognize and ignore it.
-
-2.
-
-Require that any such global names used by the application use underscore prefixes. This is unlikely to be an
+1.  Recognize and ignore it.
+2.  Require that any such global names used by the application use underscore prefixes. This is unlikely to be an
 acceptable solution as it would essential require all implementation provided globals that are not required by this
 standard to use such names even though they are likely to be referenced by user code.
-
-3.
-
-Require that all implementation globals be defined in the extension scope. Any conflicting user program globals would
+3.  Require that all implementation globals be defined in the extension scope. Any conflicting user program globals would
 shadow the implementation globals. This would generally solve the portability problem but its implementation would
 require significant changes to existing implementations.
 
 A standard conforming implementation may use any of these approaches.
 
-3.3.2 Class Definition
+### Class Definition
+
 A class definition defines the behavior and encapsulated state of objects. In addition, a class
 definition introduces a named object binding within the global definition scope. This name is called
 a class name and the associated object is a class object. A class definition specifies the behavior
 and instance variable structure for both the statically created class object and any dynamically
 created instances of the class.
+
 A class definition specifies two behaviors, the instance behavior and the class behavior. The
 instance behavior is the behavior of any dynamically created instances of the class. The class
 behavior is the behavior for the class object. Through the use of inheritance, the instance variable
@@ -541,95 +572,102 @@ methods (either class or instance methods) defined as part of the class definiti
 class definitions of any subclasses of the class definition. In addition a class definition may specify
 the importation of pools. Any pool variables defined in such pools are included in the scope of all
 methods defined as part of the class definition.
-<<class definition>>::=
-<<class name>> [<<superclass name>>]
-[<<instance state>>]
-[<<class instance variable names>>]
-[<<class variable names>>]
-[<<imported pool names>>]
-[<<instance methods>>]
-[<<class methods>>]
-[<<class initializer>>]
-<<class name>> ::= identifier
-<<superclass name>> ::= identifier
-<<instance state>> :=
-<<byte indexable>> |
-[<<object indexable>>] <<instance variables names>>
-<<instance variables names>> ::= identifier*
-<<class instance variable names>> ::= identifier*
-<<class variable names>> ::= identifier*
-<<imported pool names>> ::= identifier*
-<<instance methods>> ::= <method definition>*
 
+```
+\<\<class definition>>::=
+\<\<class name>> [\<\<superclass name>>]
+[\<\<instance state>>]
+[\<\<class instance variable names>>]
+[\<\<class variable names>>]
+[\<\<imported pool names>>]
+[\<\<instance methods>>]
+[\<\<class methods>>]
+[\<\<class initializer>>]
+\<\<class name>> ::= identifier
+\<\<superclass name>> ::= identifier
+\<\<instance state>> :=
+\<\<byte indexable>> |
+[\<\<object indexable>>] \<\<instance variables names>>
+\<\<instance variables names>> ::= identifier*
+\<\<class instance variable names>> ::= identifier*
+\<\<class variable names>> ::= identifier*
+\<\<imported pool names>> ::= identifier*
+\<\<instance methods>> ::= \<method definition>*
+\<\<class methods>> ::= \<method definition>*
+\<\<class initializer>> ::= \<initializer definition>
+```
 
-
-<<class methods>> ::= <method definition>*
-<<class initializer>> ::= <initializer definition>
-The <<class name>> is the global name of the class object. This binding is contained in the global
+The \<\<class name>> is the global name of the class object. This binding is contained in the global
 definition scope. It is erroneous if there is any other global definitions of this name within the
-program. The binding of the <<class name>> to the class object is a constant binding. It is
+program. The binding of the \<\<class name>> to the class object is a constant binding. It is
 erroneous for an identifier that resolves to such a binding to appear as the target of an assignment
-statement. It is erroneous if the <<class name>> is one of the reserved identifiers, "true", "false",
+statement. It is erroneous if the \<\<class name>> is one of the reserved identifiers, "true", "false",
 "nil", "self" or "super". Class names whose initial character is an underscore are reserved for
 implementation use.
-The <<superclass name>> identifies the class definition from which this definition inherits. It is
-erroneous if <<superclass name>> is not the <<class name>> of another <<class definition>>
-whose binding exists in the global scope of this program. If the <<superclass name>> is absent
-then this class has no inherited behavior. It is erroneous if the <<superclass name>> is the same
-as the <<class name>> or if <<superclass name>> is the name of a class that directly or indirectly
-specifies <<class name>> as its <<superclass name>>.
-3.3.2.1 Instance State Specification
-The <<instance state>> production defines the representation of the state that is encapsulated by
+
+The \<\<superclass name>> identifies the class definition from which this definition inherits. It is
+erroneous if \<\<superclass name>> is not the \<\<class name>> of another \<\<class definition>>
+whose binding exists in the global scope of this program. If the \<\<superclass name>> is absent
+then this class has no inherited behavior. It is erroneous if the \<\<superclass name>> is the same
+as the \<\<class name>> or if \<\<superclass name>> is the name of a class that directly or indirectly
+specifies \<\<class name>> as its \<\<superclass name>>.
+
+#### Instance State Specification
+
+The \<\<instance state>> production defines the representation of the state that is encapsulated by
 objects that are instances of the class. The state consists either of variables that reference other
 objects or variables that store binary data. The number of state variables may either be the same
 for all instances or may vary between different instances.
-The <<byte indexable>>and <<object indexable>> productions specify that the instances of this
+
+The \<\<byte indexable>>and \<\<object indexable>> productions specify that the instances of this
 class encapsulate a variable number of unnamed instance variables. The individual unnamed
 instance variables are identified using numeric integer indices that range from 1 to the total number
 of unnamed instance variables. The actual number of unnamed instance variables associated with
 a particular instance of the class is determined at the time the instance is created. The meaning of
-the class definition is undefined if a class definition includes a <<byte indexable>> clause and any
-superclass definition includes an <<instance variable names>> or an <<object indexable>> clause.
-The meaning is undefined if a class definition includes an <<instance variable names>> or an
-<<object indexable>> clause and any superclass definition includes a <<byte indexable>> clause.
-If a class definition does not include an <<instance state>> clause then the representation of
+the class definition is undefined if a class definition includes a \<\<byte indexable>> clause and any
+superclass definition includes an \<\<instance variable names>> or an \<\<object indexable>> clause.
+The meaning is undefined if a class definition includes an \<\<instance variable names>> or an
+\<\<object indexable>> clause and any superclass definition includes a \<\<byte indexable>> clause.
+If a class definition does not include an \<\<instance state>> clause then the representation of
 instances of the class is the same as the representation of the instances of its superclass. If a class
-definition does not include an <<instance state>> clause and the class definition does not specify a
+definition does not include an \<\<instance state>> clause and the class definition does not specify a
 superclass then instances of the class have no instance state.
-If the <<object indexable>> clause is present in the definition of a class or any of its superclasses
+
+If the \<\<object indexable>> clause is present in the definition of a class or any of its superclasses
 the values of the unnamed instance variables are object references. When such an object is
 created the initial value of each unnamed variable is nil. An object whose state includes such
 variables is called an indexable object. An indexable object may also have named instance
 variables.
-If the <<byte indexable>>clause is present in the definition of a class or any of its superclasses the
+
+If the \<\<byte indexable>>clause is present in the definition of a class or any of its superclasses the
 values of the unnamed instance variables are restricted to be integers in the range 0 to 255. When
 such an object is created the initial value of each unnamed variable is 0. An object whose state
 includes such variables is called a byte indexable object.
-The <<instance variable names>> production defines the names of instance variables of the
-objects that are instances of the class. The identifiers specified by <<instance variables names>>
+
+The \<\<instance variable names>> production defines the names of instance variables of the
+objects that are instances of the class. The identifiers specified by \<\<instance variables names>>
 are called instance variable names. It is erroneous for the same identifier to occur more than once
 in the sequence of instance variable names. The meaning of the class definition is undefined if any
 of the instance variable names is the same identifier as an instance variable name or class variable
 name defined by any superclass. It is erroneous for an instance variable name to also appear as a
 class variable name. It is erroneous if an instance variable name is one of the reserved identifiers,
 "true", "false", "nil", "self" or "super". The complete instance variable set is the set consisting of the
-
-
-
-union of the set of instance variable names of the <<class definition>> and the complete instance
-variable set of the class definition's superclass. If a <<superclass name>> is not specified in a
+union of the set of instance variable names of the \<\<class definition>> and the complete instance
+variable set of the class definition's superclass. If a \<\<superclass name>> is not specified in a
 class definition its complete instance variable set is simply the set of instance variable names of the
-<<class definition>>.
+\<\<class definition>>.
+
 Rationale
+
 The meaning of a class variable name, instance variable name, or class instance variable name that is the same as an
 inherited variable name is intentionally left undefined in order to permit implementations to extend this standard such that
 such a definition would shadow the inherited definition. While Smalltalk implementations have traditionally treated such
 shadowing as an error, shadowing is necessary in order to avoid the "fragile subclass" problem" It is anticipated that
 implementations that wish to address this problem will allow such shadowing.
 
-The encapsulated state of an instance object for a class definition that includes an <<instance
+The encapsulated state of an instance object for a class definition that includes an \<\<instance
 variable names>> clause consists of a fixed-size set of variables capable of referencing any object.
-The identifiers specified by <<instance variable names>> are called instance variable names and
+The identifiers specified by \<\<instance variable names>> are called instance variable names and
 the associated variables are called named instance variables. The number of named instances
 variables encapsulated by an instance object is equal to the size of the complete instance variable
 set of the object's class definition. There is a one-to-one correspondence between the members of
@@ -637,92 +675,106 @@ the complete instance variable set and the named instance variables of an instan
 an instance of a class is created all of the named instance variables initially have the value of the
 reserved identifier nil. An object with named instance variables may also have unnamed indexable
 instance variables.
-3.3.2.2 Class State Specification
-The <<class instance variable names>> production defines the names of instance variables of the
-class object. The identifiers specified by <<class instance variables names>> are called class
+
+#### Class State Specification
+
+The \<\<class instance variable names>> production defines the names of instance variables of the
+class object. The identifiers specified by \<\<class instance variables names>> are called class
 instance variable names. It is erroneous for the same identifier to occur more than once in the
-<<class instance variable names>> clause. The meaning of the class definition is undefined if any
+\<\<class instance variable names>> clause. The meaning of the class definition is undefined if any
 of the class instance variable names is the same identifier as a class instance variable name or a
 class variable name defined by any superclass. It is erroneous for a class instance variable name
 to also be a class variable name. It is erroneous if a class instance variable name is one of the
 reserved identifiers, "true", "false", "nil", "self" or "super". The complete class instance variable set
-is a set consisting of the union of the set of class instance variable names of the <<class
+is a set consisting of the union of the set of class instance variable names of the \<\<class
 definition>> and the complete class instance variable set of the class definition's superclass (or if a
-<<superclass name>> is not specified, a possibly empty set of implementation defined underscoreprefixed class instance variable names). The number of class instances variables encapsulated by
+\<\<superclass name>> is not specified, a possibly empty set of implementation defined underscoreprefixed class instance variable names). The number of class instances variables encapsulated by
 a class object is equal to the size of the complete class instance variable set of the object's class
 definition. There is a one-to-one correspondence between the members of the complete class
 instance variable set and the class instance variables of a class object. When a class object is
 created all of the class instance variables initially have the value of the reserved identifier "nil".
+
 Rationale
+
 Implementations may need to have built-in class instance variables (e.g., methodDictionary, className, etc.). Traditionally
 these are inherited from implementation specific classes such as Behavior or Class.
 
-The <<class variable names>> production defines the names of discrete variables which are
+The \<\<class variable names>> production defines the names of discrete variables which are
 accessible by both class and instance methods of the class and its subclasses. The identifiers
-specified by <<class variable names>> are called class variable names. It is erroneous for the
+specified by \<\<class variable names>> are called class variable names. It is erroneous for the
 same identifier to occur more than once in the list of class variable names. The meaning of the
 class definition is undefined if any of the class variable names is the same identifier as an instance
 variable name, class instance variable name, or class variable name defined by any superclass. It
 is erroneous for an class variable name to also be an instance variable name or a class instance
 variable name.
+
 One discrete variable, called a class variable, exists corresponding to each class variable name.
-Each class variable name is bound to the corresponding class variable. For each <<class
+Each class variable name is bound to the corresponding class variable. For each \<\<class
 definition>> these bindings exist in a scope called the class variable scope. The initial value of a
-class variable is the value of the reserved identifier nil. Each <<class definition>> also defines a
-
-
-
-scope called its inheritable class variable scope. The inheritable class variable scope for a <<class
+class variable is the value of the reserved identifier nil. Each \<\<class definition>> also defines a
+scope called its inheritable class variable scope. The inheritable class variable scope for a \<\<class
 definition>> is a composite scope whose outer scope is the inheritable class variable scope of its
 superclass (or the empty scope if no superclass was specified) and whose inner scope is its class
 variable scope.
-The <<imported pool names>> production, specifies variable pools whose elements may be
-referenced from within <method definition> or <initializer definition>clauses that are part of the
-<<class definition>>. The imported pools identifiers are called pool names. It is erroneous if each
-pool name is not the <<pool name>> of a <<pool definition>> whose binding exists in the global
+
+The \<\<imported pool names>> production, specifies variable pools whose elements may be
+referenced from within \<method definition> or \<initializer definition>clauses that are part of the
+\<\<class definition>>. The imported pools identifiers are called pool names. It is erroneous if each
+pool name is not the \<\<pool name>> of a \<\<pool definition>> whose binding exists in the global
 scope of this program. It is erroneous for the same identifier to occur more than once in the list of
 pool names. Each class defines a scope, called its pool variable scope, containing the union of the
-names of all pool variables defined by all of the pool definitions named by the <<imported pool
+names of all pool variables defined by all of the pool definitions named by the \<\<imported pool
 names>>clause. The binding of each name in the pool variable scope is the binding of the name in
-its corresponding <<pool definition>> unless a name is defined in more than one <<pool
+its corresponding \<\<pool definition>> unless a name is defined in more than one \<\<pool
 definition>>. In that case the binding of the name in the pool variable scope is the error binding.
-3.3.2.3 Behavior Specification
-A <<class definition>> defines a scope, called the class scope, that is used by all <method
-definition> and <initializer definition> clauses that are part of the <<class definition>>. The class
+
+#### Behavior Specification
+
+A \<\<class definition>> defines a scope, called the class scope, that is used by all \<method
+definition> and \<initializer definition> clauses that are part of the \<\<class definition>>. The class
 scope for a class, X, is defined as follows:
+
 ((global scope + X's pool variable scope) + X's class variable scope.
+
 Its instance function scope is defined as:
+
 X's class scope + X's instance variable scope
+
 and its class function scope is defined as:
+
 X's class scope + X's class instance variable scope.
+
 Where the instance variable scope is a scope that binds the elements of the complete instance
 variable set and the class instance variable scope is a scope that binds the elements of the
 complete class instance variable set.
-The productions <<instance methods>> and <<class methods>> are used to specify, respectively,
-the instance behavior and the class behavior defined by a class definition. Each <method
-definition> specifies a method selector. It is erroneous if more than one <method definition> for a
-specific method selector appears in the <<instance methods>> of a <<class definition>>. Similarly,
-it erroneous if more than one <method definition> for a specific method selector appears in the
-<<class methods>> of a <<class definition>>.
+
+The productions \<\<instance methods>> and \<\<class methods>> are used to specify, respectively,
+the instance behavior and the class behavior defined by a class definition. Each \<method
+definition> specifies a method selector. It is erroneous if more than one \<method definition> for a
+specific method selector appears in the \<\<instance methods>> of a \<\<class definition>>. Similarly,
+it erroneous if more than one \<method definition> for a specific method selector appears in the
+\<\<class methods>> of a \<\<class definition>>.
+
 The instance behavior defined by the class definition consists of the instance behavior (including
-inherited behavior) of the superclass augmented by the <<instance methods>> of the class
-definition. A <method definition> in the <<instance methods>> whose method selector is the same
-as the method selector of a <method definition> in the superclass' instance behavior replaces the
-inherited <method definition> in the instance behavior. The <method definition> that is replaced is
+inherited behavior) of the superclass augmented by the \<\<instance methods>> of the class
+definition. A \<method definition> in the \<\<instance methods>> whose method selector is the same
+as the method selector of a \<method definition> in the superclass' instance behavior replaces the
+inherited \<method definition> in the instance behavior. The \<method definition> that is replaced is
 called an over-ridden method. Similarly, the class behavior defined by the class definition consists
-of the class behavior of the superclass augmented in an analogous manner by the <<class
+of the class behavior of the superclass augmented in an analogous manner by the \<\<class
 methods>> of the class definition.
-If the <<superclass name>> is absent then this class has no inherited instance behavior and the
-instance behavior consists solely of the <<instance methods>> that are part of the class definition.
-The class behavior of such a class is defined to inherit from the instance behavior of the <<class
-definition>> whose <<class name>> is the identifier "Object" bound in the global scope.
+
+If the \<\<superclass name>> is absent then this class has no inherited instance behavior and the
+instance behavior consists solely of the \<\<instance methods>> that are part of the class definition.
+The class behavior of such a class is defined to inherit from the instance behavior of the \<\<class
+definition>> whose \<\<class name>> is the identifier "Object" bound in the global scope.
 The effect of defining a method whose method selector is one of the following restricted selectors is
 undefined except for their use in the definition of behaviors that are required by this standard.
 Implementations may disallow the definition of methods with these selectors.
 
 
-
 Restricted Selectors:
+
 ifTrue:
 
 ifTrue:ifFalse:
@@ -752,6 +804,7 @@ basicSize
 basicNew:
 
 Rationale
+
 Smalltalk implementations have traditionally open-coded certain messages including those with the above selectors. Open
 coding is typically based upon assumptions about the typical class of the receiver of these messages. If the receiver is a
 literal or block constructor, these assumptions can be verified at compilation time in order to make the decision as to
@@ -764,71 +817,91 @@ reason for the restrictions on the above selectors. These are the selectors that
 whose receivers are often expressions or variables. Other messages such as #whileTrue: have also been traditionally opencoded but typically their receivers are block constructors. Thus, it is feasible to only open-code messages with compile-time
 verifable receivers and there is no conflict with the polymorphic use of the messages.
 
-The <<class initializer>> is the initializer for the class. The <<class initializer>> production consists
-of an <initializer definition> that defines the function that is used to generate the initial values of
+The \<\<class initializer>> is the initializer for the class. The \<\<class initializer>> production consists
+of an \<initializer definition> that defines the function that is used to generate the initial values of
 class variables and the class object defined by the class definition. The outer scope of the class
-initializer is the same as the outer scope of the class methods of the same <<class definition>>. A
+initializer is the same as the outer scope of the class methods of the same \<\<class definition>>. A
 class initializer is not inherited by subclasses. The value returned by a class initializer is discarded.
-3.3.3 Global Variable Definition
+
+### Global Variable Definition
+
 A global variable definition is used to specify a discrete variable or named object that is bound to a
 variable name within the global definition scope. The definition may include an initializer that
 provides the initial value of the variable.
-<<global definition>> ::=
-[<<constant designator>>] <<global name>> [<<variable initializer>>]
-<<global name>> ::= identifier
-<<variable initializer>> ::= <initializer definition>
-If the <<constant designator>> is present the <<global definition>> defines a named object,
-otherwise it defines a global variable. The <<global name>> is the global name of the discrete
+
+```
+\<\<global definition>> ::=
+[\<\<constant designator>>] \<\<global name>> [\<\<variable initializer>>]
+\<\<global name>> ::= identifier
+\<\<variable initializer>> ::= \<initializer definition>
+```
+
+If the \<\<constant designator>> is present the \<\<global definition>> defines a named object,
+otherwise it defines a global variable. The \<\<global name>> is the global name of the discrete
 variable or named object. It is erroneous if there is any other global definitions of this name within
-the program. It is erroneous if the <<global name>> is one of the reserved identifiers, "true", "false",
+the program. It is erroneous if the \<\<global name>> is one of the reserved identifiers, "true", "false",
 "nil", "self" or "super".
-The <<variable initializer>> when evaluated provides the value of the named object or the iinitial
-value of the global variable. If no <<variable initializer>> is present its value is nil. If the <<constant
-designator>> is present the binding of the <<global name>> to the object that is the value of the
-<<variable initializer>> is a constant binding and it is erroneous for an identifier that resolves to that
-binding to appear as the target of an assignment statement. If the <<constant designator>> is
-present the value of the named object is undefined prior to the evaluation of its <<variable
+
+The \<\<variable initializer>> when evaluated provides the value of the named object or the iinitial
+value of the global variable. If no \<\<variable initializer>> is present its value is nil. If the \<\<constant
+designator>> is present the binding of the \<\<global name>> to the object that is the value of the
+\<\<variable initializer>> is a constant binding and it is erroneous for an identifier that resolves to that
+binding to appear as the target of an assignment statement. If the \<\<constant designator>> is
+present the value of the named object is undefined prior to the evaluation of its \<\<variable
 initializer>>.
 
+### Pool Definition
 
-
-3.3.4 Pool Definition
 A pool definition introduces a global name binding for a variable pool and defines the names of the
 discrete variables within the pool.
-<<pool definition>> ::= <<pool name>> <<pool variable definition>>*
-<<pool name>> ::= identifier
-<<pool variable definition>> ::=
-[<<constant designator>> <<pool variable name>> [<<variable initializer>>]
-<<pool variable name>> ::= identifier
-The <<pool name>> is the global name of the variable pool. It is erroneous if any other global
-definition of this name exists within the program. It is erroneous if the <<pool name>> is one of the
+
+```
+\<\<pool definition>> ::= \<\<pool name>> \<\<pool variable definition>>*
+\<\<pool name>> ::= identifier
+\<\<pool variable definition>> ::=
+[\<\<constant designator>> \<\<pool variable name>> [\<\<variable initializer>>]
+\<\<pool variable name>> ::= identifier
+```
+
+The \<\<pool name>> is the global name of the variable pool. It is erroneous if any other global
+definition of this name exists within the program. It is erroneous if the \<\<pool name>> is one of the
 reserved identifiers, "true", "false", "nil", "self" or "super". An identifier that is bound to a variable
-pool with a <<pool definition>> is called a pool name. Pool names are listed in the <<imported
-pools>> production of a <<class definition>>. The use of a pool name in any other context is
+pool with a \<\<pool definition>> is called a pool name. Pool names are listed in the \<\<imported
+pools>> production of a \<\<class definition>>. The use of a pool name in any other context is
 undefined.
+
 Rationale
+
 An implementation is permitted but not required to treat a pool name as a binding on an implementation artifact such as a
 pool dictionary.
 
-A <<pool variable definition>> introduces a name binding within a variable pool for a named or
-object discrete variable with an optional initial value. If the <<constant designator>> is present the
-<<pool variable definition>> defines a named object, otherwise it defines a variable, called a pool
-variable. The <<pool variable name>> is the name of the pool variable or named object. It is
-erroneous to have more than one <<pool variable definition>> with the same <<pool variable
-name>> within the same variable pool. It is erroneous if the <<pool variable name>> is one of the
-reserved identifiers, "true", "false", "nil", "self" or "super". The <<variable initializer>>, when
-evaluated, provides the initial value of the pool variable or named object. If no <<variable
+A \<\<pool variable definition>> introduces a name binding within a variable pool for a named or
+object discrete variable with an optional initial value. If the \<\<constant designator>> is present the
+\<\<pool variable definition>> defines a named object, otherwise it defines a variable, called a pool
+variable. The \<\<pool variable name>> is the name of the pool variable or named object. It is
+erroneous to have more than one \<\<pool variable definition>> with the same \<\<pool variable
+name>> within the same variable pool. It is erroneous if the \<\<pool variable name>> is one of the
+reserved identifiers, "true", "false", "nil", "self" or "super". The \<\<variable initializer>>, when
+evaluated, provides the initial value of the pool variable or named object. If no \<\<variable
 initializer>> is present the initial value is nil. The value of a named object, before evaluation of its
-<<variable initializer>> is undefined. If the <<constant designator>> is present the binding of the
-<<pool variable name>> to the value computed by the <<variable initializer>> is a constant binding
+\<\<variable initializer>> is undefined. If the \<\<constant designator>> is present the binding of the
+\<\<pool variable name>> to the value computed by the \<\<variable initializer>> is a constant binding
 and it is erroneous for an identifier that resolves to that binding to appear as the target of an
 assignment statement.
-3.3.5 Program Initializer Definition
+
+### Program Initializer Definition
+
 A program initializer definition is used to specify a initializer that is executed solely for its sideeffects. The value of such an initializer is not captured as the value of a variable or as a named
 object.
-<<program initializer definition >> ::= <initializer definition>
+
+```
+\<\<program initializer definition >> ::= \<initializer definition>
+```
+
 The value of the initializer is discarded.
-3.4 Method Grammar
+
+## Method Grammar
+
 The method grammar defines Smalltalk's language for describing units of executable code. There
 are three fundamental constructs that define executable code: methods, initializers, and blocks.
 These are generically called functions because they perform computations and return a result
@@ -837,28 +910,31 @@ the Smalltalk program. Each type of function is activated in a different manner.
 functions are activated as the result of some action in an already active function. In this case, the
 function which performs the action is known as the calling function and it is said to call the newly
 activated function. The definition of each type of function specifies the circumstances under which
-
-
-
 a function of that type is activated. The next section defines the traits that are common to all types
 of functions.
-3.4.1 Functions
+
+### Functions
+
 The definition of any function may include a set of temporary variable names. In addition, the
 definitions of methods and blocks may also include a set of argument names. A function defines a
 scope, called its local scope, whose names consist of its argument names and its temporary
 variable names. Temporary variable names are bound to discrete variables. The bindings of
 argument names are constant bindings. It is erroneous for an identifier that resolves to an
 argument to be the target of an assignment statement.
+
 The identifiers referenced from the statements of a function are resolved in the context of a
 composite scope called the statement scope. The inner scope of a statement scope is its function's
 local scope. The nature of the outer scope varies for each type of function.
+
 When a function is activated, an individual discrete variable, called a temporary variable, is created
 corresponding to each of the function's temporary variable names. Each temporary variable is
 bound to the corresponding temporary variable name in the function's local scope. The value of
 each temporary variable is initialized to nil.
+
 If the function requires arguments the constant binding of each argument name in the local scope
 is set to reference the object that is the corresponding actual argument passed by the expression
 that called the function.
+
 The state of an executing function includes the active identifier bindings used by the function and
 the current locus of execution within the function. The noun activation is used to describe the state
 of an executing function. Each time the execution of a function is initiated a new activation is comes
@@ -881,173 +957,210 @@ destroyed when the activation of the function that created them is terminated. H
 function evaluates a block constructor that results in a block that references any of the function's
 local variables, then those variables must continue to exist, maintaining their values, (even after the
 function is terminated) as long as the block or any activation of the block exists.
-3.4.2 Method Definition
-A method is a function that is activated as the result of sending a message to an object. A <method
-definition> is a component of a <<class definition>> that introduces a method along with an
+
+### Method Definition
+
+A method is a function that is activated as the result of sending a message to an object. A \<method
+definition> is a component of a \<\<class definition>> that introduces a method along with an
 associated method selector into a behavior. A method consists of a sequence of statements that
 are evaluated when the method is activated by a message send. Evaluation of a method concludes
 by returning an object reference as the value of the message send that activated the method.
 
+```
+\<method definition> ::=
+\<message pattern>
+[\<temporaries> ]
+[\<statements>]
+\<message pattern> ::= \<unary pattern> | \<binary pattern> | \<keyword pattern>
+\<unary pattern> ::= unarySelector
+\<binary pattern> ::= binarySelector \<method argument>
+\<keyword pattern> ::= (keyword \<method argument>)+
+\<temporaries> ::= '|' \<temporary variable list> '|'
+\<temporary variable list> ::= identifier*
+```
 
-
-<method definition> ::=
-<message pattern>
-[<temporaries> ]
-[<statements>]
-<message pattern> ::= <unary pattern> | <binary pattern> | <keyword pattern>
-<unary pattern> ::= unarySelector
-<binary pattern> ::= binarySelector <method argument>
-<keyword pattern> ::= (keyword <method argument>)+
-<temporaries> ::= '|' <temporary variable list> '|'
-<temporary variable list> ::= identifier*
-It is erroneous if the same identifier is used for more than one <method argument> in an individual
-<method definition>. It is erroneous if any of the reserved identifiers ('nil', 'true', 'false', 'self', and
-'super') is used as a <method argument>. It is erroneous if the same identifier is used as a
-<method argument> of a <method definition> and also appears in the method's <temporary
-variable list>. An identifier that is used as a <method argument> is called a method argument
+It is erroneous if the same identifier is used for more than one \<method argument> in an individual
+\<method definition>. It is erroneous if any of the reserved identifiers ('nil', 'true', 'false', 'self', and
+'super') is used as a \<method argument>. It is erroneous if the same identifier is used as a
+\<method argument> of a \<method definition> and also appears in the method's \<temporary
+variable list>. An identifier that is used as a \<method argument> is called a method argument
 name.
+
 It is erroneous if the same identifier appears more than once in a single method definition's
-<temporary variable list>. It is erroneous for any one of the reserved identifiers ('nil', 'true', 'false',
-'self' and 'super') to appear in a <temporary variable list>. An identifier that appears in a
-<temporary variable list> of a method is called a method temporary variable name.
-A <temporary variable list> list may be empty, containing no identifiers. In this case the enclosing
+\<temporary variable list>. It is erroneous for any one of the reserved identifiers ('nil', 'true', 'false',
+'self' and 'super') to appear in a \<temporary variable list>. An identifier that appears in a
+\<temporary variable list> of a method is called a method temporary variable name.
+A \<temporary variable list> list may be empty, containing no identifiers. In this case the enclosing
 vertical bars may be immediately adjacent with no intervening white space.
-Each <method definition> has an identifying method selector. If the <method definition> has a
-<unary pattern> or a <binary pattern> then its method selector is the specified unarySelector or
-binarySelector. If the <method definition> has a <keyword pattern> then its method selector is the
+
+Each \<method definition> has an identifying method selector. If the \<method definition> has a
+\<unary pattern> or a \<binary pattern> then its method selector is the specified unarySelector or
+binarySelector. If the \<method definition> has a \<keyword pattern> then its method selector is the
 keywordSelector formed by concatenating, in left to right order, each keyword specified in the
-<keyword pattern>.
+\<keyword pattern>.
+
 If a method is an instance method then the outer scope of its statement scope is its class
 definition's instance function scope and each instance variable name is bound to its corresponding
 instance variable of the object that is the receiver of the message that activated the method.
 If a method is a class method then the outer scope of its statement scope is its class definition's
 class function scope and each class instance variable name is bound to its corresponding class
 instance variable of the class object that is the receiver of the message that activated the method.
-Note that because of inheritance this is not necessarily the class object defined by the <<class
+Note that because of inheritance this is not necessarily the class object defined by the \<\<class
 definition>> that defined the method.
+
 During activation of a method the reserved identifier 'self' has a constant binding to the object that
 was the receiver of the message that activated the method.
+
 The evaluation of a method is terminated either when it executes the last statement in its
-<statements> or by executing a return statement. If the method is terminated by a return statement
+\<statements> or by executing a return statement. If the method is terminated by a return statement
 then the value of the method is the value of the return statement. Otherwise the value of the
 method is the current binding of the reserved identifier 'self'.
-3.4.3 Initializer Definition
+
+### Initializer Definition
+
 An initializer is a function that is executed to provide an initial value for a program element. An
 initializer consists of a sequence of statements that are executed in sequence. The value of the
 initializer is used to initialize any associated variables.
-<initializer definition> ::=
 
+```
+\<initializer definition> ::=
+[\<temporaries>]
+[\<statements>]
+```
 
+The outer scope of an initializer's statement scope varies according to the usage of the \<initializer
+definition>. If an initializer is part of a \<\<global definition>> or a \<\<program initializer definition>> its
+outer scope is the global scope. If an initializer is a \<\<class initializer>> its outer scope is the class
+function scope of the \<\<class definition>> that includes the initializer. If an initializer is a \<\<variable
+initializer>> of a \<pool variable definition> then its outer scope is a composite scope defined as:
 
-[<temporaries>]
-[<statements>]
-The outer scope of an initializer's statement scope varies according to the usage of the <initializer
-definition>. If an initializer is part of a <<global definition>> or a <<program initializer definition>> its
-outer scope is the global scope. If an initializer is a <<class initializer>> its outer scope is the class
-function scope of the <<class definition>> that includes the initializer. If an initializer is a <<variable
-initializer>> of a <pool variable definition> then its outer scope is a composite scope defined as:
 global scope + pool scope
-where pool scope is a scope that binds each <pool variable name> of the pool to its associated
+
+where pool scope is a scope that binds each \<pool variable name> of the pool to its associated
 discrete variable or named object.
+
 During activation of an initializer the reserved identifier 'self' has the error binding unless the
-initializer is a <<class initializer>>. During activation of a <<class initializer>> the binding of 'self' is
-the class object of the <<class definition>> that defines the <<class initializer>>.
+initializer is a \<\<class initializer>>. During activation of a \<\<class initializer>> the binding of 'self' is
+the class object of the \<\<class definition>> that defines the \<\<class initializer>>.
+
 The evaluation of an initializer is terminated either when it executes the last statement in its
-<statements> or by the execution a <return statement> during the evaluation of any block that is
-created from a <block constructor> contained within the initializer's <statements> during the
-activation of the initializer. If the initializer is terminated by a <return statement> then the value of
-the initializer is the value of the <return statement>. Otherwise the value of the initializer is the
-value of its last statement. The value of an initializer with no <statements> is the binding of the
+\<statements> or by the execution a \<return statement> during the evaluation of any block that is
+created from a \<block constructor> contained within the initializer's \<statements> during the
+activation of the initializer. If the initializer is terminated by a \<return statement> then the value of
+the initializer is the value of the \<return statement>. Otherwise the value of the initializer is the
+value of its last statement. The value of an initializer with no \<statements> is the binding of the
 reserved identifier 'nil'.
-3.4.4 Blocks
-A block is a function that can be manipulated as an object that implements the <valuable> protocol.
-A block is always defined, using a <block constructor>, as a <primary> expression element within
+
+### Blocks
+
+A block is a function that can be manipulated as an object that implements the \<valuable> protocol.
+A block is always defined, using a \<block constructor>, as a \<primary> expression element within
 another function, called its enclosing function. Thus a block is always nested within a method, an
 initializer, or another block. Blocks may be nested to an arbitrary level. The outermost function
 enclosing a block is called the home function of the block. A block object is created when the
-<block constructor> for the block is evaluated in the course of executing the block's enclosing
+\<block constructor> for the block is evaluated in the course of executing the block's enclosing
 function. If the enclosing function of a block is a method or an initializer the home activation of the
 block is the activation of its enclosing function that created the block. If the enclosing function of a
 block is a block then the home activation of the block is the same as the home activation of the
 block that created the block.
-The <statements> of a block are normally evaluated when the block is activated by sending a
+
+The \<statements> of a block are normally evaluated when the block is activated by sending a
 variant of the #value message to the block object. However, other methods defined in this standard
 also specify that they cause the evaluation of blocks. In these cases, evaluation of the block
 proceeds as if a #value message variant had been sent to the block. Evaluation of a block normally
 concludes by executing the last statement of the block. In this case the object reference that is the
 value of the last statement is returned as the value of the message send that activated the block. If
-the last statement of a block is a <return statement> evaluation of the block's home activation is
-also terminated and the value of the <return statement> is used as the return value of the home
+the last statement of a block is a \<return statement> evaluation of the block's home activation is
+also terminated and the value of the \<return statement> is used as the return value of the home
 activation.
+
 Expressions within a block may reference temporary variables and arguments of the functions that
 enclose the block. Each block object is an independent closure that captures the current bindings
 for any enclosing functions' arguments or temporaries that are referenced from within the block's
-<block constructor>. Any such captured bindings and their associated discrete variables or objects
+\<block constructor>. Any such captured bindings and their associated discrete variables or objects
 must be preserved as long as the block object continues to exist and is available for evaluation.
 Note that the values of any such captured discrete variables and the state of any object captured
 by an argument binding remain subject to possible modification.
-<block constructor> ::= '[' <block body> ']'
-<block body> ::= [<block argument>* '|'] [<temporaries>] [<statements>]
 
+```
+\<block constructor> ::= '[' \<block body> ']'
+\<block body> ::= [\<block argument>* '|'] [\<temporaries>] [\<statements>]
+\<block argument> ::= ':' identifier
+```
 
+If the \<block body> does not have any \<block argument> clauses then the objects that are the
+value of the \<block constructor> conform to the protocol \<niladic-block>. If the \<block body> has
+exactly one \<block argument> then objects that are the value of the \<block constructor> conform to
+the protocol \<monadic-block>. If the \<block body> has exactly two \<block argument> clauses then
+objects that are the value of the \<block constructor> conform to the protocol \<dyadic-valuable>. If
+the \<block body> has more than two \<block argument> clauses then objects that are the value of
+the \<block constructor> conform to the protocol \<valuable>.
 
-<block argument> ::= ':' identifier
-If the <block body> does not have any <block argument> clauses then the objects that are the
-value of the <block constructor> conform to the protocol <niladic-block>. If the <block body> has
-exactly one <block argument> then objects that are the value of the <block constructor> conform to
-the protocol <monadic-block>. If the <block body> has exactly two <block argument> clauses then
-objects that are the value of the <block constructor> conform to the protocol <dyadic-valuable>. If
-the <block body> has more than two <block argument> clauses then objects that are the value of
-the <block constructor> conform to the protocol <valuable>.
 If any block arguments are present, the final block argument is followed by a vertical bar ("|"). If a
-<temporaries> clause is present then the first temporary variable is preceded by a vertical bar. A
+\<temporaries> clause is present then the first temporary variable is preceded by a vertical bar. A
 vertical bar that terminates a sequence of block arguments may be immediately adjacent (with no
-intervening white space) to the vertical bar that initiates a <temporaries> clause.
-It is erroneous if the same identifier is used for more than one <block argument> of a individual
-<block constructor>. It is erroneous for any one of the reserved identifiers ('nil', 'true', 'false', 'self'
-and 'super') to be used as a <block argument>. It is erroneous if the same identifier is used both
-as a <block argument> and also appears in the <temporaries> of a single <block constructor>. An
-identifier that is used as a <block argument> is called a block argument name. An identifier that
-appears in the <temporaries> of a <block constructor> is called a block temporary variable name.
+intervening white space) to the vertical bar that initiates a \<temporaries> clause.
+
+It is erroneous if the same identifier is used for more than one \<block argument> of a individual
+\<block constructor>. It is erroneous for any one of the reserved identifiers ('nil', 'true', 'false', 'self'
+and 'super') to be used as a \<block argument>. It is erroneous if the same identifier is used both
+as a \<block argument> and also appears in the \<temporaries> of a single \<block constructor>. An
+identifier that is used as a \<block argument> is called a block argument name. An identifier that
+appears in the \<temporaries> of a \<block constructor> is called a block temporary variable name.
 The outer scope of a block's statement scope is the statement scope of the block's enclosing
-function. Within a <block constructor> the binding of the reserved identifier 'self' is the same
+function. Within a \<block constructor> the binding of the reserved identifier 'self' is the same
 binding as the binding of 'self' for the block's home activation.
-If a block has no <block body> or no <statements> in its <block body> then the value of the block is
+If a block has no \<block body> or no \<statements> in its \<block body> then the value of the block is
 undefined.
-3.4.5 Statements
-When a function is activated the expressions defined in the <statements> portion of the function's
+
+### Statements
+
+When a function is activated the expressions defined in the \<statements> portion of the function's
 definition are evaluated. Each such expression is called a statement.
-<statements> ::=
-(<return statement> ['.'] ) |
-(<expression> ['.' [<statements>]])
-<statements> consists of a sequence of statements. Each statement except the final statement of
-the sequence is an <expression>. The last statement in a <statements> sequence may be either
-an <expression> or a <return statement>. Each <expression> within a <statements> is separated
+
+```
+\<statements> ::=
+(\<return statement> ['.'] ) |
+(\<expression> ['.' [\<statements>]])
+```
+
+\<statements> consists of a sequence of statements. Each statement except the final statement of
+the sequence is an \<expression>. The last statement in a \<statements> sequence may be either
+an \<expression> or a \<return statement>. Each \<expression> within a \<statements> is separated
 from its following statement by a period ('.'). A period is optional following the last statement.
+
 The individual statements are evaluated in left to right sequence. All identifiers within the
 statements are resolved using the statement scope of the immediately enclosing function.
+
 Identifiers within block constructors are resolved using the block constructor's statement scope.
 The value returned by each statement except, in some circumstances, the last statement is
 discarded.
+
 3.4.5.1 Return statement
-If the last <expression> in a <statements> clause is proceeded by a circumflex ('^') the
-<expression> forms a return statement and the value computed by the expression is the value of
+
+If the last \<expression> in a \<statements> clause is proceeded by a circumflex ('^') the
+\<expression> forms a return statement and the value computed by the expression is the value of
 the return statement.
 
 
 
-<return statement> ::= returnOperator <expression>
-A return statement returns the value of it's <expression> as the value of the method or initializer in
+\<return statement> ::= returnOperator \<expression>
+
+
+A return statement returns the value of it's \<expression> as the value of the method or initializer in
 which it appears.
+
 If a return statement is the last statement of a block, execution returns from the home activation of
 that block and the value of the return statement becomes the value returned from its home
 activation. It is undefined to execute a return statement from a block activation if the home
 activation of that block has already returned a value or has otherwise terminated. It is undefined to
 execute a return statement from a block activation if the block's home activation does not exist on
 the call chain that leads to the block activation.
+
 If the home activation is an initializer activation the value of the return statement becomes the value
 of the initializer and execution proceeds with the evaluation of the next initializer in the global
 initialization sequence.
+
 If the home activation is not an initializer execution proceeds by resuming execution of the function
 activation that was suspended when the home activation was created. The value of the return
 statement becomes the value of the message that resulted in the creation of the home activation.
@@ -1067,7 +1180,9 @@ a termination block concludes with the execution of a return statement the resul
 result is also undefined if evaluation of the termination block results in evaluation of any block that
 concludes with a return statement and whose home activation is not on the call chain that starts
 with the activation of the termination block.
+
 3.4.5.2 Expressions
+
 Statements are composed of expressions. An expression is a sequence of tokens that describes a
 reference to an object or a computation that produces a reference to an object. The resultant object
 is called the value of the expression. An expression may optionally specify that its value is to be
@@ -1075,108 +1190,134 @@ assigned to one or more variables. The primary constituent of an expression is a
 object, literal, block constructor, or a parenthesized subexpression. The primary either directly
 provides the value of the expression or serves as the receiver of a set of messages that compute
 the value of the expression.
-<expression> ::=
-<assignment> |
-<basic expression>
-<assignment> ::= <assignment target> assignmentOperator <expression>
-<basic expression> ::=
-<primary> [<messages> <cascaded messages>]
-<assignment target> := identifier
-<primary> ::=
+
+
+\<expression> ::=
+\<assignment> |
+\<basic expression>
+\<assignment> ::= \<assignment target> assignmentOperator \<expression>
+\<basic expression> ::=
+\<primary> [\<messages> \<cascaded messages>]
+\<assignment target> := identifier
+\<primary> ::=
 identifier |
 
 
 
-<literal> |
-<block constructor> |
-( '(' <expression> ')' )
-An <assignment target> is a variable name that is called the target of the assignment. The value of
-the <expression> to the right of the assignmentOperator replaces the current value of the
-<assignment target> variable. The target must have a binding to a variable in the statement scope
-that contains the <expression>. It is erroneous if a binding for the <assignment target> identifier
+\<literal> |
+\<block constructor> |
+( '(' \<expression> ')' )
+
+
+An \<assignment target> is a variable name that is called the target of the assignment. The value of
+the \<expression> to the right of the assignmentOperator replaces the current value of the
+\<assignment target> variable. The target must have a binding to a variable in the statement scope
+that contains the \<expression>. It is erroneous if a binding for the \<assignment target> identifier
 does not exist in the statement scope. It is erroneous if the binding of the target is a constant
 binding. It is erroneous if target is one of the reserved identifiers: 'true', 'false', 'nil', 'self', 'super'.
-An <assignment> may assign its value to multiple target variables by including multiple
-assignmentOperator clauses. The value of an <assignment> expression is the value that is
+
+An \<assignment> may assign its value to multiple target variables by including multiple
+assignmentOperator clauses. The value of an \<assignment> expression is the value that is
 assigned to its target variable. All target variables in an assignment with multiple targets are
 assigned the same value.
-A <primary> is the basic unit from which expressions are constructed. A <primary> that consists of
+
+A \<primary> is the basic unit from which expressions are constructed. A \<primary> that consists of
 an identifier is a reference to the value of a variable, named object, or reserved identifier. The
 identifier must be a name that is bound in the statement scope that contains the expression. The
-value of such a <primary> is the value of the entity that is bound to the identifier. It is erroneous if
+value of such a \<primary> is the value of the entity that is bound to the identifier. It is erroneous if
 the identifier does not have a binding in the statement scope. If the binding of the identifier is to a
-<<pool name>> its value is undefined. It is erroneous if a <basic expression> consists solely of the
-reserved identifier 'super'. 'super' may only appear if it is followed by a <messages> clause.
-A <primary> that is a <literal> is a reference to a statically created object. The value of the primary
+\<\<pool name>> its value is undefined. It is erroneous if a \<basic expression> consists solely of the
+reserved identifier 'super'. 'super' may only appear if it is followed by a \<messages> clause.
+A \<primary> that is a \<literal> is a reference to a statically created object. The value of the primary
 is the object. The type of object is determined by the syntactic form of the literal.
-The value of a <primary> that is a <block constructor> is a reference to a block object whose outer
-scope is the statement scope of the function that contains the <block constructor> and whose
+
+The value of a \<primary> that is a \<block constructor> is a reference to a block object whose outer
+scope is the statement scope of the function that contains the \<block constructor> and whose
 home activation is the home activation of the enclosing function. It is unspecified whether separate
-evaluations of a <block constructor> produce distinct objects.
+evaluations of a \<block constructor> produce distinct objects.
+
 Rationale
+
 Traditionally, a block constructor always creates a new object. This is necessary if the block captures any bindings from its
 enclosing routines or contains a return statement. By leaving the identify of successive block constructor values undefined,
 we permit implementation to optimize other cases by statically creating block objects.
 
-The value of a <primary> that is a parenthesized <expression> is the value of the <expression>.
+The value of a \<primary> that is a parenthesized \<expression> is the value of the \<expression>.
+
 3.4.5.3 Messages
+
 Messages cause the activation of a method. There are three syntactic forms of message sends.
 They correspond to the three types of message selectors: unary, binary and keyword. Every
 message send has a value that is the result returned from the evaluation of its method.
-<messages> ::=
-(<unary message>+ <binary message>* [<keyword message>] ) |
-(<binary message>+ [<keyword message>] ) |
-<keyword message>
-<unary message> ::= unarySelector
-<binary message> ::= binarySelector <binary argument>
-<binary argument> ::= <primary> <unary message>*
-<keyword message> ::= (keyword <keyword argument> )+
-<keyword argument> ::= <primary> <unary message>* <binary message>*
-<cascaded messages> ::= (';' <messages>)*
-Syntactically, the three forms of <messages> are similar in that the receiver is always written first,
 
 
 
-followed by the selector and arguments. The receiver of a message is the value of the <primary> or
+\<messages> ::=
+(\<unary message>+ \<binary message>* [\<keyword message>] ) |
+(\<binary message>+ [\<keyword message>] ) |
+\<keyword message>
+\<unary message> ::= unarySelector
+\<binary message> ::= binarySelector \<binary argument>
+\<binary argument> ::= \<primary> \<unary message>*
+\<keyword message> ::= (keyword \<keyword argument> )+
+\<keyword argument> ::= \<primary> \<unary message>* \<binary message>*
+\<cascaded messages> ::= (';' \<messages>)*
+
+
+
+Syntactically, the three forms of \<messages> are similar in that the receiver is always written first,
+
+
+
+followed by the selector and arguments. The receiver of a message is the value of the \<primary> or
 the message send to the immediate left of a message's selector. The receiver is a reference to an
 object. It can be represented either as a literal, an identifier, a block constructor, or another
 expression . All message arguments are also references to objects, represented in the same way
 as the receiver. The receiver and the arguments are evaluated before the message is sent. They
 are evaluated in a left-to-right order.
+
 Unary messages have no arguments.
+
 Binary messages require one argument.
+
 A keyword message takes one or more arguments and is composed of a sequence of keywords
 followed by expressions. The number of keywords is equal to the number of arguments. Each
 keyword is used to associate the argument immediately following it with a corresponding argument
 of the method that is activated.
-A <messages> clause can be made up of multiple message sends. The order of evaluation of the
-message sends are defined by the following precedence rules:. Sequences of <unary message>
-clauses are evaluated left to right. The result of each message becomes the receiver to the <unary
-message> to its immediate right. Sequences of <binary message> clauses are also evaluated
-strictly left to right. The <binary argument> of a <binary message> is evaluated before performing
-the binary message send. The result of each binary message becomes the receiver for the <binary
-message> to its immediate right. The <keyword argument> clauses of a <keyword message> are
-evaluated left to right. The final message send of a <messages> clause is its <keyword message>.
-The method selector of a <unary message> is its unarySelector. The method selector of a <binary
-message> is its binarySelector. The method selector of a <keyword message> is formed by
+
+A \<messages> clause can be made up of multiple message sends. The order of evaluation of the
+message sends are defined by the following precedence rules:. Sequences of \<unary message>
+clauses are evaluated left to right. The result of each message becomes the receiver to the \<unary
+message> to its immediate right. Sequences of \<binary message> clauses are also evaluated
+strictly left to right. The \<binary argument> of a \<binary message> is evaluated before performing
+the binary message send. The result of each binary message becomes the receiver for the \<binary
+message> to its immediate right. The \<keyword argument> clauses of a \<keyword message> are
+evaluated left to right. The final message send of a \<messages> clause is its \<keyword message>.
+
+The method selector of a \<unary message> is its unarySelector. The method selector of a \<binary
+message> is its binarySelector. The method selector of a \<keyword message> is formed by
 concatenating, in left to right order each keyword. The ordering of keywords is an essential
 property of keyword messages. Different orderings of a common set of keywords produce different
 selectors.
+
 A message send is evaluated by locating and activating a method. The method is located by
 matching the message's method selector with the selectors of the methods that compose the
 behavior of the receiver. The method to be activated is the method whose selector is identical to
 the message's selector.
+
 If a method is located, the current function activation is suspended and the selected method is
 activated. The bindings of 'self' and 'super' in the local scope of the newly activated method are
 constant bindings to the object that was the receiver of the message. Within the local scope, the
-identifier associated with each <method argument> in the <message pattern> of the method's
+identifier associated with each \<method argument> in the \<message pattern> of the method's
 definition is bound with a constant binding to the corresponding argument object. When the method
 completes execution, execution of the suspended activation is resumed with the value of the
 method serving as the value of the message that activated it.
+
 3.4.5.3.1 Sends To 'super'
-If the <primary> that defines the receiver of a message is the reserved identifier 'super' the method
+
+If the \<primary> that defines the receiver of a message is the reserved identifier 'super' the method
 is located using the behaviors of the class definition that is the superclass of the class definition
-that includes the definition of the method containing the <primary>. If the method is an instance
+that includes the definition of the method containing the \<primary>. If the method is an instance
 method, the superclass' instance behavior is used. If the current method is a class method the
 superclass' class behavior is used. If the method is a class method, and the class definition that
 defines the method does not have a superclass then the behavior to use is unspecified. A method
@@ -1190,54 +1331,61 @@ not have a superclass.
 
 
 3.4.5.3.2 Message Not Understood
+
 If a method matching the message's selector does not exist in the behavior of the receiver the
 message send is a failed send and the following actions occur. A new object that conforms to the
-protocol <failedMessage> is created. It is initialized such that if sent the message #selector it
+protocol \<failedMessage> is created. It is initialized such that if sent the message #selector it
 returns an object that is equal to message's selector of the failed send and if sent the message
 #arguments it returns a sequence of objects whose elements are the arguments of the failed send.
 Execution then proceeds to locate a method whose selector matches the literal selector
 #doesNotUnderstand: in the behavior of the receiver of the failed send. It is erroneous if the
 receiver's behavior does not include a method with a matching selector. If a method with a
 matching selector is located, the method is activated with the receiver of the failed send bound to
-'self' and the <failedMessage> object bound to the argument of the method.
+'self' and the \<failedMessage> object bound to the argument of the method.
+
 3.4.5.3.3 Cascades
+
 A cascade is a sequence of message sends that are all directed to the same object. Only the first
-in such a sequence has an explicit receiver specified via a <primary>. The receiver of the
+in such a sequence has an explicit receiver specified via a \<primary>. The receiver of the
 subsequent messages is the same object as the receiver of the initial message in the sequence.
 Otherwise, each message send occurs as if it was a normal message send that was not part of a
 cascade. The result object of each message in the cascade except the right most message is
-discarded. The value of a <messages> clause that includes a <cascaded messages> clause is the
-value of its right most message. If the <primary> that provides the receiver of the first message in a
+discarded. The value of a \<messages> clause that includes a \<cascaded messages> clause is the
+value of its right most message. If the \<primary> that provides the receiver of the first message in a
 cascade consists solely of the reserved identifier 'super' then each message in the cascade
 performs is if it was a message with 'super' specified as its receiver.
+
 3.4.5.3.4 Reserved Messages for Indexable Objects
-If the method selector of a message is equal to the literal selector #basicAt:, the <primary> that
+
+If the method selector of a message is equal to the literal selector #basicAt:, the \<primary> that
 provides the receiver consists solely of the reserved identifier 'self', and the receiver is an indexable
 object or a byte indexable object the following actions are performed. The argument of the
 message is used as a numeric index that identifies one of the receiver's unnamed instance
 variables. The value of the identified instance variable is returned as the value of the message
 send. If the receiver is a byte indexable object the returned value is an object that conforms to the
-protocol <integer>. It is erroneous if the value of the argument does not conform to the protocol
-<integer>. It is erroneous if the integer value of the argument is less than or equal to zero or if it is
+protocol \<integer>. It is erroneous if the value of the argument does not conform to the protocol
+\<integer>. It is erroneous if the integer value of the argument is less than or equal to zero or if it is
 greater than the number of unnamed instance variables of the receiver.
-If the method selector of a message is equal to the literal selector #basicAt:put, the <primary> that
+
+If the method selector of a message is equal to the literal selector #basicAt:put, the \<primary> that
 provides the receiver consists solely of the reserved identifier 'self', and the receiver is an indexable
 object or a byte indexable object the following actions are performed. The first argument of the
 message is used as a numeric index that identifies one of the receiver's unnamed instance
 variables. The value of the message's second argument is assigned to the identified instance
 variable and is also returned as the value of the message send. It is erroneous if the value of the
-first argument does not conform to the protocol <integer>. It is erroneous if the numeric value of the
+first argument does not conform to the protocol \<integer>. It is erroneous if the numeric value of the
 first argument is less than or equal to zero or if it is greater than the number of unnamed instance
 variables of the receiver. If the receiver is a byte indexable object it is erroneous if the value of the
-second argument is not an object that conforms to the protocol <integer> and whose value is in the
+second argument is not an object that conforms to the protocol \<integer> and whose value is in the
 range 0 to 255.
-If the method selector of a message is equal to the literal selector #basicSize, the <primary> that
+
+If the method selector of a message is equal to the literal selector #basicSize, the \<primary> that
 provides the receiver consists solely of the reserved identifier 'self', and the receiver is an indexable
 object or a byte indexable object the following actions are performed. An object that conforms to
-the protocol <integer> is returned as the value of the message send. The numeric value of the
+the protocol \<integer> is returned as the value of the message send. The numeric value of the
 object is equal to the number of unnamed instance variables of the receiver. If the receiver has no
 unnamed instance variables the numeric value of the returned object is zero.
-If the method selector of a message is equal to the literal selector #basicNew:, the <primary> that
+If the method selector of a message is equal to the literal selector #basicNew:, the \<primary> that
 
 
 
@@ -1246,21 +1394,25 @@ object of a class whose instance objects are indexable or byte indexable the fol
 performed. A new instance of the receiver is created that has the number of unnamed instance
 variables that is specified by the value of the argument to the message. The new object is returned
 as the value of the message send. It is erroneous if the value of the argument does not conform to
-the protocol <integer>. It is erroneous if the integer value of the argument is less than zero. The
+the protocol \<integer>. It is erroneous if the integer value of the argument is less than zero. The
 result is undefined if it is impossible to create an object of the size specified by the argument.
+
 3.4.6 Literals
+
 A literal is a syntactic construct that that directly describes a statically created object. Instances of
 several classes of objects can be represented literally. These include numbers, characters, strings,
 symbols, message selectors, and arrays. Each type of literal is discussed in individual sections
 below. For each type of literal, a protocol is specified to which objects of that literal form must
 conform.
-<literal> ::=
-<number literal> |
-<string literal> |
-<character literal> |
-<symbol literal> |
-<selector literal> |
-<array literal>
+
+\<literal> ::=
+\<number literal> |
+\<string literal> |
+\<character literal> |
+\<symbol literal> |
+\<selector literal> |
+\<array literal>
+
 The protocols specified for literals do not include any messages that modify the state of the literal
 objects. The effect of sending a message to an object that is the value of a literal that modifies the
 state of the literal is undefined.
@@ -1270,17 +1422,17 @@ of separate evaluations of a particular literal are the same or distinct objects
 3.4.6.1 Numeric Literals
 Numbers are objects that represent numerical values. Numeric literals are used to create numeric
 objects which have specific values and numeric representations.
-<number literal> ::= ['-'] <number>
-<number> ::= integer | float | scaledDecimal
+\<number literal> ::= ['-'] \<number>
+\<number> ::= integer | float | scaledDecimal
 If the preceding '-' is not present the value of the numeric object is a positive number. If the '-' is
 present the value of the numeric object is the negative number that is the negation of the positive
-number defined by the <number> clause. White space is allowed between the '-' and the
-<number>.
-If the <number> clause is an integer the value of the literal is an object that responds to the
-<integer> protocol and whose value represents the numeric value of the integer. Integer objects
+number defined by the \<number> clause. White space is allowed between the '-' and the
+\<number>.
+If the \<number> clause is an integer the value of the literal is an object that responds to the
+\<integer> protocol and whose value represents the numeric value of the integer. Integer objects
 correspond to ISO/IEC 10967 integers with unbounded range. There is no maximum magnitude for
 an integer.
-If the <number> is a float the value of the literal is an object that responds to the <Float> protocol.
+If the \<number> is a float the value of the literal is an object that responds to the \<Float> protocol.
 The maximum precision of a float is implementation-defined. If the number of digits in the
 mantissa of the float exceeds the maximum precision then the mantissa will be rounded to the
 maximum.
@@ -1290,7 +1442,7 @@ maximum.
 An implementation may support up to three different floating point numeric representations with
 varying precision and ranges. The floating point numeric representations are characterized by the
 objects that are the values of the standard globals named FloatE, FloatD, and FloatQ. These
-objects all conform to the protocol <floatCharacterization>and can report the values of parameters
+objects all conform to the protocol \<floatCharacterization>and can report the values of parameters
 that describe the characteristics of a floating point numeric representation. If an implementation
 supports three floating point representations then the characterization parameters of FloatE,
 FloatD, and FloatQ will each be different. If an implementation supports two floating point
@@ -1299,7 +1451,9 @@ characterization parameter of FloatD and FloatQ are equal. If an implementation 
 floating point representations then the characterization values of FloatE, FloatD, and FloatQ are all
 equal. One of the characteristic parameters of a floating point numeric representation is its
 precision. It is required that:
+
 (FloatE precision) ≤ (FloatD precision) ≤ (FloatQ precision).
+
 The numeric representation used for a floating point literal is determined by the exponentLetter if
 it is present in the float. If the exponentLetter is 'e' the floating point representation characterized
 by FloatE is its selected representation. If the exponentLetter is 'd' the floating point
@@ -1309,93 +1463,126 @@ If a floating point literal does not include an explicit exponentLetter its sele
 the floating point representation with the smallest precision that can represent the numeric value of
 the float with no loss of precision or, if no such representation exists, the representation with the
 greatest precision.
+
 The value of the floating point object is the value using the selected floating point representation
 that most closely approximates the numeric value of the float. If the number of digits in the
 mantissa of the float exceeds the maximum precision of the selected representation the mantissa
 will be rounded to the representation's maximum precision. It is erroneous if the numeric value
 defined by float is outside the range of values expressible using the selected representation.
-If the <number> is a scaledDecimal the value of the literal is a numeric object that responds to the
-<scaledDecimal> protocol. Scaled decimal objects provide a precise representation of decimal
+If the \<number> is a scaledDecimal the value of the literal is a numeric object that responds to the
+\<scaledDecimal> protocol. Scaled decimal objects provide a precise representation of decimal
 fractions with an explicitly specified number of fractional digits. The specified number of fractional
 digits in the scaled decimal object is the greater of the numeric value of fractionalDigits and the
 actual number of digits to the right of the decimal point in the scaledMantissa. It is erroneous if
 the numeric value of fractionalDigits is smaller than the actual number of digits, if any, to the right
 of the decimal point in the scaledMantissa.
+
 The maximum allowed precision for a scaled decimal numeric object is implementation defined and
 may be unbounded. It is erroneous if the total number of digits including the specified number of
 fractional digits exceeds the implementation defined maximum precision.
+
 3.4.6.2 Character Literals
+
 Character literals define objects that represent individual symbols of an alphabet. Characters are
 most commonly used as the elements of strings.
-<character literal> ::= quotedCharacter
-The value of a character literal is an object that conforms to the <character> protocol. It is
+
+\<character literal> ::= quotedCharacter
+
+The value of a character literal is an object that conforms to the \<character> protocol. It is
 erroneous if the character part of the quotedCharacter does not exist in the implementation
 defined execution character set used in the representation of character objects.
 
 
 
 3.4.6.3 String Literals
+
 String literals define objects that represent sequences of characters.
-<string literal> ::= quotedString
-The value of a string literal is an object that conforms to the <readableString> protocol. The
+
+\<string literal> ::= quotedString
+
+The value of a string literal is an object that conforms to the \<readableString> protocol. The
 elements of the object consist of objects representing the individual characters that make up the
 stringBody. For the purpose of defining the string each individual character is treated as if it was
-the character of a <character literal>. Any paired stringDelimiter characters within the
+the character of a \<character literal>. Any paired stringDelimiter characters within the
 stringBody are treated as one character object that encodes the string delimiter character.
 It is erroneous if stringBody contains any characters that does not exist in the implementation
 defined execution character set used in the representation of character objects.
-If the stringBody is not present the value of the string literal is a <readableString> object
+If the stringBody is not present the value of the string literal is a \<readableString> object
 containing no characters. Its size is zero.
+
 3.4.6.4 Symbol Literals
+
 Symbols are strings that are identity objects.
-<symbol literal> ::= hashedString
-The value of a symbol literal is an object that implements the <symbol> protocol. The elements of
+
+\<symbol literal> ::= hashedString
+
+The value of a symbol literal is an object that implements the \<symbol> protocol. The elements of
 the object consist of objects representing the individual characters that make of the stringBodyof
 the hashedString. For the purpose of defining the symbol each individual character is treated as if
-it was the character of a <character literal>. Any paired stringDelimiter characters within the
+it was the character of a \<character literal>. Any paired stringDelimiter characters within the
 stringBody are treated as one character object that encodes the string delimiter.
+
 It is erroneous if stringBody contains any characters that do not exist in the implementation
+
 defined execution character set used in the representation of character objects.
-If the stringBody is not present the value of the symbol literal is the unique <symbol> object
+If the stringBody is not present the value of the symbol literal is the unique \<symbol> object
 containing no characters. Its size is zero.
+
 Symbol objects are identity objects. If two symbols are equal they are the same object. Two symbol
 literals with identical stringBody parts evaluate to the same symbol object. Every evaluation of a
-particular <symbol literal> always returns the same object.
+particular \<symbol literal> always returns the same object.
+
+
 3.4.6.5 Selector Literals
+
 Selectors are objects which may be used as method selectors in perform messages.
-<selector literal> ::= quotedSelector
-The value of a selector literal is an object that implements the <selector> protocol. Selector objects
+
+
+\<selector literal> ::= quotedSelector
+
+
+The value of a selector literal is an object that implements the \<selector> protocol. Selector objects
 represent method selectors and can be used in conjunction with perform messages to dynamically
 send messages.
+
 Selector objects are identity objects. If two selectors are equal they are the same object. Two
 selector literals with identical quotedSelectors will evaluate to the same symbol object. Every
-evaluation of a particular <selector literal> always returns the same object.
+evaluation of a particular \<selector literal> always returns the same object.
 Some implementations may wish to implement selector objects such that they conform to both
 
 
 
-<selector> protocol and <symbol> protocol. It is implementation defined whether a symbol literal
+\<selector> protocol and \<symbol> protocol. It is implementation defined whether a symbol literal
 whose stringBody is identical to the selectorBody of a selector literal evaluates to the same
 object as the selector literal.
+
 Rationale
+
 Because symbols and selectors are defined as supporting different protocols and because the standard does not define any
 messages that generate selectors from text strings it is possible to build an implementation that can analyze the program
 text to determine which methods have selectors that are not used by the program. Alternatively, a traditional implementation
 where selectors and symbols are equivalent constructs is also permitted.
 
 3.4.6.6 Array Literals
+
 An array literal is a sequenced collection with numeric keys which may contain any number of other
 literals.
-<array literal> ::= '#(' <array element>* ')'
-<array element> ::= <literal> | identifier
-The value of an array literal is an object that implements the <sequencedReadableCollection>
+
+
+\<array literal> ::= '#(' \<array element>* ')'
+\<array element> ::= \<literal> | identifier
+
+
+The value of an array literal is an object that implements the \<sequencedReadableCollection>
 protocol. The elements of an array literal can consist of any combination of literal forms. If an
-identifier appears as an <array element> and it is one of the reserved identifiers nil, true or false
+identifier appears as an \<array element> and it is one of the reserved identifiers nil, true or false
 the value of the corresponding element of the collection is the value of that reserved identifier. The
-meaning is undefined if any other identifier is used as an <array element>. If an <array literal> has
-no <array element>clauses the collection has no elements.
+meaning is undefined if any other identifier is used as an \<array element>. If an \<array literal> has
+no \<array element>clauses the collection has no elements.
+
 3.4.7 Reserved Identifiers
-The following identifiers are reserved words in Smalltalk. They may only be used as a <primary>
+
+The following identifiers are reserved words in Smalltalk. They may only be used as a \<primary>
 and are defined as follows:
 nil
 
@@ -1405,18 +1592,22 @@ self
 
 super
 
-A constant binding to a unique object that supports the <nil>
+A constant binding to a unique object that supports the \<nil>
 protocol. The scope of the binding is the entire program. Variables
 that have not been explicitly initialized initially have this value.
-A constant binding to a unique object that supports the <boolean>
+
+A constant binding to a unique object that supports the \<boolean>
 protocol. The scope of the binding is the entire program.
-A constant binding to a unique object that supports the <boolean>
+
+A constant binding to a unique object that supports the \<boolean>
 protocol. The scope of the binding is the entire program.
+
 Within a method, a constant binding to the receiver of the
 message that activated the method. The scope of the binding is a
-single method activation. Within a <<class initializer>> it is a
+single method activation. Within a \<\<class initializer>> it is a
 constant binding to the associated class object. Within any other
 type of initializer self has the error binding.
+
 Within a method, a constant binding to the receiver of the
 message that activated the method. The binding of 'super' is to the
 same object as the binding of 'self', but causes message lookup to
@@ -1435,7 +1626,9 @@ The use of these reserved identifiers in any other context is erroneous .
 Implementations may define other identifiers with bindings that have implementation specified
 semantics. Any such identifier must be bound in the extension scope of the program.. An explicit
 definition of such an identifier in any scope supersedes the implementation provided binding.
+
 3.5 Lexical Grammar
+
 The lexical grammar defines the syntax of the atomic symbols, called tokens, used in the method
 grammar and program grammar. Tokens are ordered sequences of characters. A character is the
 smallest possible syntactic unit of the token grammar. Each token is to be recognized as the
@@ -1443,7 +1636,11 @@ longest string of characters that is syntactically valid, except where otherwise
 otherwise specified, white space or another separator must appear between any two tokens if the
 initial characters of the second token would be a valid extension of the first token. White space is
 not allowed within a token unless explicitly specified as being allowed.
+
+
 3.5.1 Character Categories
+
+
 The tokens of the concrete syntax are composed from an alphabet of characters. This standard
 does not specify the use of a particular character set or encoding. An implementation must specify
 its specific character set and its encoding. All implementations must support the following
@@ -1451,11 +1648,15 @@ categories of characters:
 The lowercase letters of the English alphabet.
 The uppercase letters of the English alphabet.
 The Arabic numerals.
+
 A specific set of binary operators and other special characters.
+
 A set of characters that represent "white space".
 An implementation may define characters in addition to those listed below in each character
 category. While the meaning of a program that uses any such characters is well defined it may not
 be portable between conforming implementations.
+
+
 character ::=
 "Any character in the implementation-defined character set"
 whitespace ::= "Any non-printing character interpreted as white space including spaces, tabs, and
@@ -1473,7 +1674,9 @@ uppercaseAlphabetic |
 lowercaseAlphabetic |
 nonCaseLetter |
 "implementation defined letters"
+
 3.5.2 Comments
+
 Comments exist to allow the programmer to add documentation to a program
 
 
@@ -1483,51 +1686,75 @@ nonCommentDelimiter::=
 "any character that is not a commentDelimiter "
 comment :=
 commentDelimiter nonCommentDelimiter * commentDelimiter
+
+
 The quote character " begins and ends a comment. Comments do not nest. A comment is
 considered white space and acts as a separator. There is no need to allow embedded quote
 characters in comments as this double-quote construct can simply be parsed as two sequential
 comments. White space characters are allowed within comments
+
 3.5.3 Identifiers
+
 Identifiers are used to name entities defined by the program or implementation such as variables,
 classes, message selectors.
+
 identifier ::= letter (letter | digit)*
+
+
 An identifier is an sequence of letters and digits. The sequence may be of any length. The first
 character must be a letter. Upper-case and lower-case letters are logically different. Identifiers
 starting with an underscore ("_") are reserved for use by the implementation. Implementations may
 define additional nonCaseLetter and letter characters but their usage is non-portable.
+
 3.5.4 Keywords
+
 Keywords are identifiers used to create message selectors.
+
 keyword ::= identifier ':'
+
+
 Keywords are identifiers followed immediately by the colon character. An unadorned identifier is an
 identifier which is not immediately preceded by a '#'. If a ':' followed by an '=' immediately follows
 an unadorned identifier, with no intervening white space, then the token is to be parsed as an
 identifier followed by an assignmentOperator not as an keyword followed by an '='.
+
 3.5.5 Operators
+
 Three types of operator tokens are defined in Smalltalk: binary selectors, the return operator, and
 the assignment operator.
 .
+
+
 binaryCharacter ::=
-'!' | '%' | '&'' | '*' | '+' | ','' | '/' | '<' | '=' | '>' | '?' | '@' | '\' | '~' | '|' | '-'
+'!' | '%' | '&'' | '*' | '+' | ','' | '/' | '\<' | '=' | '>' | '?' | '@' | '\' | '~' | '|' | '-'
 binarySelector ::= binaryCharacter+
 returnOperator ::= '^'
 assignmentOperator ::= ':='
+
 Binary selectors are method selectors that appear similar to mathematical operators. A binary
-selector may be any length greater than or equal to one. If a negative <number literal> follows a
+selector may be any length greater than or equal to one. If a negative \<number literal> follows a
 binary selector there must intervening white space.
 An implementation may define additional binaryCharacters but their use may result in a nonportable program.
 
 
 
+
 3.5.6 Numbers
+
 Numbers are tokens that represent numeric quantities. There are three forms of numbers: integer,
 
 float, and scaledDecimal. No white space is allowed within a numeric token.
+
+
+
 integer ::= decimalInteger | radixInteger
 decimalInteger ::= digits
 digits ::= digit+
 radixInteger ::= radixSpecifier 'r' radixDigits
 radixSpecifier := digits
 radixDigits ::= (digit | uppercaseAlphabetic)+
+
+
 Integer tokens describe whole numbers using any radix between 2 and 36. If no radix is specified
 then the radix is 10. The radixSpecifier is interpreted as a decimal integer whose numeric value
 must be in the range 2≤radixSpecifier≤36. The digits used to form a radix number are the
@@ -1537,10 +1764,16 @@ characters represent the digits with values 1010 through 3510 where 'A' represen
 character representing a digit value greater than or equal to or the numeric value of the
 radixSpecifier is used to form the radixDigits. It is erroneous if the numeric value of the
 radixSpecifier is less than 2 or greater than 36.
+
+
+
 float ::= mantissa [exponentLetter exponent]
 mantissa ::= digits '.' digits
 exponent ::= ['-']decimalInteger
 exponentLetter ::= 'e' | 'd' | 'q'
+
+
+
 Floating-point tokens represent numbers in scientific notation. The mantissa contains the
 significant digits of the number and the exponent defines a power of ten that the mantissa is to be
 multiplied by to obtain the numerical value of the float. Both the mantissa and exponent are
@@ -1551,15 +1784,20 @@ the mantissa multiplied by ten raised to the power specified by the numeric valu
 exponent. If the optional exponent is not present the value of the float is simply the numerical
 value of the mantissa. An exponentLetter must be followed by an explicit exponent
 Rationale
+
 Constants such as 1.0q are not valid. This is to avoid ambiguity relating to a minus ('-') operator immediately following such
 a token.
+
 The exponent Letter is only used in floating-point numbers. Historically some implementations have allowed its use in the
 specification of integer constants. For example 10e10 is not a valid number token. It has not been universally implemented
 and its utility was deemed insufficient to justify the effort to define and implement itl.
 
+
 scaledDecimal ::= scaledMantissa 's' [fractionalDigits]
 scaledMantissa ::= decimalInteger | mantissa
 fractionalDigits ::= decimalInteger
+
+
 ScaledDecimal tokens describe decimal fractions that are to be represented using a specified
 number of fractional decimal digits of precision. The scaledMantissa specifies the decimal
 numeric value of the number. If fractionalDigits is present it specifies that the representation used
@@ -1569,37 +1807,53 @@ numeric value of fractionalDigits.
 
 
 Rationale
+
 123s = 123s0
 123.0s = 123s1=123.0s1
 123.000s=123s3 = 123.0s3=123.00s3=123.000s3
+
 Allowing the digits following the 's' to be missing seems inconsistent with the rule that the exponentLetter of a float must be
 followed by digit
 
 3.5.7 Quoted Character
+
 A quoted character is a distinct token consisting of a dollar sign followed by any single character in
 the implementation defined character set, including a white space character
 quotedCharacter ::= '$' character
+
 3.5.8 Quoted Strings
+
 A quoted string token is a delimited sequence of any characters in the implementation defined
 character set.
+
+
 quotedString ::= stringDelimiter stringBody stringDelimiter
 stringBody ::= (nonStringDelimiter | (stringDelimiter stringDelimiter)*)
 stringDelimiter ::= ''' "a single quote"
 nonStringDelimiter ::= "any character except stringDelimiter"
+
+
 A nonStringDelimiter is any character in the implementation defined character set except a
 stringDelimiter. A single stringDelimiter may be represented in the string by two successive
 stringDelimiter. There is no limit on the length of a quoted string token. White space characters
 may be included in the stringBody.
+
 3.5.9 Hashed String
+
 A hashed string is a quoted string that is immediately preceded by a pound sign.
 hashedString ::= '#' quotedString
 The stringBody of a hashedString may include white space characters.
+
 3.5.10 Quoted Selector
+
 A quoted selector is an identifier, binary selector or sequence of keywords that is immediately
 preceded by a pound sign.
 quotedSelector ::= '#' (unarySelector | binarySelector | keywordSelector)
 keywordSelector ::= keyword+
+
+
 3.5.11 Separators
+
 separator ::= (whitespace | comment)*
 Smalltalk programs are free-format. Unless otherwise specified, a separator must appear between
 two tokens if all or any initial part of the second may appear as a valid extension of the first. A
@@ -1609,7 +1863,9 @@ separator may appear between any two tokens. They may not appear within a token 
 
 explicitly allowed to so appear. Anywhere one separator may appear an arbitrary number may
 appear.
+
 3.6 Implementation Limits
+
 The portability of a conforming program may be dependent upon the limits of numerous parameters
 of a conforming Smalltalk language implementation. For certain parameters, the standard defines a
 lower limit for all conforming implementations. Other lower limits are left unspecified by the
@@ -1674,6 +1930,7 @@ Total number instance variables
 65535
 
 4. Smalltalk Interchange Format
+
 This section gives a concrete syntax for the interchange of Smalltalk programs. This defines one of
 many possible concrete implementations of the program definition syntax given in section 3.3. This
 
@@ -1681,8 +1938,9 @@ many possible concrete implementations of the program definition syntax given in
 
 interchange format is not a user specification language for the concrete syntax of these elements. It
 is only intended for program interchange.
+
 Each interchange file consists of a set of definitions which form part or all of a Smalltalk program.
-Each definition represents all or part of a <<program element>> in the program definition syntax.
+Each definition represents all or part of a \<\<program element>> in the program definition syntax.
 Interchange files are composed of units, called "chunks" , which are delimited by exclamation
 points. Each program element, as defined in section 3.3 is a represented by one or more chunks.
 Exclamation points which appear within a chunk are doubled but represent a single exclamation
@@ -1690,6 +1948,7 @@ point. When processing an interchange file, each chunk should be sequentially re
 preprocessed converting doubled exclamation points into single exclamation points. The body of
 the chunk can then be processed as specified by the Interchange BNF Syntax.
 Rationale
+
 A interchange format is a derivative of the code file format defined by Krasner in "The Smalltalk-80 Code File Format" in
 "Smalltalk-80, Bits of History, Words of Advice". The syntax was designed so that it could be implemented by reading
 chunks and evaluating them (although this may restrict those implementations to treat certain globals, such as Class, Global
@@ -1700,176 +1959,210 @@ which may cause a small set of Standard-compliant programs to be non-portable to
 
 The interchange BNF references the following symbols from the method grammar and lexical
 grammar as defined in sections 3.5, 3.4.2 and 3.3.5: comment, identifier, string,
-stringDelimiter, whitespace, <initializer definition>, and <method definition>. References to
+stringDelimiter, whitespace, \<initializer definition>, and \<method definition>. References to
 these symbols from the interchange BNF are to be interpreted using their section 3 definitions. The
-BNF is written with the construct <elementSeparator> as the break character for the chunks. Any
+BNF is written with the construct \<elementSeparator> as the break character for the chunks. Any
 processing to convert doubled exclamation points is assumed to be done as part of the initial
 scanning, and is not reflected in the BNF.
-<interchangeFile> ::=
-<interchangeVersionIdentifier>
-( <interchangeUnit> ) +
-<elementSeparator> ::= '!'
-<interchangeUnit> ::= <interchangeElement> <annotation>*
-<interchangeElement> ::=
-<classDefinition> |
-<classInitialization> |
-<globalDefinition> |
-<globalValueInitialization> |
-<poolDefinition> |
-<poolVariableDefinition> |
-<poolValueInitialization> |
-<methodDefinition> |
-<classMethodDefinition> |
-<programInitialization> |
-comment <elementSeparator>
+
+
+
+\<interchangeFile> ::=
+\<interchangeVersionIdentifier>
+( \<interchangeUnit> ) +
+\<elementSeparator> ::= '!'
+\<interchangeUnit> ::= \<interchangeElement> \<annotation>*
+\<interchangeElement> ::=
+\<classDefinition> |
+\<classInitialization> |
+\<globalDefinition> |
+\<globalValueInitialization> |
+\<poolDefinition> |
+\<poolVariableDefinition> |
+\<poolValueInitialization> |
+\<methodDefinition> |
+\<classMethodDefinition> |
+\<programInitialization> |
+comment \<elementSeparator>
+
+
+
+
 An interchange file consists of a version specification followed by an ordered list of interchange
 elements. Each of the elements is terminated by an exclamation point. The interchange file
-corresponds to all or part of a <<Smalltalk program>> from the section Smalltalk Abstract Program
+corresponds to all or part of a \<\<Smalltalk program>> from the section Smalltalk Abstract Program
 Grammar . A complete program is treated as a concatenation of the interchange files from which it
 
 
 
 is composed. Any names or objects that are predefined by an implementation are treated as if
 their definitions preceded the first file in this concatenation.
-Each <interchangeUnit> is composed of lexical tokens as defined by the Smalltalk lexical grammar
+
+Each \<interchangeUnit> is composed of lexical tokens as defined by the Smalltalk lexical grammar
 in section 3.5. Generally each token may be separated from the next by any amount of
 whitespace.
-Each <interchangeElement> corresponds to all or part of a <<program element>> as defined by
+
+Each \<interchangeElement> corresponds to all or part of a \<\<program element>> as defined by
 the Smalltalk Abstract Program Syntax. The annotations allow extra-lingual information to be
 associated with individual program elements. Collectively, the interchange elements
-correspond to the <<program element>>+ list of a <<Smalltalk program>>. The <<initialization
-ordering>> of the <<Smalltalk program>> is defined to be the ordering of the initializations
+correspond to the \<\<program element>>+ list of a \<\<Smalltalk program>>. The \<\<initialization
+ordering>> of the \<\<Smalltalk program>> is defined to be the ordering of the initializations
 elements in the interchange files. The elements and annotations may be separated by any amount
 of whitespace.
-<interchangeVersionIdentifier> ::=
-'Smalltalk' 'interchangeVersion:' <versionId> <elementSeparator>
-<versionId> ::= quotedString
+
+
+
+\<interchangeVersionIdentifier> ::=
+'Smalltalk' 'interchangeVersion:' \<versionId> \<elementSeparator>
+\<versionId> ::= quotedString
+
+
+
+
 In order to accommodate future changes in the format, each interchange file starts with a string that
 identifies the version of the interchange format used for that file. The version identifier is a constant
-string. If the <versionId> is the quotedString '1.0' the interchange file must strictly conform to the
+string. If the \<versionId> is the quotedString '1.0' the interchange file must strictly conform to the
 format specified in this standard. Any future revisions of this standard that extends or modifies the
 interchange file format will specify a different value for the quotedString. Any non-standard
 extensions to the interchange file format should be identified with a unique version identifier. The
 result is undefined if an implementation does not support an interchange file of the version that is
 defined in the version string.
-<classDefinition> ::=
-'Class' 'named:' <classNameString>
-'superclass:' <superclassNameString>
-'indexedInstanceVariables:' <indexableInstVarType>
-'instanceVariableNames:' <instanceVariableNames>
-'classVariableNames:' <classVariableList>
-'sharedPools:' <poolList>
-'classInstanceVariableNames:'<classInstVariableList>
-<elementSeparator>
-<classNameString> ::= stringDelimiter <className> stringDelimiter
-<superclassNameString> ::= stringDelimiter <className> stringDelimiter
-<className> ::= identifier
-<indexableInstVarType> ::= hashedString
-<instanceVariableNames> ::= <identifierList>
-<classVariableList> ::= <identifierList>
-<classInstVariableList> ::= <identifierList>
-<poolList> ::= <identifierList>
-<identifierList> ::= stringDelimiter identifier* stringDelimiter
-<methodDefinition> ::=
-<className> 'method' <elementSeparator>
-<method definition> <elementSeparator>
-<classMethodDefinition> ::=
-<className> 'classMethod' <elementSeparator>
 
 
 
-<method definition> <elementSeparator>
-<classInitializationr> ::=
-<className> 'initializer' <elementSeparator>
-<initializer definition> <elementSeparator>
-These productions correspond to the components of a <<class definition>> as defined in section
-3.3.2. The <<instance state>> is defined in the interchange format by the
-<instanceVariableNames> and the <indexableInstVarType> clauses. If the hashedString of the
-<indexableInstVarType> clause is #'byte' then the <<instance state>> clause includes the
-<<byte indexable>> symbol. If the hashedString of the <indexableInstVarType> clause is
-#'object' then the <<instance state>> clause includes the <<object indexable>> symbol. If the
-hashedString of the <indexableInstVarType> clause is #'none' then the <<instance state>>
-clause includes neither the <<byte indexable>> symbol or the <<object indexable>> symbol. The
-<instanceVariablesNames> corresponds to <<instance variable names>>. The identifiers in this list
-correspond to the identifiers in <<class variable names>>. The identifiers are separated by
+
+\<classDefinition> ::=
+'Class' 'named:' \<classNameString>
+'superclass:' \<superclassNameString>
+'indexedInstanceVariables:' \<indexableInstVarType>
+'instanceVariableNames:' \<instanceVariableNames>
+'classVariableNames:' \<classVariableList>
+'sharedPools:' \<poolList>
+'classInstanceVariableNames:'\<classInstVariableList>
+\<elementSeparator>
+\<classNameString> ::= stringDelimiter \<className> stringDelimiter
+\<superclassNameString> ::= stringDelimiter \<className> stringDelimiter
+\<className> ::= identifier
+\<indexableInstVarType> ::= hashedString
+\<instanceVariableNames> ::= \<identifierList>
+\<classVariableList> ::= \<identifierList>
+\<classInstVariableList> ::= \<identifierList>
+\<poolList> ::= \<identifierList>
+\<identifierList> ::= stringDelimiter identifier* stringDelimiter
+\<methodDefinition> ::=
+\<className> 'method' \<elementSeparator>
+\<method definition> \<elementSeparator>
+\<classMethodDefinition> ::=
+\<className> 'classMethod' \<elementSeparator>
+
+
+
+\<method definition> \<elementSeparator>
+\<classInitializationr> ::=
+\<className> 'initializer' \<elementSeparator>
+\<initializer definition> \<elementSeparator>
+
+
+
+These productions correspond to the components of a \<\<class definition>> as defined in section
+3.3.2. The \<\<instance state>> is defined in the interchange format by the
+\<instanceVariableNames> and the \<indexableInstVarType> clauses. If the hashedString of the
+\<indexableInstVarType> clause is #'byte' then the \<\<instance state>> clause includes the
+\<\<byte indexable>> symbol. If the hashedString of the \<indexableInstVarType> clause is
+#'object' then the \<\<instance state>> clause includes the \<\<object indexable>> symbol. If the
+hashedString of the \<indexableInstVarType> clause is #'none' then the \<\<instance state>>
+clause includes neither the \<\<byte indexable>> symbol or the \<\<object indexable>> symbol. The
+\<instanceVariablesNames> corresponds to \<\<instance variable names>>. The identifiers in this list
+correspond to the identifiers in \<\<class variable names>>. The identifiers are separated by
 whiteSpace.
-The <classVariableList> corresponds to <<class variable names>>. The identifiers in this list
-correspond to the identifiers in <<class variable names>>. The identifiers are separated by
+
+The \<classVariableList> corresponds to \<\<class variable names>>. The identifiers in this list
+correspond to the identifiers in \<\<class variable names>>. The identifiers are separated by
 whiteSpace.
-<classInstVariableList> corresponds to <<class instance variable names>>. The identifiers in this
-string correspond to the identifiers in the <<class variable names>>. The identifiers are separated
+
+\<classInstVariableList> corresponds to \<\<class instance variable names>>. The identifiers in this
+string correspond to the identifiers in the \<\<class variable names>>. The identifiers are separated
 by whiteSpace.
-<poolList> corresponds to <<imported pool names>>. The identifiers in this string correspond to
-the identifiers in the <<imported pool names>>. The identifiers are separated by whiteSpace.
-The collection of all <methodDefinition> elements with a common class name throughout the file
-correspond to the <<instance methods>> portion of the <<class definition>> for that class name.
-The collection of all <classMethodDefinition> elements with a common class name through out the
-file correspond to the <<class methods>> portion of the <<class definition>>. Any
-<methodDefinition> elements or <classMethodDefinition> elements for a particular class name
-must follow the <classDefinition> for that class name.; however, they do not need to immediately
-follow the <classDefinition>. Nor do they need to be adjacent within the interchange file.
-<classInitializationr> corresponds to the <<class initializer>> of a <<class definition>>. The
-<classInitialization> may appear anywhere following the <classDefinition> of the class to which it
+
+\<poolList> corresponds to \<\<imported pool names>>. The identifiers in this string correspond to
+the identifiers in the \<\<imported pool names>>. The identifiers are separated by whiteSpace.
+The collection of all \<methodDefinition> elements with a common class name throughout the file
+correspond to the \<\<instance methods>> portion of the \<\<class definition>> for that class name.
+The collection of all \<classMethodDefinition> elements with a common class name through out the
+file correspond to the \<\<class methods>> portion of the \<\<class definition>>. Any
+\<methodDefinition> elements or \<classMethodDefinition> elements for a particular class name
+must follow the \<classDefinition> for that class name.; however, they do not need to immediately
+follow the \<classDefinition>. Nor do they need to be adjacent within the interchange file.
+\<classInitializationr> corresponds to the \<\<class initializer>> of a \<\<class definition>>. The
+\<classInitialization> may appear anywhere following the \<classDefinition> of the class to which it
 applies.
-<globalDefinition> ::=
-<globalVariableDefinition> | <globalConstantDefinition>
-<globalVariableDefinition> ::=
-'Global' 'variable:' <globalNameString> <elementSeparator>
-<globalConstantDefinition> ::=
-'Global' 'constant:' <globalNameString> <elementSeparator>
-<globalValueInitialization> ::=
-<globalName> 'initializer' <elementSeparator>
-<variableInitializer> <elementSeparator>
-<globalNameString> ::=
-stringDelimiter <globalName> stringDelimiter
-<globalName> ::= identifier
-<variableInitializer> ::= <initializer definition>
 
 
 
-These productions provide the syntax of the interchange format for a <<global definition>>. The
-<globalConstantDefinition> corresponds to a <<global definition>> with a <<constant designator>>
-and the <globalVariableDefinition> corresponds to a <<global definition>> without a <<constant
-designator>>. The <globalName> corresponds to the <<global name>> of that <<global
-definition>>. The <variableInitializer> of a <globalValueInitialization> with an identical
-<globalName> corresponds to the <variableInitializer> of the corresponding <<global definition>>.
-The <globalValueInitialization> may appear anywhere following the <globalDefinition>.
-<poolDefinition> ::=
-'Pool' 'named:' <poolNameString> <elementSeparator>
-<poolVariableDefinition> ::=
-<poolValueDefinition> | <poolConstantDefinition>
-<poolValueDefinition> ::= <poolName> 'variable:'
-<poolVariableNameString> <elementSeparator>
-<poolConstantDefinition> ::= <poolName> 'constant:'
-<poolVariableNameString> <elementSeparator>
-<poolValueInitialization> ::=
-<poolName> 'initializerFor:' <poolVariableNameString>
-<elementSeparator> <variableInitializer> <elementSeparator>
-<poolNameString> ::=
-stringDelimiter <poolName> stringDelimiter
-<poolVariableNameString> ::=
-stringDelimiter <poolVariableName> stringDelimiter
-<poolName> ::= identifier
-<poolVariableName> ::= identifier
-These productions provide the syntax of the interchange format corresponding to a <<pool
-definition>>. A <poolName> corresponds to a <<pool name>> of the abstract program syntax. A
-<poolValueDefinition> defines a <<pool definition>> without a <<constant designator>> and a
-<poolConstantDefinition> defines a <<pool definition>> with a <<constant designator>>.
-<poolVariableName> corresponds to a <<pool variable name>>. The individual
-<poolVariableDefinition> elements for a pool may appear anywhere following the <poolDefinition>
-for that pool. The <poolValueInitialization> elements may appear anywhere following the
-corresponding <poolValueDefinition>.
-<programInitialization> ::=
-'Global' 'initializer' <elementSeparator>
-<programInitializer> <elementSeparator>
-<programInitializer> ::= <initializer definition>
-This is the interchange syntax for the <<program initializer definition>>. The <initializer definition>
-in the <programInitializer> corresponds to the <initializer definition> of a <<program initializer
+\<globalDefinition> ::=
+\<globalVariableDefinition> | \<globalConstantDefinition>
+\<globalVariableDefinition> ::=
+'Global' 'variable:' \<globalNameString> \<elementSeparator>
+\<globalConstantDefinition> ::=
+'Global' 'constant:' \<globalNameString> \<elementSeparator>
+\<globalValueInitialization> ::=
+\<globalName> 'initializer' \<elementSeparator>
+\<variableInitializer> \<elementSeparator>
+\<globalNameString> ::=
+stringDelimiter \<globalName> stringDelimiter
+\<globalName> ::= identifier
+\<variableInitializer> ::= \<initializer definition>
+
+
+
+These productions provide the syntax of the interchange format for a \<\<global definition>>. The
+
+
+\<globalConstantDefinition> corresponds to a \<\<global definition>> with a \<\<constant designator>>
+and the \<globalVariableDefinition> corresponds to a \<\<global definition>> without a \<\<constant
+designator>>. The \<globalName> corresponds to the \<\<global name>> of that \<\<global
+definition>>. The \<variableInitializer> of a \<globalValueInitialization> with an identical
+\<globalName> corresponds to the \<variableInitializer> of the corresponding \<\<global definition>>.
+The \<globalValueInitialization> may appear anywhere following the \<globalDefinition>.
+\<poolDefinition> ::=
+'Pool' 'named:' \<poolNameString> \<elementSeparator>
+\<poolVariableDefinition> ::=
+\<poolValueDefinition> | \<poolConstantDefinition>
+\<poolValueDefinition> ::= \<poolName> 'variable:'
+\<poolVariableNameString> \<elementSeparator>
+\<poolConstantDefinition> ::= \<poolName> 'constant:'
+\<poolVariableNameString> \<elementSeparator>
+\<poolValueInitialization> ::=
+\<poolName> 'initializerFor:' \<poolVariableNameString>
+\<elementSeparator> \<variableInitializer> \<elementSeparator>
+\<poolNameString> ::=
+stringDelimiter \<poolName> stringDelimiter
+\<poolVariableNameString> ::=
+stringDelimiter \<poolVariableName> stringDelimiter
+\<poolName> ::= identifier
+\<poolVariableName> ::= identifier
+These productions provide the syntax of the interchange format corresponding to a \<\<pool
+definition>>. A \<poolName> corresponds to a \<\<pool name>> of the abstract program syntax. A
+\<poolValueDefinition> defines a \<\<pool definition>> without a \<\<constant designator>> and a
+\<poolConstantDefinition> defines a \<\<pool definition>> with a \<\<constant designator>>.
+\<poolVariableName> corresponds to a \<\<pool variable name>>. The individual
+\<poolVariableDefinition> elements for a pool may appear anywhere following the \<poolDefinition>
+for that pool. The \<poolValueInitialization> elements may appear anywhere following the
+corresponding \<poolValueDefinition>.
+\<programInitialization> ::=
+'Global' 'initializer' \<elementSeparator>
+\<programInitializer> \<elementSeparator>
+\<programInitializer> ::= \<initializer definition>
+This is the interchange syntax for the \<\<program initializer definition>>. The \<initializer definition>
+in the \<programInitializer> corresponds to the \<initializer definition> of a \<\<program initializer
 definition>.
-<annotation> ::=
+\<annotation> ::=
 'Annotation' 'key:' quotedString
-'value:' quotedString <elementSeparator>
-An <annotation> defines an implementation defined attribute for program element to which it is
+'value:' quotedString \<elementSeparator>
+
+
+
+An \<annotation> defines an implementation defined attribute for program element to which it is
 attached. These attributes have no semantics defined by this standard. They are provided as a
 mechanism for implementations to exchange extra-lingual information concerning the program. An
 
@@ -1877,9 +2170,11 @@ mechanism for implementations to exchange extra-lingual information concerning t
 
 implementation is under no obligation to do anything with and can totally ignore any or all
 annotations.
+
 Multiple annotations may follow a single definition or initialization. The first string of an
-<annotation> names the attribute defined by the annotation. The second string provides the value
+\<annotation> names the attribute defined by the annotation. The second string provides the value
 of that attribute.
+
 For interchange purposes the following standard attributes are defined :
 
 key
@@ -1908,12 +2203,15 @@ attribute names that will not conflict with those chosen by other implementors. 
 also encouraged to cooperate in the naming of attributes that may be of general utility.
 
 5. Standard Class Library
+
 5.1 Definitions and Concepts
+
 The class library specification defines the externally visible behavior of a set of concrete classes in
 a conforming Smalltalk system without supplying a corresponding implementation. The
 specification does not define how the classes must be arranged in an inheritance hierarchy, nor
 does it specify the existence or behavior of any abstract classes. Similarly, the specification does
 not specify the instance variables of classes in a conforming implementation.
+
 In order to specify the standard class library without making reference to any particular inheritance
 hierarchy, the class library specification uses a behavioral description based on protocols. A
 protocol is a named semantic interface, defined by a glossary of terms, and a set of message
@@ -1921,13 +2219,15 @@ specifications. Protocols are independent of implementation inheritance relation
 intended to clearly specify essential aspects of behavior while leaving incidental aspects
 unspecified. The fact that something is explicitly unspecified may be important information to both
 implementors and application developers.
-Protocols are denoted by <P>, where P is the name of a protocol. Protocols are used in the
+
+Protocols are denoted by \<P>, where P is the name of a protocol. Protocols are used in the
 specification both to define the behavior of concrete classes, and also to factor common behavior
 from other protocols through a relationship called conformance. Protocols that define the behavior
 of objects bound to global names (concrete protocols) start with an uppercase letter, and
 implementations must provide a global name that is the same as the name of the protocol which
 implements the specified behavior. Protocols that are used only as a factoring mechanism in the
 specification start with a lowercase letter and are referred to as abstract protocols.
+
 For any particular set of concrete classes there are typically many possible factorings of behavior
 into abstract protocols. In general we will prefer the minimal set of abstract protocols which capture
 the concrete behavior being modeled, unless there are compelling reasons to the contrary, e.g.
@@ -1939,24 +2239,30 @@ the abstract protocols is to describe the behavior of the global names being spe
 standard. While the abstract protocols may also prove to be useful as a tool for specifying Smalltalk
 class libraries, it is not a goal to provide a set of generic, reusable abstract protocols for this
 purpose.
+
 Rationale
+
 Experience has shown that there is occasionally a conflict between adhering strictly to the protocol
 specification rules as laid out in this section, and providing a clear and unambiguous specification
 for a particular message. This arises most frequently in cases where the simplest and most obvious
 definition breaks the protocol conformance rules (covariance and contravariance). In all such cases
 we have opted for simplicity and clarity, even if the resulting specification does not strictly follow
 protocol conformance rules.
+
 5.1.1 Glossary of Terms
+
 The glossary of terms defines terminology that is used in the message specifications to describe
 message semantics. The glossary typically defines terms related to an abstract model of behavior
 for a particular object, and it is usually specific to the domain in which the object is applied. For
 example, one may consider that all collections behave as if they contain elements, regardless of
 whether elements actually exist in a particular implementation. The concept of elements is
 therefore useful in defining collection operations, and so it is defined in the glossary for the
-<collection> protocol. Note however, that the existence in the specification of a glossary term of a
+\<collection> protocol. Note however, that the existence in the specification of a glossary term of a
 conceptual variable called elements does not require the implementation to actually have such an
 instance variable.
+
 5.1.2 Message Specification
+
 A message specification describes an individual message in the context of a particular protocol. It
 is defined by a message selector, a behavioral description, a set of parameter specifications, and a
 set of return value specifications. A specification for a particular message may appear in arbitrarily
@@ -1965,13 +2271,17 @@ message selector. A message specification has no meaning outside of the context 
 A selector names a message, and is denoted as such with a preceding # symbol. For example,
 #at:put: is a 2-parameter message selector. We distinguish a message from a method as
 follows:
+
 A selector, together with its parameters, is a message.
 A selector, together with a receiver object, identifies a method, the unique implementation of
 the message.
+
 Just as a method is uniquely identified by a receiver and selector, a message specification is
-uniquely identified by a protocol and selector pair (<P>, s) where P is a protocol name and s is a
+uniquely identified by a protocol and selector pair (\<P>, s) where P is a protocol name and s is a
 selector.
+
 5.1.2.1 Behavioral Description
+
 The behavior of a message is described with English text, using a definitional style wherever
 possible. Basic operations are described in terms of their effects on the abstract state of the object
 (using terms described in the glossary). These form the building blocks for specifying the behavior
@@ -1983,6 +2293,7 @@ a word as defined in the glossary and normal English usage.
 
 
 5.1.2.2 Parameter Specification
+
 A parameter specification is defined by a parameter name, a parameter interface definition, and a
 parameter aliasing attribute.
 A parameter specification places constraints on the parameter in terms of protocol conformance,
@@ -1990,13 +2301,13 @@ and provides information concerning how the parameter is used by implementations
 message. The parameter name is the name of a formal parameter and is used to identify the
 parameter with a parameter specification, and to refer to the parameter in textual descriptions.
 A parameter interface definition is defined as either:
-•=
+-=
 
-A single protocol name <P>.
+A single protocol name \<P>.
 
-•=
+-=
 
-A logical OR of two or more protocols, written as <P1> | <P2> | ... | <Pn>
+A logical OR of two or more protocols, written as \<P1> | \<P2> | ... | \<Pn>
 
 The parameter interface definition identifies the behavioral assumptions the message makes
 concerning the parameter. A client must supply an appropriate actual parameter. An OR of
@@ -2006,10 +2317,12 @@ tests their behavior by sending messages in order to determine the action to be 
 this is different from the case where a message accepts objects with diverse behavior, but only
 makes use of common shared behavior. In the latter case, the message is not really dealing with
 diverse cases of behavior.
-When a message specifies that a given formal parameter must conform to a protocol <P>, it is
-making a commitment to use only behavior which is defined in <P> in the message
+
+When a message specifies that a given formal parameter must conform to a protocol \<P>, it is
+making a commitment to use only behavior which is defined in \<P> in the message
 implementation. In this sense, the conformance statement is a maximal behavioral requirement—at
-most all of the behavior described by <P> will be used, and no more.
+most all of the behavior described by \<P> will be used, and no more.
+
 Aliasing information (for example, whether a parameter is stored, or whether a returned value is
 new or returned state) is specified to avoid having implementors use defensive programming
 techniques which result in unnecessary object creation and copying, incurring a performance
@@ -2018,17 +2331,26 @@ and for return values. Essential aliasing forms a critical part of the behavior 
 such it must be specified by the interface designer. Incidental aliasing should not be specified since
 it is a side effect of implementation choices, and is not fundamental to the specified functionality of
 the interface.
+
 Essential aliasing of parameters is described using a parameter aliasing attribute:
+
 captured
+
 The receiver always retains a reference to the parameter, directly or
 indirectly, as a result of this message.
+
 uncaptured
+
 The receiver never retains a reference to the parameter, directly or
 indirectly, as a result of this message.
+
 unspecified
+
 It is unspecified as to whether or not a reference is retained as a result of
 this message i.e. either case may occur.
+
 5.1.2.3 Return value specification
+
 A return value specification is defined by a return value protocol and a return value aliasing
 attribute. Whereas the parameter description is prescriptive in that it states requirements to which
 the parameters must conform, the return value information is descriptive in that it provides
@@ -2051,39 +2373,51 @@ In this case we denote the return value as UNSPECIFIED. This can be used to sepa
 procedural messages from functional messages; to allow for inconsequential differences in
 implementations; or to allow conforming implementations which return different results but are
 otherwise operationally equivalent.
+
 In order to relate return values through conformance, we define the return value interface definition
 for a message specification to be the single return value protocol, or the logical OR of the protocols
 in each distinct return value specification.
+
 Information concerning retained references to return values (by the message receiver) is described
 using a return value aliasing attribute, which is one of the following identifiers:
 state
+
 The receiver retains a reference (direct or indirect) to the returned object
 after the method returns i.e. the object is returned state.
 new
+
 The object is newly created in the method invocation and no reference
 (direct or indirect) is retained by the receiver after the method returns.
 unspecified
+
 No information is provided as to the origin or retained references to the
 object (Note this is different from saying that the return value itself is
 UNSPECIFIED. Here we are committing that the return value conforms
 to some protocol, but making no commitment about the aliasing
 behavior).
+
 Note that we do not attempt to describe the aliasing of the state variables of the return value
 itself—the attribute applies only to the first level returned object. The implication is that second and
 subsequent level aliasing of the return value is always unspecified. An exception occurs in the case
 where the returned state is an object which the client originally gave the service provider for
 safekeeping. This occurs with element retrieval in collections, for example. In such cases only the
 client knows the implications of modifying second level state of the return value.
+
 5.1.3 Conformance and Refinement
+
 Protocols are related to each other through two substitutability relationships, conformance and
 refinement, which arrange the protocols in a lattice. Conformance models requirements
 satisfaction, and provides the flexibility to partially constrain the behavior of parameters and return
 values without necessarily naming specific classes. Refinement allows a protocol to make more
 precise statements about behavior inherited from another protocol.
+
 5.1.3.1 Conformance
+
 Conformance can be defined on both objects and protocols.
+
 5.1.3.1.1 Object Conformance
-An object x conforms to a protocol <P> if it implements the set of behaviors specified by <P>. Of
+
+An object x conforms to a protocol \<P> if it implements the set of behaviors specified by \<P>. Of
 course, such an object may have additional behavior, or it may be possible to specify the object's
 behavior in more detail. Thus a protocol may describe only a subset of an object's behavior, or it
 may leave certain aspects of the behavior unspecified.
@@ -2094,48 +2428,55 @@ have the same implementation. This is the same relationship between classes and 
 
 established by most object-oriented type systems and allows us to establish a straightforward
 relationship between classes and protocols.
-5.1.3.1.2 Protocol Conformance
-Protocols are also related to each other through conformance. If all objects that conform to a
-protocol <P> also conform to a protocol <Q>, then <P> is defined to conform to <Q>. If both <P>
-conforms to <Q> and <Q> conforms to <P> then necessarily <P> and <Q> define the same
-behavior i.e. <Q> = <P>.
-A protocol <P> conforms to a protocol <Q> if and only if both of the following are true:
-•=
 
-Every message specification in <Q> has a corresponding message specification in <P> with
+5.1.3.1.2 Protocol Conformance
+
+Protocols are also related to each other through conformance. If all objects that conform to a
+protocol \<P> also conform to a protocol \<Q>, then \<P> is defined to conform to \<Q>. If both \<P>
+conforms to \<Q> and \<Q> conforms to \<P> then necessarily \<P> and \<Q> define the same
+behavior i.e. \<Q> = \<P>.
+A protocol \<P> conforms to a protocol \<Q> if and only if both of the following are true:
+-=
+
+Every message specification in \<Q> has a corresponding message specification in \<P> with
 the same message selector.
 
-•=
+-=
 
-Every message specification in <P> conforms to its corresponding message specification in
-<Q>.
+Every message specification in \<P> conforms to its corresponding message specification in
+\<Q>.
 
-This means that in order for <P> to conform to <Q>, <P> must define message specifications for at
-least all of the message selectors in <Q>, and these specifications must specify compatible
+This means that in order for \<P> to conform to \<Q>, \<P> must define message specifications for at
+least all of the message selectors in \<Q>, and these specifications must specify compatible
 behavior.
 Note that conformance is a transitive relationship. If an object or a protocol conforms to a protocol
 through transitivity we say that it implicitly conforms.
+
 5.1.3.1.3 Message Specification Conformance
+
 In the context of protocols, message specifications are related through conformance. A message
-specification s in a protocol <P> is identified by a protocol and selector pair (<P>, s). A message
-specification (<P>, s) conforms to a message specification (<Q>,s) if and only if all of the following
+specification s in a protocol \<P> is identified by a protocol and selector pair (\<P>, s). A message
+specification (\<P>, s) conforms to a message specification (\<Q>,s) if and only if all of the following
 are true:
+
 1.
 
-(<P>, s) and (<Q>, s) have the same formal parameters (the same names in the same
+(\<P>, s) and (\<Q>, s) have the same formal parameters (the same names in the same
 positions).
 
-2. the parameter interface definitions of (<Q>, s) conform to the corresponding parameter
-interface definitions of (<P>, s) (contravariance).
-3. the parameter aliasing attributes of (<P>, s) conform to the corresponding parameter aliasing
-attributes of (<Q>, s) (covariance).
-4. the return value interface definition of (<P>, s) conforms to the return value interface definition
-of (<Q>, s) (covariance).
-5. the return value aliasing attributes of (<P>, s) conforms to the corresponding return value
-aliasing attributes of (<Q>, s) (covariance).
-6. the behavioral description of (<P>, s) conforms to the behavioral description of (<Q>, s)
+2. the parameter interface definitions of (\<Q>, s) conform to the corresponding parameter
+interface definitions of (\<P>, s) (contravariance).
+3. the parameter aliasing attributes of (\<P>, s) conform to the corresponding parameter aliasing
+attributes of (\<Q>, s) (covariance).
+4. the return value interface definition of (\<P>, s) conforms to the return value interface definition
+of (\<Q>, s) (covariance).
+5. the return value aliasing attributes of (\<P>, s) conforms to the corresponding return value
+aliasing attributes of (\<Q>, s) (covariance).
+6. the behavioral description of (\<P>, s) conforms to the behavioral description of (\<Q>, s)
 (covariance).
+
 5.1.3.1.4 Interface Definition Conformance
+
 Recall that a parameter or return value interface definition is either a single protocol, or a logical
 OR of two or more protocols. The protocol set for an interface definition is the set of protocols in the
 disjunction (or the set consisting of a single protocol). An interface definition I conforms to an
@@ -2147,46 +2488,61 @@ that we do not require a proper subset; the sets may be equal.)
 Note that interface definition conformance is defined by a subset relationship, since an interface
 definition is defined to require an object conforming to one or more protocols in the corresponding
 disjunction. The subset relationship follows directly from this definition.
+
 5.1.3.1.5 Parameter Aliasing Conformance
+
 Parameter aliasing attributes that are the same conform to each other. The following additional
+
 conformance relationships are also defined among the parameter aliasing attributes:
+
 captured conforms to unspecified.
+
 uncaptured conforms to unspecified.
+
 5.1.3.1.6 Return Value Aliasing Attribute Conformance
+
 Return value aliasing attributes that are the same conform to each other. The following additional
 conformance relationships are also defined among the return value aliasing attributes:
 state conforms to unspecified.
 new conforms to unspecified.
+
 5.1.3.1.7 Behavioral Description Conformance
+
 A behavioral description D2 conforms to a behavioral description D1, if the behavior described by
 D1 is implied by D2. If D2 actually includes the text of D1, it is more difficult for a designer to
 accidentally violate conformance in a message specification when conformance between protocols
 has been asserted. In most cases, contradictions are readily apparent. Consequently this is the
 recommended practice.
+
 The conformance rules for behavioral descriptions reflect the fact that substitutability requires that
 behavior be strictly additive. Conforming protocols may only define new messages, or provide more
 precise statements concerning the behavior of existing messages.
+
 5.1.3.2 Refinement
+
 The refinement relation can be applied wherever we have defined the conformance relation, and is
 defined as follows. Given any A and B such that there is a conformance relation defined on A and
 B, then A is a refinement of B if A conforms to B but B does not conform to A. Refinement applies
 to protocols, message specifications, interface definitions, and aliasing attributes. It is also
 convenient to say that if A is a refinement of B, then A refines B.
+
 Refinement makes a stronger statement than conformance. Refinement describes the property
 which relates protocols in a way that allows them to make progressively more and more precise
 statements concerning object behavior, while still satisfying conformance. As a consequence, given
-two protocols <A> and <B> such that <A> refines <B>, objects which conform to <A> are
-substitutable for objects which conform to <B>.
-We call a message specification in a protocol <P> a definition if it is not included in any protocol to
-which <P> conforms. Otherwise it is a refinement. The protocol conformance relationship defines a
-lattice with protocols at the nodes. For any given message specification (<P>, s) in a protocol <P>
-there exists a path through refinements (if any) to the definition (<P'>, s') of the message
-specification. The set of all paths from <P> establishes message specification visibility. A message
-specification (<Q>, t) is visible from a protocol <P> if either <P> = <Q> or there exists a path from
-<P> to <Q>. The implicit specification of a message in a protocol <P> is the closest message
-specification visible from <P> through the conformance graph (i.e., involving the fewest number of
+two protocols \<A> and \<B> such that \<A> refines \<B>, objects which conform to \<A> are
+substitutable for objects which conform to \<B>.
+
+We call a message specification in a protocol \<P> a definition if it is not included in any protocol to
+which \<P> conforms. Otherwise it is a refinement. The protocol conformance relationship defines a
+lattice with protocols at the nodes. For any given message specification (\<P>, s) in a protocol \<P>
+there exists a path through refinements (if any) to the definition (\<P'>, s') of the message
+specification. The set of all paths from \<P> establishes message specification visibility. A message
+specification (\<Q>, t) is visible from a protocol \<P> if either \<P> = \<Q> or there exists a path from
+\<P> to \<Q>. The implicit specification of a message in a protocol \<P> is the closest message
+specification visible from \<P> through the conformance graph (i.e., involving the fewest number of
 arcs in the graph).
-Thus the implicit specification may be either in <P> or in some protocol to which <P> conforms.
+
+Thus the implicit specification may be either in \<P> or in some protocol to which \<P> conforms.
 Note that we use the closest visible message specification in order to ensure we obtain all
 
 
@@ -2196,43 +2552,58 @@ there can in principle be multiple conformance paths to the same message specifi
 case we explicitly disallow conflicts. If there are multiple implicit message specifications for the
 same message selector found by traversing different paths, they must result in the same
 specification.
+
 The full text of the behavioral description of a message specification is obtained by concatenating
 the behavioral description from the definition together with the text added by behavioral
 refinements in the visibility path, in reverse order.
-In summary, a message specification may form a part of the behavior described by a protocol <P>
+In summary, a message specification may form a part of the behavior described by a protocol \<P>
 in the following ways:
+
 Definition
-<P> contains the definition.
+
+\<P> contains the definition.
 Refinement
-<P> contains a refinement of an implicit specification of the message.
+\<P> contains a refinement of an implicit specification of the message.
 Conformance
 an implicit message specification is visible and there is no refinement in
-<P>.
+\<P>.
+
 5.1.3.3 Special Protocols
+
 Two special protocols are defined:
-<ANY>
+
+\<ANY>
+
 A protocol to which all other protocols conform.
-<RECEIVER>
+
+\<RECEIVER>
+
 A notational convenience which represents the protocol to which the
 receiver of the message conforms.
-All objects are defined to conform to the special protocol <ANY>. The protocol <ANY> places no
-restrictions on a parameter definition since it allows all possible parameters; <ANY> may be
+All objects are defined to conform to the special protocol \<ANY>. The protocol \<ANY> places no
+restrictions on a parameter definition since it allows all possible parameters; \<ANY> may be
 thought of as a protocol which specifies no behavior.
-The <RECEIVER> protocol is a notational convenience that allows a message specification to
+
+The \<RECEIVER> protocol is a notational convenience that allows a message specification to
 indicate a return value which conforms to the protocol in which it is used, or any protocol that
 conforms to that protocol. Due to the contravariance requirement for parameter interface definition
-conformance, <RECEIVER> cannot be used in a parameter specification since it is necessarily
+conformance, \<RECEIVER> cannot be used in a parameter specification since it is necessarily
 covariant. However, for the same reason, it is valid in a return value specification.
+
 5.1.4 Protocol Specification Conventions
+
 5.1.4.1 Naming
+
 A protocol's name has its initial letter capitalized if there is a global name defined in the standard
-that is conformant to the protocol. For instance, <OrderedCollection> has its first letter capitalized
-but <puttableStream> does not.
+that is conformant to the protocol. For instance, \<OrderedCollection> has its first letter capitalized
+but \<puttableStream> does not.
 Protocols that are required to be implemented as class objects in Smalltalk implementations end
 with the word "class". Protocols that are typically implemented as class objects, but are not
 required to be so, end with either the word "factory", if they are used to create new objects, or the
 word "discriminator".
+
 5.1.4.2 Message Lists
+
 Each protocol includes a list of the message selectors defined or refined by the protocol. If a
 message is refined by the protocol it is shown in italics in this list.
 5.1.4.3 Message Definitions
@@ -2240,47 +2611,47 @@ Message definitions have these elements:
 
 
 
-•=
+-=
 
 A header that shows the message pattern. The message pattern is preceded by the word
 "Message:" or for refinements of messages defined in other protocols, "Message
 Refinement:".
 
-•=
+-=
 
 A synopsis, which is a short and informal description of what the message does, under the
 heading "Synopsis".
 
-•=
+-=
 
 A more rigorous definition of the message. The heading for this section, "Definition:", is
 followed by the name of the defining protocol. For refinements, the text of the inherited
 definition is merely copied.
 
-•=
+-=
 
 For each inherited refinement and the current protocol's refinement, a refinement section
 showing how the method is refined. The heading for this section, "Refinement:", is followed by
 the name of the refining protocol.
 
-•=
+-=
 
 A list of the parameters of the message under the heading "Parameters", what their required
 protocol conformance is, and whether they are captured by the receiver of the message. Each
 parameter is listed on a separate line using the format:
-parameterName <parametersProtocol> captured/uncaptured/unspecified
+parameterName \<parametersProtocol> captured/uncaptured/unspecified
 If there are no parameters, this element is omitted.
 
-•=
+-=
 
 A description of the return value, under the heading "Return Value", in the form:
-<returnValueProtocol>
+\<returnValueProtocol>
 
 state/new/unspecified
 
 or
 UNSPECIFIED
-•=
+-=
 
 A list of errors that define erroneous conditions for the message under the heading "Errors".
 
@@ -2289,17 +2660,17 @@ Message:
 canAcceptSalaryIncrease: amount
 Synopsis
 Determine whether the receiver can accept the given salary increase.
-Definition: <Employee>
+Definition: \<Employee>
 This message determines whether the receiver is allowed to receive the given salary
 increase.
 It answers true if the elevated salary is acceptable and false if not.
 Parameters
 amount
 
-<scaledDecimal>
+\<scaledDecimal>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -2311,23 +2682,23 @@ or,
 Message Refinement: canAcceptSalaryIncrease: amount
 Synopsis
 Determine whether the receiver can accept the given salary increase.
-Definition: <Person>
+Definition: \<Person>
 This message determines whether the receiver is allowed to receive the given salary
 increase.
 
 
 
 It answers true if the elevated salary is acceptable and false if not.
-Refinement: <Employee>
+Refinement: \<Employee>
 This refines the inherited message by checking the amount against known consistency
 rules for an employee object.
 Parameters
 amount
 
-<scaledDecimal>
+\<scaledDecimal>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -2335,8 +2706,8 @@ uncaptured
 
 Errors
 none
-In the second example, the message is a refinement of the definition from protocol <Person> and is
-refined in <Employee>.
+In the second example, the message is a refinement of the definition from protocol \<Person> and is
+refined in \<Employee>.
 5.1.4.4 Protocol Groupings
 Within a grouping, protocols are ordered according to their conformance lattice. Secondary sorting
 is alphabetical by protocol name.
@@ -2358,7 +2729,7 @@ Array
 
 Grouping
 
-<Array factory>
+\<Array factory>
 
 Language
 Element
@@ -2368,7 +2739,7 @@ Collection Protocols
 
 Bag
 
-<Bag factory>
+\<Bag factory>
 
 unspecified
 
@@ -2376,7 +2747,7 @@ Collection Protocols
 
 ByteArray
 
-<ByteArray factory>
+\<ByteArray factory>
 
 unspecified
 
@@ -2384,7 +2755,7 @@ Collection Protocols
 
 DateAndTime
 
-<DateAndTime factory>
+\<DateAndTime factory>
 
 unspecified
 
@@ -2392,7 +2763,7 @@ DateTime Protocols
 
 Dictionary
 
-<Dictionary factory>
+\<Dictionary factory>
 
 unspecified
 
@@ -2400,7 +2771,7 @@ Collection Protocols
 
 Duration
 
-<Duration factory>
+\<Duration factory>
 
 unspecified
 
@@ -2408,7 +2779,7 @@ DateTime Protocols
 
 Error
 
-<Error class>
+\<Error class>
 
 Class
 
@@ -2416,7 +2787,7 @@ Exception Protocols
 
 Exception
 
-<Exception class>
+\<Exception class>
 
 Class
 
@@ -2424,7 +2795,7 @@ Exception Protocols
 
 FileStream
 
-<FileStream factory>
+\<FileStream factory>
 
 unspecified
 
@@ -2432,7 +2803,7 @@ File I/O Protocols
 
 Float
 
-<floatCharacterization>
+\<floatCharacterization>
 
 unspecified
 
@@ -2440,7 +2811,7 @@ Numeric Protocols
 
 FloatD
 
-<floatCharacterization>
+\<floatCharacterization>
 
 unspecified
 
@@ -2448,7 +2819,7 @@ Numeric Protocols
 
 FloatE
 
-<floatCharacterization>
+\<floatCharacterization>
 
 unspecified
 
@@ -2456,7 +2827,7 @@ Numeric Protocols
 
 FloatQ
 
-<floatCharacterization>
+\<floatCharacterization>
 
 unspecified
 
@@ -2464,7 +2835,7 @@ Numeric Protocols
 
 Fraction
 
-<Fraction factory>
+\<Fraction factory>
 
 unspecified
 
@@ -2472,7 +2843,7 @@ Numeric Protocols
 
 IdentityDictionary
 
-<Identitydictionary factory>
+\<Identitydictionary factory>
 
 unspecified
 
@@ -2480,7 +2851,7 @@ Collection Protocols
 
 Interval
 
-<Interval factory>
+\<Interval factory>
 
 unspecified
 
@@ -2488,7 +2859,7 @@ Collection Protocols
 
 MessageNotUnderstood
 
-<messageNotUnderstoodSelector>
+\<messageNotUnderstoodSelector>
 
 unspecified
 
@@ -2496,7 +2867,7 @@ Exception Protocols
 
 Notification
 
-<Notification class>
+\<Notification class>
 
 Class
 
@@ -2504,7 +2875,7 @@ Exception Protocols
 
 Object
 
-<Object class>
+\<Object class>
 
 Class
 
@@ -2512,7 +2883,7 @@ Fundamental Protocols
 
 OrderedCollection
 
-<OrderedCollection factory>
+\<OrderedCollection factory>
 
 unspecified
 
@@ -2520,7 +2891,7 @@ Collection Protocols
 
 ReadStream
 
-<ReadStream factory>
+\<ReadStream factory>
 
 unspecified
 
@@ -2528,7 +2899,7 @@ Stream Protocols
 
 ReadWriteStream
 
-<ReadWriteStream factory>
+\<ReadWriteStream factory>
 
 unspecified
 
@@ -2536,7 +2907,7 @@ Stream Protocols
 
 Set
 
-<Set factory>
+\<Set factory>
 
 unspecified
 
@@ -2544,7 +2915,7 @@ Collection Protocols
 
 SortedCollection
 
-<SortedCollection factory>
+\<SortedCollection factory>
 
 unspecified
 
@@ -2554,7 +2925,7 @@ Collection Protocols
 
 String
 
-<String factory>
+\<String factory>
 
 unspecified
 
@@ -2562,7 +2933,7 @@ Collection Protocols
 
 TimeLocal
 
-<TimeLocal factory>
+\<TimeLocal factory>
 
 unspecified
 
@@ -2570,7 +2941,7 @@ DateTime Protocols
 
 Transcript
 
-<Transcript>
+\<Transcript>
 
 unspecified
 
@@ -2578,7 +2949,7 @@ Stream Protocols
 
 Warning
 
-<Warning class>
+\<Warning class>
 
 Class
 
@@ -2586,7 +2957,7 @@ Exception Protocols
 
 WriteStream
 
-<WriteStream factory>
+\<WriteStream factory>
 
 unspecified
 
@@ -2594,7 +2965,7 @@ Stream Protocols
 
 ZeroDivide
 
-<ZeroDivide factory>
+\<ZeroDivide factory>
 
 Class
 
@@ -2607,28 +2978,28 @@ This section includes protocols that are fundamental to the Smalltalk language.
 The graph below shows the conformance relationships between the protocols defined in this
 section.
 
-<Object>
+\<Object>
 
-<boolean>
-<nil>
+\<boolean>
+\<nil>
 
-<Character>
+\<Character>
 
-<selector>
+\<selector>
 
-<Character factory>
+\<Character factory>
 
-<classDescription> <instantiator>
+\<classDescription> \<instantiator>
 
-<failedMessage>
+\<failedMessage>
 
-<Object class>
+\<Object class>
 
 
 
-5.3.1 Protocol: <Object>
+5.3.1 Protocol: \<Object>
 Conforms To
-<ANY>
+\<ANY>
 Description
 This protocol describe the behavior that is common to all objects.
 Standard Globals
@@ -2637,15 +3008,15 @@ Number
 ScaledDecimal
 Symbol
 
-Conforms to the protocol <Object>. Its language element type is
+Conforms to the protocol \<Object>. Its language element type is
 unspecified. This global identifies integer objects.
-Conforms to the protocol <Object>. Its language element type is
+Conforms to the protocol \<Object>. Its language element type is
 unspecified. This global identifies number objects.
-Conforms to the protocol <Object>. Its language element type is
+Conforms to the protocol \<Object>. Its language element type is
 unspecified. This global identifies scaled decimal objects.
-Conforms to the protocol <Object>. Its language element type is
+Conforms to the protocol \<Object>. Its language element type is
 unspecified. This global identifies objects that conform to the protocol
-<symbol>.
+\<symbol>.
 
 Messages
 =
@@ -2696,7 +3067,7 @@ objects. As such they should be supported either by explicit language extensions
 
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Return true if the receiver is equivalent to comparand. Otherwise return
 false.
@@ -2719,10 +3090,10 @@ do not change while the objects are contained in the collection.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -2741,7 +3112,7 @@ precise definitions of equivalence
 
 Synopsis
 Object identity test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are the same object. Return true if
 the receiver is the same object as comparand. Otherwise return false.
 The value of
@@ -2760,10 +3131,10 @@ receiver identityHash = comparand identityHash
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -2777,7 +3148,7 @@ none
 
 Synopsis
 Object inequality test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are not equivalent objects at the time
 the message is processed. Return true if the receiver is not equivalent to comparand. Otherwise
 return false.
@@ -2794,10 +3165,10 @@ would also be true.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -2819,7 +3190,7 @@ but it does require that within a class, the same definition of equivalence is u
 
 Synopsis
 Negated object identity test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are different objects. Return true if
 the receiver is not the same object as comparand. Otherwise return false.
 The result must be equivalent to the Boolean negation of the result of sending the message #== to
@@ -2832,10 +3203,10 @@ would also be true.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -2854,12 +3225,12 @@ class
 
 Synopsis
 Determine the class of the receiver.
-Definition: <Object>
+Definition: \<Object>
 If the receiver is an instance object, return the class object defined by the class definition that
 defines the behavior of the receiver. If the receiver is itself a class object, the result is unspecified
-except that it must conform to the protocol <classDescription>.
+except that it must conform to the protocol \<classDescription>.
 Return Value
-<classDescription>
+\<classDescription>
 
 unspecified=
 
@@ -2871,7 +3242,7 @@ copy
 
 Synopsis
 Return a copy of the receiver.
-Definition: <Object>
+Definition: \<Object>
 
 
 
@@ -2881,7 +3252,7 @@ change the state or behavior of the receiver. Similarly, any change to the recei
 side-effect change the new object.
 If the receiver is an identity object, return the receiver.
 Return Value
-<RECEIVER>
+\<RECEIVER>
 
 unspecified=
 
@@ -2897,19 +3268,19 @@ doesNotUnderstand: message
 
 Synopsis
 A message was sent to the receiver for which the receiver has no behavior.
-Definition: <Object>
+Definition: \<Object>
 A message was sent to the receiver for which the receiver has no behavior. Signal a
 MessageNotUnderstood exception corresponding to the failed message. If the exception resumes,
 the resumption value is returned as the value of this message.
 Conforming protocols may refine this message to perform some action other than signaling the
 exception.
 Parameters
-message <failedMessage>
+message \<failedMessage>
 
 unspecified
 
 Return Value
-<Object> unspecified=
+\<Object> unspecified=
 Errors
 none
 5.3.1.8 Message:
@@ -2918,14 +3289,14 @@ error: signalerText
 
 Synopsis
 Announce an error
-Definition: <Object>
+Definition: \<Object>
 This message is used the announce the occurrence of some type of error condition. The argument
 should describe the nature of the error. The default behavior is to raise an Error exception as if the
 message #signal: had been sent to the global Error with signalerText as the argument.
 Conforming protocols may refine this message to perform some action other than signaling the
 exception.
 Parameters
-signalerText <readableString>
+signalerText \<readableString>
 Return Value
 UNSPECIFIED
 Errors
@@ -2948,7 +3319,7 @@ hash
 
 Synopsis
 Return an integer hash code that can be used in conjunction with an #= comparison.
-Definition: <Object>
+Definition: \<Object>
 An integer value that can be used as a hash code for the receiver is returned. The hash code is
 intended for use in conjunction with an #= comparison.
 The range, minimum, and maximum values of the result is implementation defined.
@@ -2961,7 +3332,7 @@ The hash value of an object need not be temporally invariant. Two independent in
 #= to discriminate objects may only reliably store objects whose hash values do not change while
 the objects are contained in the collection.
 Return Value
-<integer> unspecified=
+\<integer> unspecified=
 Errors
 none
 5.3.1.10 Message:
@@ -2970,13 +3341,13 @@ identityHash
 
 Synopsis
 Return an integer hash code that can be used in conjunction with an #== (identity) comparison.
-Definition: <Object>
+Definition: \<Object>
 An integer value that can be used as a hash code for the receiver is returned. The hash code is
 intended for use in conjunction with an #== comparison.
 The range, minimum, or maximum values of the result is implementation defined.
 The identity hash of an object must be temporally invariant.
 Return Value
-<integer> unspecified=
+\<integer> unspecified=
 Errors
 none
 Rationale
@@ -2989,7 +3360,7 @@ isKindOf: candidateClass
 
 Synopsis
 Classify an object.
-Definition: <Object>
+Definition: \<Object>
 Return true if the receiver is an instance of candidateClass or is an instance of a general
 subclass of candidateClass. Otherwise return false.
 The return value is unspecified if the receiver is a class object or candidateClass is not a class
@@ -3000,11 +3371,11 @@ Parameters
 of ANSI Smalltalk Standard
 candidateClass
 Return Value
-<boolean>
+\<boolean>
 
 December, 1997
 revision 1.9
-<Object>
+\<Object>
 
 58
 
@@ -3020,16 +3391,16 @@ isMemberOf: candidateClass
 
 Synopsis
 Determine whether the receiver is an instance of the argument.
-Definition: <Object>
+Definition: \<Object>
 Return true if the receiver is an instance of candidateClass. Otherwise return false.
 The return value is unspecified if the receiver is a class object or candidateClass is not a class
 object.
 Parameters
 candidateClass
 Return Value
-<boolean>
+\<boolean>
 
-<Object>
+\<Object>
 
 uncaptured
 
@@ -3043,13 +3414,13 @@ isNil
 
 Synopsis
 Determine if the receiver is the value of the reserved identifier nil.
-Definition: <Object>
+Definition: \<Object>
 Determine if the receiver is the same object as the value of the reserved identifier nil. Return true if
 it is, false if it is not.
 The messages #isNil and #notNil must be implemented to produce consistent results. For a
 given receiver if the result of #isNil is true then the result of #notNil must be false.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -3061,13 +3432,13 @@ notNil
 
 Synopsis
 Determine if the receiver is not the value of the reserved identifier nil.
-Definition: <Object>
+Definition: \<Object>
 Determine if the receiver is the same object as the value of the reserved identifier nil. Return false if
 it is, true if it is not.
 The messages #isNil and #notNil must be implemented to produce consistent results. For a
 given receiver if the result of #isNil is true then the result of #notNil must be false.
 Return Value
-<boolean>
+\<boolean>
 Errors
 
 unspecified=
@@ -3087,7 +3458,7 @@ perform: selector with: argument1 with: argument2 with: argument3
 
 Synopsis
 Send a message using a computed message selector.
-Definition: <Object>
+Definition: \<Object>
 Send to the receiver a message whose selector is selector and whose arguments are
 argument1, argument2, etc. Return the value of that message.
 If the receiver does not have a method for selector normal "message not understood"
@@ -3103,30 +3474,30 @@ syntactic form of the selector.
 Parameters
 selector
 
-<selector>
+\<selector>
 
 unspecified
 
 argument1
 
-<ANY>
+\<ANY>
 
 unspecified
 
 argument2
 
-<ANY>
+\<ANY>
 
 unspecified
 
 argument3
 
-<ANY>
+\<ANY>
 
 unspecified
 
 Return Value
-<ANY> unspecified=
+\<ANY> unspecified=
 The protocol specification of the returned value of this method is not really useful for any sort of
 static analysis. In practice the returned value will be treated as conforming to the return type of the
 message that is dynamically constructed.
@@ -3138,7 +3509,7 @@ perform: selector withArguments: arguments
 
 Synopsis
 Send a message using a computed message selector and a collection of arguments.
-Definition: <Object>
+Definition: \<Object>
 Send to the receiver a message whose selector is selector and whose arguments are the
 elements of arguments. Return the value of that message. The first element of arguments is the
 first argument, the second element is the second argument, and so on.
@@ -3159,16 +3530,16 @@ Parameters
 selector
 arguments
 
-<selector>
+\<selector>
 
 unspecified
 
-<Array>
+\<Array>
 
 unspecified
 
 Return Value
-<ANY> unspecified=
+\<ANY> unspecified=
 The protocol specification of the returned value of this method is not really useful for any sort of
 static analysis. In practice the returned value will be treated as conforming to the return type of the
 message that is dynamically constructed.
@@ -3180,14 +3551,14 @@ printOn: target
 
 Synopsis
 Write a textual description of the receiver to a stream.
-Definition: <Object>
+Definition: \<Object>
 The string of characters that would be the result of sending the message #printString to the
 receiver is written to target. The characters appear on the stream as if each character was, in
 sequence, written to the stream using the message #nextPut:.
 Parameters
 target
 
-<puttableStream>
+\<puttableStream>
 
 uncaptured
 
@@ -3201,12 +3572,12 @@ printString
 
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
 Return Value
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 
@@ -3223,16 +3594,16 @@ respondsTo: selector
 
 Synopsis
 Determine if the receiver can respond to a specific message selector.
-Definition: <Object>
+Definition: \<Object>
 Return true if the receiver has a method in its behavior that has the message selector selector.
 Otherwise return false.
 Parameters
 selector
 
-<selector>
+\<selector>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -3251,19 +3622,19 @@ yourself
 
 Synopsis
 No operation. Return the receiver as the result.
-Definition: <Object>
+Definition: \<Object>
 Return the receiver of the message.
 Return Value
-<RECEIVER>
+\<RECEIVER>
 
 unspecified=
 
 Errors
 none
 
-5.3.2 Protocol: <nil>
+5.3.2 Protocol: \<nil>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior that is unique to the distinguished immutable, identity object
 that is the value of the reserved identifier "nil".
@@ -3275,20 +3646,20 @@ printString
 5.3.2.1 Message Refinement: printString
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
-Refinement: <nil>
+Refinement: \<nil>
 Return a string with the same characters as the string 'nil'.
 Return Value
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 
-5.3.3 Protocol: <boolean>
+5.3.3 Protocol: \<boolean>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior of the objects that are the values of the reserved identifiers
 "true" and "false". These objects are identity objects.
@@ -3316,7 +3687,7 @@ xor:
 
 Synopsis
 Logical and — Boolean conjunction.
-Definition: <boolean>
+Definition: \<boolean>
 Return the Boolean conjunction of the receiver and operand. The value returned is determined by
 the following truth table:
 &
@@ -3330,10 +3701,10 @@ false
 Parameters
 operand
 
-<boolean>
+\<boolean>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3357,7 +3728,7 @@ none
 
 Synopsis
 Logical or — Boolean disjunction.
-Definition: <boolean>
+Definition: \<boolean>
 Return the Boolean disjunction of the receiver and operand. The value returned is determined by
 the following truth table:
 |
@@ -3372,10 +3743,10 @@ false
 Parameters
 operand
 
-<boolean>
+\<boolean>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3389,21 +3760,21 @@ and: operand
 
 Synopsis
 "Short circuit" logical and.
-Definition: <boolean>
-If the receiver is false, return false. Otherwise, return the <boolean> result of sending the message
+Definition: \<boolean>
+If the receiver is false, return false. Otherwise, return the \<boolean> result of sending the message
 #value to operand.
-The result is undefined if the result of sending #value to operand is not a <boolean>.
+The result is undefined if the result of sending #value to operand is not a \<boolean>.
 Rationale
-Some existing implementations do not require that the operand must evaluate to a <boolean>. The message #ifTrue:
-should be used to conditionally evaluate a block that does not return a <boolean>.
+Some existing implementations do not require that the operand must evaluate to a \<boolean>. The message #ifTrue:
+should be used to conditionally evaluate a block that does not return a \<boolean>.
 
 Parameters
 operand
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3418,7 +3789,7 @@ Boolean equivalence.
 
 
 
-Definition: <boolean>
+Definition: \<boolean>
 Return the Boolean disjunction of the receiver and operand. The value returned is determined by
 the following truth table:
 eqv:
@@ -3427,10 +3798,10 @@ false
 Parameters
 operand
 
-<boolean>
+\<boolean>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3452,7 +3823,7 @@ ifFalse: operand
 
 Synopsis
 Evaluate the argument if receiver is false.
-Definition: <boolean>
+Definition: \<boolean>
 If the receiver is false return the result of sending the message #value to operand.
 The return value is unspecified if the receiver is true.
 Rationale
@@ -3462,9 +3833,9 @@ potentially allows for implementation specific optimization.
 Parameters
 operand
 Return Value
-<ANY>
+\<ANY>
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 unspecified
 
 Errors
@@ -3475,18 +3846,18 @@ ifFalse: falseOperand ifTrue: trueOperand
 
 Synopsis
 Selectively evaluate one of the arguments.
-Definition: <boolean>
+Definition: \<boolean>
 If the receiver is false return the result return the result as if the message #value was sent to
 falseOperand, otherwise return the result as if the message #value was sent to trueOperand.
 Parameters
-falseOperand <niladicBlock> uncaptured
+falseOperand \<niladicBlock> uncaptured
 trueOperand
 Return Value
-<ANY>
+\<ANY>
 Errors
 none
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 unspecified
 
 NCITS J20 DRAFT
@@ -3502,7 +3873,7 @@ ifTrue: operand
 
 Synopsis
 Evaluate the argument if the receiver is true.
-Definition: <boolean>
+Definition: \<boolean>
 If the receiver is true, return the result of sending the message #value to operand.
 The return value is unspecified if the receiver is false.
 Rationale
@@ -3512,9 +3883,9 @@ potentially allows for implementation specific optimization.
 Parameters
 operand
 Return Value
-<ANY>
+\<ANY>
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 unspecified
 
 Errors
@@ -3525,17 +3896,17 @@ ifTrue: trueOperand ifFalse: falseOperand
 
 Synopsis
 Selectively evaluate one of the arguments.
-Definition: <boolean>
+Definition: \<boolean>
 If the receiver is true return the result of sending the message #value to trueOperand,
 otherwise return the result of sending #value to the falseOperand.
 Parameters
 trueOperand
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 
-falseOperand <niladicBlock> uncaptured
+falseOperand \<niladicBlock> uncaptured
 Return Value
-<ANY>
+\<ANY>
 
 unspecified
 
@@ -3547,11 +3918,11 @@ not
 
 Synopsis
 Logical not — Boolean negation.
-Definition: <boolean>
+Definition: \<boolean>
 Return the Boolean negation of the receiver.
 If the receiver is true the return value is false, if the receiver is false the return value is true.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3566,21 +3937,21 @@ Synopsis
 
 
 
-Definition: <boolean>
+Definition: \<boolean>
 If the receiver is true, return true. Otherwise, return the Boolean result of sending the message
 #value to operand.
-The result is undefined if the result of sending #value to operand is not a <boolean>.
+The result is undefined if the result of sending #value to operand is not a \<boolean>.
 Rationale
-Some existing implementations do not require that the operand must evaluate to a <boolean>. The message #ifFalse:
+Some existing implementations do not require that the operand must evaluate to a \<boolean>. The message #ifFalse:
 should be used to conditionally evaluate a block that does not return a Boolean.
 
 Parameters
 operand
 Return Value
-<boolean>
+\<boolean>
 UNSPECIFIED
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
@@ -3594,15 +3965,15 @@ printString
 
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
-Refinement: <boolean>
+Refinement: \<boolean>
 If the receiver is true, return a string with the same characters as the string 'true', otherwise
 return a string with the same characters as the string 'false'.
 Return Value
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 5.3.3.12 Message:
@@ -3611,7 +3982,7 @@ xor: operand
 
 Synopsis
 Boolean exclusive or.
-Definition: <boolean>
+Definition: \<boolean>
 Return the Boolean exclusive or of the receiver and operand. The value returned is determined by
 the following truth table:
 xor:
@@ -3620,10 +3991,10 @@ false
 Parameters
 operand
 
-<boolean>
+\<boolean>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3642,9 +4013,9 @@ false
 
 none
 
-5.3.4 Protocol: <Character>
+5.3.4 Protocol: \<Character>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior that is common to character objects. Character objects serve
 as the element value for Smalltalk strings. The Smalltalk language provides a literal syntax for
@@ -3671,7 +4042,7 @@ isUppercase
 5.3.4.1 Message Refinement: = comparand
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Return true if the receiver is equivalent to comparand. Otherwise return
 false.
@@ -3694,7 +4065,7 @@ The equivalence of objects need not be temporally invariant. Two independent inv
 with the same receiver and operand objects may not always yield the same results. Note that a
 collection that uses #= to discriminate objects may only reliably store objects whose hash values
 do not change while the objects are contained in the collection.
-Refinement: <Character>
+Refinement: \<Character>
 Two characters are considered equivalent if they have the same code point. In other words
 character1 = character2
 is true if and only if
@@ -3703,10 +4074,10 @@ is also true.
 Parameters
 comparand
 
-<Character>
+\<Character>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified=
 
@@ -3725,7 +4096,7 @@ asLowercase
 
 Synopsis
 Return a character which is equivalent to the lowercase representation of the receiver.
-Definition: <Character>
+Definition: \<Character>
 If the receiver is equal to the value of a character literal in the "receiver" row of the following table,
 the result object must be equal to the value of the corresponding character literal in the "result" row.
 receiver $A $B $C $D $E $F $G $H $I $J $K $L $M $N $O $P $Q $R $S $T $U $V $W $X $Y $Z
@@ -3739,7 +4110,7 @@ An implemention may define other #asLowercase mappings. If the receiver does not
 a character in the "receiver" row of the table and does not have an implementation defined
 mapping the receiver is returned as the result.
 Return Value
-<Character>
+\<Character>
 Errors
 none
 
@@ -3758,12 +4129,12 @@ asString
 
 Synopsis
 Return a new string whose sole element is equivalent to the receiver.
-Definition: <Character>
+Definition: \<Character>
 Return a new string of size one (1) whose sole element is equivalent to the receiver. The new
-string is created using the same constraints as defined by the #new: message defined in <String
+string is created using the same constraints as defined by the #new: message defined in \<String
 factory>. It is unspecified whether the resulting string captures a reference to the receiver.
 Return Value
-<String> new
+\<String> new
 Errors
 none
 5.3.4.4 Message:
@@ -3772,7 +4143,7 @@ asUppercase
 
 Synopsis
 Return a character equivalent to the uppercase representation of the receiver.
-Definition: <Character>
+Definition: \<Character>
 If the receiver is equal to the value of a character literal in the "receiver" row of the following table,
 the result object must be equal to the value of the corresponding character literal in the "result" row.
 receiver $a $b $c $d $e $f $g $h $i
@@ -3786,7 +4157,7 @@ An implemention may define other #asUppercase mappings. If the receiver does not
 a character in the "receiver" row of the table and does not have an implementation defined
 mapping the receiver is returned as the result.
 Return Value
-<Character>
+\<Character>
 
 unspecified
 
@@ -3798,13 +4169,13 @@ codePoint
 
 Synopsis
 Return the encoding value of the receiver.
-Definition: <Character>
+Definition: \<Character>
 Return the encoding value of the receiver in the implementation defined execution character set.
 The following invariant must hold:
 (charFactory codePoint: x) codePoint = x
-where charFactory is an object that implements <Character factory> and x is an <integer>.
+where charFactory is an object that implements \<Character factory> and x is an \<integer>.
 Return Value
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.3.4.6 Message:
@@ -3815,7 +4186,7 @@ isAlphaNumeric
 
 
 Test whether the receiver is a letter or digit.
-Definition: <Character>
+Definition: \<Character>
 Return true if the receiver is either a letter or digit. Otherwise return false. In other words
 character isAlphaNumeric
 is true if and only if either
@@ -3824,7 +4195,7 @@ is true or
 character isDigit
 is true.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3836,12 +4207,12 @@ isDigit
 
 Synopsis
 Test whether the receiver is a digit.
-Definition: <Character>
+Definition: \<Character>
 Return true if the receiver represents a digit. Otherwise return false. The receiver is a digit if it is
 equal to the value of one of the following character literals:
 $0 $1 $2 $3 $4 $5 $6 $7 $8 $9
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3853,7 +4224,7 @@ isLetter
 
 Synopsis
 Test whether the receiver is a letter.
-Definition: <Character>
+Definition: \<Character>
 Return true if the receiver corresponds to an alphabetic character, ignoring case. Otherwise return
 false. The receiver is an alphabetic character if it is equal to the value of one of the following
 character literals:
@@ -3864,7 +4235,7 @@ $n $o $p $q $r $s $t $u $v $w $x $y $z
 Implementations may define other characters to be alphabetic characters. Any such characters will
 return true when set this message.
 Return Value
-<boolean>
+\<boolean>
 Errors
 
 unspecified
@@ -3878,7 +4249,7 @@ isLowercase
 
 Synopsis
 Test whether the receiver is a lowercase letter.
-Definition: <Character>
+Definition: \<Character>
 Return true if the receiver corresponds to a lowercase letter. Otherwise return false. The receiver is
 an lowercase letter if it is equal to the value of one of the following character literals:
 $a $b $c $d $e $f $g $h $i $j $k $l $m
@@ -3886,7 +4257,7 @@ $n $o $p $q $r $s $t $u $v $w $x $y $z
 Implementations may define other characters to be lowercase characters. Any such characters will
 return true when set this message.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -3898,7 +4269,7 @@ isUppercase
 
 Synopsis
 Test whether the receiver is an uppercase letter.
-Definition: <Character>
+Definition: \<Character>
 Return true if the receiver corresponds to a uppercase letter. Otherwise return false. The receiver is
 an uppercase letter if it is equal to the value of one of the following character literals:
 $A $B $C $D $E $F $G $H $I $J $K $L $M
@@ -3906,25 +4277,25 @@ $N $O $P $Q $R $S $T $U $V $W $X $Y $Z
 Implementations may define other characters to be lowercase characters. Any such characters will
 return true when set this message.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
 Errors
 none
 
-5.3.5 Protocol: <Character factory>
+5.3.5 Protocol: \<Character factory>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior for accessing character objects.
 Standard Globals
 
 
 
-Conforms to the protocol <Object>. Its language element type is
+Conforms to the protocol \<Object>. Its language element type is
 unspecified. This global is a factory for for creating or accessing objects
-that conform to <Character>.
+that conform to \<Character>.
 
 Character
 
@@ -3941,7 +4312,7 @@ codePoint: integer
 
 Synopsis
 Return a character whose encoding value is integer.
-Definition: <Character factory>
+Definition: \<Character factory>
 Return a character whose encoding value in the implementation defined execution character set is
 integer.
 The result is undefined if the encoding value is not a valid encoding value in the implementation
@@ -3949,10 +4320,10 @@ defined character set.
 Parameters
 integer
 
-<integer>
+\<integer>
 
 Return Value
-<Character>
+\<Character>
 
 unspecified
 
@@ -3966,11 +4337,11 @@ cr
 
 Synopsis
 Return a character representing a carriage-return.
-Definition: <Character factory>
+Definition: \<Character factory>
 Return a character representing a carriage-return. The code point of the resulting character is
 implementation defined.
 Return Value
-<Character>
+\<Character>
 
 unspecified
 
@@ -3982,11 +4353,11 @@ lf
 
 Synopsis
 Return a character representing a line feed.
-Definition: <Character factory>
+Definition: \<Character factory>
 Return a character representing a line feed. The code point of the resulting character is
 implementation defined.
 Return Value
-<Character>
+\<Character>
 Errors
 none
 
@@ -4005,11 +4376,11 @@ space
 
 Synopsis
 Return a character representing a space.
-Definition: <Character factory>
+Definition: \<Character factory>
 Return a character representing a space. The code point of the resulting character is
 implementation defined.
 Return Value
-<Character>
+\<Character>
 
 unspecified
 
@@ -4021,20 +4392,20 @@ tab
 
 Synopsis
 Return a character representing a tab.
-Definition: <Character factory>
+Definition: \<Character factory>
 Return a character representing a tab. The code point of the resulting character is implementation
 defined.
 Return Value
-<Character>
+\<Character>
 
 unspecified
 
 Errors
 none
 
-5.3.6 Protocol: <failedMessage>
+5.3.6 Protocol: \<failedMessage>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior of objects that represent a message that was sent to an
 object, but was not understood by that object.
@@ -4051,13 +4422,13 @@ Answer the arguments of the message that could not be sent.
 
 
 
-Definition: <failedMessage>
+Definition: \<failedMessage>
 Return a collection containing the arguments of the message that could not be sent. The elements
 of the collection are ordered, from the first element to the last element, in the same order as the
 arguments of the message, from left to right. If the message had no arguments, the collection will
 be empty.
 Return Value
-<sequenceReadabledCollection> unspecified
+\<sequenceReadabledCollection> unspecified
 Errors
 none
 5.3.6.2 Message:
@@ -4066,31 +4437,31 @@ selector
 
 Synopsis
 Answer the selector of the message that could not be sent.
-Definition: <failedMessage>
+Definition: \<failedMessage>
 Answer the selector of the message that could not be sent.
 Return Value
-<selector>
+\<selector>
 
 unspecified
 
 Errors
 none
 
-5.3.7 Protocol: <selector>
+5.3.7 Protocol: \<selector>
 Conforms To
-<Object>
+\<Object>
 Description
 Defines the protocol supported by literal message selectors. No behavior is defined by this
 protocols but objects that conform to is can be used to perform dynamically generated message
-sends using <Object> #perform: and related messages.
+sends using \<Object> #perform: and related messages.
 Messages
 none
 
 
 
-5.3.8 Protocol: <classDescription>
+5.3.8 Protocol: \<classDescription>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior of class objects. It provides messages for identifying and
 locating class objects within the class hierarchy.
@@ -4112,13 +4483,13 @@ allSubclasses
 
 Synopsis
 Return all subclasses of a class.
-Definition: <classDescription>
+Definition: \<classDescription>
 If the receiver is a class object, return a collection containing all of the class objects whose class
 definitions inherit either directly or indirectly from the class definition of the receiver.
 If the receiver is not a class object, the result is unspecified.
-Each element of the result collection supports the protocol <classDescription>. The order of class
+Each element of the result collection supports the protocol \<classDescription>. The order of class
 objects within the collection is unspecified.
-<collection>
+\<collection>
 unspecified
 Errors
 none
@@ -4128,15 +4499,15 @@ allSuperclasses
 
 Synopsis
 Return all superclasses of a class.
-Definition: <classDescription>
+Definition: \<classDescription>
 If the receiver is a class object, return a collection containing all of the class objects defined by the
 class definitions from which the class definition of the receiver inherits, either directly or indirectly. If
 the class definition of the receiver has no superclasses, return an empty collection.
 If the receiver is not a class object, the result is unspecified.
-Each element of the result collection supports the protocol <classDescription>. The order of class
+Each element of the result collection supports the protocol \<classDescription>. The order of class
 objects within the collection is unspecified.
 Return Value
-<collection>
+\<collection>
 
 unspecified
 
@@ -4150,7 +4521,7 @@ name
 
 
 Return the name of a class.
-Definition: <classDescription>
+Definition: \<classDescription>
 Return a string containing the global name of the receiver. The global name of a class object is the
 global identifier that is bound to the class object.
 Rationale
@@ -4158,7 +4529,7 @@ Some existing implementations may return a symbol as the result of this message.
 should be whatever protocol is general enough to be either a string or a symbol.
 
 Return Value
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 5.3.8.4 Message:
@@ -4167,15 +4538,15 @@ subclasses
 
 Synopsis
 Return direct subclasses of a class.
-Definition: <classDescription>
+Definition: \<classDescription>
 If the receiver is a class object, return a collection containing all of the class objects whose class
 definitions inherit directly from the class definition of the receiver. If there are no class definitions
 that inherit from the class definition of the receiver, return an empty collection.
 If the receiver is not a class object, the result is unspecified.
-Each element of the result collection supports the protocol <classDescription>. The order of class
+Each element of the result collection supports the protocol \<classDescription>. The order of class
 objects within the collection is unspecified.
 Return Value
-<collection>
+\<collection>
 
 unspecified
 
@@ -4187,14 +4558,14 @@ superclass
 
 Synopsis
 Return the immediate superclass of a class.
-Definition: <classDescription>
+Definition: \<classDescription>
 If the receiver is a class object, return the class objects defined by the class definitions from which
 the class definition of the receiver directly inherits. If the class definition of the receiver has no
 superclasses, return nil.
 If the receiver is not a class object, the result is unspecified.
 Return Value
-<classDescription>
-<nil>
+\<classDescription>
+\<nil>
 Errors
 none
 
@@ -4203,9 +4574,9 @@ unspecified
 
 
 
-5.3.9 Protocol: <instantiator>
+5.3.9 Protocol: \<instantiator>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol defines the behavior of objects that can be used to create other objects without
 requiring any additional information.
@@ -4218,16 +4589,16 @@ new
 
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
 Return Value
-<Object> new
+\<Object> new
 Errors
 none
 
-5.3.10 Protocol: <Object class>
+5.3.10 Protocol: \<Object class>
 Conforms To
-<classDescription>, <instantiator>
+\<classDescription>, \<instantiator>
 Description
 This protocol describes the behavior the class object whose global identifier is 'Object', which is the
 traditional root of the class hierarchy.
@@ -4246,7 +4617,7 @@ Standard Globals
 
 
 
-Object Conforms to the protocol <Object class>. It is a class object and the name of a class
+Object Conforms to the protocol \<Object class>. It is a class object and the name of a class
 definition.
 Messages
 new
@@ -4257,12 +4628,12 @@ new
 
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <Object class>
+Refinement: \<Object class>
 Return a newly created instance of the receiver.
 Return Value
-<Object> new
+\<Object> new
 Errors
 none
 
@@ -4274,19 +4645,19 @@ This section includes protocols that describe objects that can be evaluated usin
 However, protocols that specify valuable protocols as parameters are defined to accept any class
 of object conforming to the specified protocol.
 The graph below shows the conformance relationships between the protocols in this section.
-<valuable>
+\<valuable>
 
-<niladicValuable> <monadicValuable> <dyadicValuable>
+\<niladicValuable> \<monadicValuable> \<dyadicValuable>
 
-<niladicBlock>
+\<niladicBlock>
 
-<monadicBlock>
+\<monadicBlock>
 
 
 
-5.4.1 Protocol: <valuable>
+5.4.1 Protocol: \<valuable>
 Conforms To
-<Object>
+\<Object>
 Description
 This protocol describes the behavior for objects that can be evaluated using variants of the #value
 message.
@@ -4304,10 +4675,10 @@ argumentCount
 
 Synopsis
 Answers the number of arguments needed to evaluate the receiver.
-Definition: <valuable>
+Definition: \<valuable>
 The number of arguments needed to evaluate the receiver is returned.
 Return Value
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.4.1.2 Message:
@@ -4316,7 +4687,7 @@ valueWithArguments: argumentArray
 
 Synopsis
 Answers the value of the receiver when applied to the arguments in argumentArray.
-Definition: <valuable>
+Definition: \<valuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, that the evaluation is defined by the language with
 the elements of argumentArray bound in sequence to the receiver's arguments.
@@ -4326,17 +4697,17 @@ count.
 Parameters
 argumentArray
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
-.4.2 Protocol: <niladicValuable>
+.4.2 Protocol: \<niladicValuable>
 Conforms To
-<valuable>
+\<valuable>
 Description
 This protocol describes the behavior for objects supporting the #value selector.
 Messages
@@ -4350,12 +4721,12 @@ whileTrue:
 5.4.2.1 Message Refinement: argumentCount
 Synopsis
 Answers the number of arguments needed to evaluate the receiver.
-Definition: <valuable>
+Definition: \<valuable>
 The number of arguments needed to evaluate the receiver is returned.
-Refinement: <niladicValuable>
+Refinement: \<niladicValuable>
 Returns 0.
 Return Value
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.4.2.2 Message:
@@ -4364,11 +4735,11 @@ value
 
 Synopsis
 Answers the value of the receiver.
-Definition: <niladicValuable>
+Definition: \<niladicValuable>
 The receiver is evaluated as defined by the receiver.
 The result is as defined by the receiver.
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 
@@ -4387,7 +4758,7 @@ whileFalse
 
 Synopsis
 Evaluates the receiver until it evaluates to true.
-Definition: <niladicValuable>
+Definition: \<niladicValuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, the evaluation is defined by the language.
 If this evaluation results in false the process repeats.
@@ -4403,7 +4774,7 @@ whileFalse: iterationBlock
 
 Synopsis
 Evaluates iterationBlock zero or more times until the receiver evaluates to true.
-Definition: <niladicValuable>
+Definition: \<niladicValuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, that the evaluation is defined by the language.
 If this evaluation results in false, the argument is evaluated and the process repeats.
@@ -4412,7 +4783,7 @@ The results are undefined if the receiver is not a block which evaluates to a Bo
 Parameters
 iterationBlock
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
@@ -4426,7 +4797,7 @@ whileTrue
 
 Synopsis
 Evaluates the receiver until it evaluates to false.
-Definition: <niladicValuable>
+Definition: \<niladicValuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, that the evaluation is defined by the language.
 If this evaluation results in true the process repeats.
@@ -4450,7 +4821,7 @@ whileTrue: iterationBlock
 
 Synopsis
 Evaluates iterationBlock zero or more times until the receiver evaluates to false.
-Definition: <niladicValuable>
+Definition: \<niladicValuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, that the evaluation is defined by the language.
 If this evaluation results in true, the argument is evaluated and the process repeats.
@@ -4459,7 +4830,7 @@ The results are undefined if the receiver is not a block which evaluates to a Bo
 Parameters
 iterationBlock
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
@@ -4468,9 +4839,9 @@ UNSPECIFIED
 Errors
 none
 
-5.4.3 Protocol: <niladicBlock>
+5.4.3 Protocol: \<niladicBlock>
 Conforms To
-<niladicValuable>
+\<niladicValuable>
 Description
 This protocol describes the behavior for blocks with no arguments.
 Objects conforming to this protocol can be created only by the block constructor construct of the
@@ -4486,7 +4857,7 @@ ensure: terminationBlock
 
 Synopsis
 Evaluate a termination block after evaluating the receiver.
-Definition: <niladicBlock>
+Definition: \<niladicBlock>
 Evaluate the receiver and return its result. Immediately after successful evaluation of the receiver
 but before returning its result, evaluate terminationBlock. If abnormal termination of the
 
@@ -4505,10 +4876,10 @@ the reverse of the order in which the corresponding receiver blocks were evaluat
 Parameters
 terminationBlock
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 5.4.3.2 Message:
@@ -4517,7 +4888,7 @@ ifCurtailed: terminationBlock
 
 Synopsis
 Evaluating the receiver with an abnormal termination action.
-Definition: <niladicBlock>
+Definition: \<niladicBlock>
 Evaluate the receiver and return its result. If abnormal termination of the receiver occurs,
 terminationBlock is evaluated. The value returned from the evaluation of
 terminationBlock is discarded.
@@ -4532,10 +4903,10 @@ the reverse of the order in which the corresponding receiver blocks were evaluat
 Parameters
 terminationBlock
 
-<niladicBlock> uncaptured
+\<niladicBlock> uncaptured
 
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 5.4.3.3 Message:
@@ -4544,7 +4915,7 @@ on: selector do: action
 
 Synopsis
 Evaluate the receiver in the scope of an exception handler.
-Definition: <niladicBlock>
+Definition: \<niladicBlock>
 The receiver is evaluated such that if during its evaluation an exception corresponding to
 selector is signaled then action will be evaluated. The result of evaluating the receiver is
 returned.
@@ -4559,27 +4930,27 @@ If evaluation of the receiver terminates normally then the exception environment
 handler environment before returning to the sender of the #on:do: message.
 If signaling of an exception results in evaluation of action the evaluation will occur in the context
 of the handler environment. The argument to the action will be an object that conforms to the
-protocol <signaledException>.
+protocol \<signaledException>.
 Parameters
 selector
 action
 
-<exceptionSelector>
+\<exceptionSelector>
 
 uncaptured
 
-<monadicBlock>
+\<monadicBlock>
 
 uncaptured
 
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 
-5.4.4 Protocol: <monadicValuable>
+5.4.4 Protocol: \<monadicValuable>
 Conforms To
-<valuable>
+\<valuable>
 Description
 This protocol describes the behavior for objects supporting the value: selector.
 Messages
@@ -4589,12 +4960,12 @@ value:
 5.4.4.1 Message Refinement: argumentCount
 Synopsis
 Answers the number of arguments needed to evaluate the receiver.
-Definition: <valuable>
+Definition: \<valuable>
 The number of arguments needed to evaluate the receiver is returned.
-Refinement: <monadicValuable>
+Refinement: \<monadicValuable>
 Returns 1.
 Return Value
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.4.4.2 Message:
@@ -4605,7 +4976,7 @@ value: argument
 
 
 Answers the value of the receiver when applied to the argument.
-Definition: <monadicValuable>
+Definition: \<monadicValuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, that the evaluation is defined by the language with
 argument bound to the block's only argument.
@@ -4613,16 +4984,16 @@ The result is as defined by the receiver.
 Parameters
 argument
 
-<ANY> unspecified
+\<ANY> unspecified
 
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 
-5.4.5 Protocol: <monadicBlock>
+5.4.5 Protocol: \<monadicBlock>
 Conforms To
-<monadicValuable>
+\<monadicValuable>
 Description
 This protocol describes the behavior for blocks with one argument.
 Objects conforming to this protocol can be created only by the block constructor construct of the
@@ -4630,9 +5001,9 @@ Smalltalk language.
 Messages
 none
 
-5.4.6 Protocol: <dyadicValuable>
+5.4.6 Protocol: \<dyadicValuable>
 Conforms To
-<valuable>
+\<valuable>
 Description
 This protocol describes the behavior for objects supporting the #value:value: selector.
 Messages:
@@ -4645,12 +5016,12 @@ value:value:
 5.4.6.1 Message Refinement: argumentCount
 Synopsis
 Answers the number of arguments needed to evaluate the receiver.
-Definition: <valuable>
+Definition: \<valuable>
 The number of arguments needed to evaluate the receiver is returned.
-Refinement: <dyadicValuable>
+Refinement: \<dyadicValuable>
 Returns 2.
 Return Value
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.4.6.2 Message:
@@ -4659,7 +5030,7 @@ value: argument1 value: argument2
 
 Synopsis
 Answers the value of the receiver when applied to the arguments.
-Definition: <dyadic-valuable>
+Definition: \<dyadic-valuable>
 The receiver is evaluated as defined by the receiver.
 Note that in the case that the receiver is a block, that the evaluation is defined by the language with
 argument1 bound to the block's first argument, and argument2 bound to the block's second
@@ -4668,14 +5039,14 @@ The result is as defined by the receiver.
 Parameters
 argument1
 
-<ANY> unspecified
+\<ANY> unspecified
 
 argument2
 
-<ANY> unspecified
+\<ANY> unspecified
 
 Return Value
-<ANY> unspecified
+\<ANY> unspecified
 Errors
 none
 
@@ -4684,43 +5055,43 @@ none
 5.5 Exception Protocols
 This section includes the protocols that define the behavior of the exception handling system.
 The graph below shows the conformance relationships between the protocols in this section
-(except for the protocol <instantiator>, which is in the section containing fundamental protocols).
+(except for the protocol \<instantiator>, which is in the section containing fundamental protocols).
 
-<instantiator>
+\<instantiator>
 
-<exceptionDescription>
+\<exceptionDescription>
 
-<signaledException>
+\<signaledException>
 
-<exceptionSignaler>
+\<exceptionSignaler>
 
-<exceptionBuilder>
+\<exceptionBuilder>
 
-<exceptionSelector>
+\<exceptionSelector>
 
-<exceptionInstantiator>
+\<exceptionInstantiator>
 
-<ExceptionSet>
+\<ExceptionSet>
 
-<MessageNotUnderstoodSelector>
-<Exception> <ZeroDivide factory>
-<Error>
+\<MessageNotUnderstoodSelector>
+\<Exception> \<ZeroDivide factory>
+\<Error>
 
-<Exception class>
+\<Exception class>
 
-<Notification> <Notification class>
+\<Notification> \<Notification class>
 
-<MessageNotUnderstood> <ZeroDivide> <Warning>
+\<MessageNotUnderstood> \<ZeroDivide> \<Warning>
 
-<Warning class>
+\<Warning class>
 
-<Error class>
+\<Error class>
 
 
 
-5.5.1 Protocol: <exceptionDescription>
+5.5.1 Protocol: \<exceptionDescription>
 Conforms To:
-<Object>
+\<Object>
 Description
 This protocol describe the messages that may be used to obtain information about an occurrence
 of an exception.
@@ -4737,12 +5108,12 @@ defaultAction
 
 Synopsis
 The default action taken if the exception is signaled.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 If the exception described by the receiver is signaled and the current exception environment does
 not contain a handler for the exception this method will be executed.
 The exact behavior and result of this method is implementation defined.
 Return Value
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 5.5.1.2 Message:
@@ -4751,12 +5122,12 @@ description
 
 Synopsis
 Return a textual description of the exception.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 Return text that describes in a human readable form an occurrence of an exception. If an explicit
 message text was provided by the signaler of the exception, that text should be incorporated into
 the description.
 Return Value
-<readable>
+\<readable>
 
 unspecified
 
@@ -4768,14 +5139,14 @@ isResumable
 
 Synopsis
 Determine whether an exception is resumable.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 This message is used to determine whether the receiver is a resumable exception. Answer true if
 the receiver is resumable. Answer false if the receiver is not resumable.
 Return Value
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
-<boolean>
+\<boolean>
 
 December, 1997
 revision 1.9
@@ -4792,12 +5163,12 @@ messageText
 
 Synopsis
 Return an exception's message text.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 Return the signaler message text of the receiver. If the signaler has not provided any message text,
 return nil.
 Return Value
-<readableString> unspecified
-<nil>
+\<readableString> unspecified
+\<nil>
 unspecified
 Errors
 none
@@ -4807,7 +5178,7 @@ tag
 
 Synopsis
 Return an exception's tag value.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 Return the tag value provided by the signaler of the receiver. If the signaler has not provided a tag
 value, return the same value was would be returned as if #message Text was sent to the receiver
 of this message. If the signaler has provided neither a tag value nor a message text, return nil.
@@ -4815,15 +5186,15 @@ Exception tags are intended for use in situations where a particular occurrence 
 needs to be identified and a textual description is not appropriate. For example, the message text
 might vary according to the locale and thus could not be used to identify the exception.
 Return Value
-<Object> unspecified
-<nil>
+\<Object> unspecified
+\<nil>
 unspecified
 Errors
 none
 
-5.5.2 Protocol: <exceptionSignaler>
+5.5.2 Protocol: \<exceptionSignaler>
 Conforms To:
-<Object>
+\<Object>
 Description
 This protocol describes the behavior of signaling an exceptional condition, locating an exception
 handler, and executing an exception action.
@@ -4840,8 +5211,8 @@ signal
 
 Synopsis
 Signal the occurrence of an exceptional condition.
-Definition: <exceptionSignaler>
-Associated with the receiver is an <exceptionDescription> called the signaled exception. The
+Definition: \<exceptionSignaler>
+Associated with the receiver is an \<exceptionDescription> called the signaled exception. The
 current exception environment is searched for an exception handler whose exception selector
 matches the signaled exception. The search proceeds from the most recently created exception
 handler to the oldest exception handler.
@@ -4851,7 +5222,7 @@ If a matching handler is found, the exception action of the handler is evaluated
 environment that was current when the handler was created and the state of the current exception
 environment is preserved as the signaling environment.
 The exception action is evaluated as if the message #value: were sent to it with a
-<signaledException> passed as its argument. The <signaledException> is derived from the
+\<signaledException> passed as its argument. The \<signaledException> is derived from the
 signaled exception in an implementation dependent manner.
 If the evaluation of the exception action returns normally (as if it had returned from the #value:
 message), the handler environment is restored and the value returned from the exception action is
@@ -4860,13 +5231,13 @@ active #ensure: or #ifCurtailed: termination blocks created during evaluation of
 of the #on:do: message are evaluated.
 If a matching handler is not found when the exception environment is searched, the default action
 for the signaled exception is performed. This is accomplished as if the message #defaultAction
-were sent to the <signaledException> object derived from the signaled exception. The
+were sent to the \<signaledException> object derived from the signaled exception. The
 #defaultAction method is executed in the context of the signaling environment. If the signaled
 exception is resumable the value returned from the #defaultAction method is returned as the
 value of the #signal message. If the signaled exception is not resumable the action taken upon
 completion of the #defaultAction method is implementation defined.
 Return Value
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 5.5.2.2 Message:
@@ -4875,31 +5246,31 @@ signal: signalerText
 
 Synopsis
 Signal the occurrence of an exceptional condition with a specified textual description.
-Definition: <exceptionSignaler>
-Associated with the receiver is an <exceptionDescription> called the signaled exception. The
+Definition: \<exceptionSignaler>
+Associated with the receiver is an \<exceptionDescription> called the signaled exception. The
 message text of the signaled exception is set to the value of signalerText, and then the
 exception is signaled in the same manner as if the message #signal had been sent to the
 receiver.
 Note that this message does not return in some circumstances. The situations in which it does
 return and the returned value, if any, are the same as specified for the #signal message.
 Parameters
-signalerText <readableString>
+signalerText \<readableString>
 Return Value
 
 unspecified
 
 
 
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 
-5.5.3 Protocol: <exceptionBuilder>
+5.5.3 Protocol: \<exceptionBuilder>
 Conforms To:
-<exceptionDescription>, <exceptionSignaler>
+\<exceptionDescription>, \<exceptionSignaler>
 Description
 This protocol describes the messages that may be used to set the information about an occurrence
-of an exception. This information may be retrieved using <exceptionDescription> protocol. If an
+of an exception. This information may be retrieved using \<exceptionDescription> protocol. If an
 object conforming to this protocol is signaled as an exception, any information set in that object
 using this protocol's messages will also be available for retrival from the signaled exception that is
 passed to a handler block.
@@ -4912,22 +5283,22 @@ messageText: signalerText
 
 Synopsis
 Set an exception's message text.
-Definition: <exceptionBuilder>
+Definition: \<exceptionBuilder>
 Set the signaler message text of the receiver. Subsequent sends of the message #messgeText to
 the receiver will return this value. Subseqent sends of of the message #messgeText to a signaled
 exception generated by sending the message #signal to the receiver of this message will also
 return this value.
 Return the receiver as the result of the message.
 Parameters
-signalerText <readableString>
+signalerText \<readableString>
 Return Value
-<RECEIVER> unspecified
+\<RECEIVER> unspecified
 Errors
 none
 
-5.5.4 Protocol: <signaledException>
+5.5.4 Protocol: \<signaledException>
 Conforms To:
-<exceptionDescription>
+\<exceptionDescription>
 
 captured
 
@@ -4955,13 +5326,13 @@ isNested
 Synopsis
 Determine whether the current exception handler is within the scope of another handler for the
 same exception.
-Definition: <signaledException>
+Definition: \<signaledException>
 Answer true if the handler environment for the current exception handler contains an exception
 handler that will handle the receiver. Answer false if it does not.
 The default action for an exception is not considered to be an enclosing handler. Only the
 existence of a handler explicitly established using #on:do: will result in this method returning true.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -4973,7 +5344,7 @@ outer
 
 Synopsis
 Evaluate the enclosing exception action for the receiver and return.
-Definition: <signaledException>
+Definition: \<signaledException>
 If the handler environment for the current exception handler contains an exception handler that will
 handle the receiver, evaluate that handler's exception action with the receiver as the argument to
 its handler block. If there is no enclosing handler, send the message #defaultAction to the
@@ -4983,10 +5354,10 @@ from #outer will be the resumption value of the evaluated exception action. If t
 resumable or if the exception action does not resume then this message will not return.
 For exceptions that are not resumable, #outer is equivalent to #pass.
 Return Value
-<Object> unspecified
+\<Object> unspecified
 Errors
 It is erroneous to directly or indirectly send this message from within a
-<exceptionDescription>#defaultAction method to the receiver of the #defaultAction
+\<exceptionDescription>#defaultAction method to the receiver of the #defaultAction
 message.
 
 NCITS J20 DRAFT
@@ -5002,7 +5373,7 @@ pass
 
 Synopsis
 Yield control to the enclosing exception action for the receiver.
-Definition: <signaledException>
+Definition: \<signaledException>
 If the handler environment for the current exception handler contains an enclosing exception
 handler for the receiver, activate that handler's exception action in place of the current exception
 action. If there is no enclosing handler, execute the default action for the receiver as if no handler
@@ -5020,7 +5391,7 @@ resignalAs: replacementException
 
 Synopsis
 Signal an alternative exception in place of the receiver.
-Definition: <signaledException>
+Definition: \<signaledException>
 The active exception action is aborted and the exception environment and the evaluation context
 are restored to the same states that were in effect when the receiver was originally signaled.
 Restoring the evaluation context may result in the execution of #ensure: or #ifCurtailed:
@@ -5035,7 +5406,7 @@ Control does not return from this message to the currently active exception acti
 Parameters
 replacementException
 
-<exceptionDescription> unspecified
+\<exceptionDescription> unspecified
 
 Return Value
 none
@@ -5047,7 +5418,7 @@ resume
 
 Synopsis
 Return from the message that signaled the receiver.
-Definition: <signaledException>
+Definition: \<signaledException>
 If the current exception action was activated as the result of sending the message #outer to the
 receiver, return a resumption value as the value of the #outer message.
 If the receiver is a resumable exception a resumption value is returned as the value of the message
@@ -5072,7 +5443,7 @@ resume: resumptionValue
 
 Synopsis
 Return the argument as the value of the message that signaled the receiver.
-Definition: <signaledException>
+Definition: \<signaledException>
 If the current exception action was activated as the result of sending the message #outer to the
 receiver, return resumptionValue as the value of the #outer message.
 If the receiver is a resumable exception, the resumptionValue is returned as the value of the
@@ -5084,7 +5455,7 @@ This message does not return to its point of invocation.
 Parameters
 resumptionValue
 
-<Object>
+\<Object>
 
 uncaptured
 
@@ -5100,7 +5471,7 @@ retry
 
 Synopsis
 Abort an exception handler and re-evaluate its protected block.
-Definition: <signaledException>
+Definition: \<signaledException>
 The active exception action is aborted and the exception environment and the evaluation context
 are restored to the same states that were in effect when the #on:do: message that established
 the active handler was sent. Restoring the evaluation context may result in the execution of
@@ -5121,7 +5492,7 @@ retryUsing: alternativeBlock
 
 Synopsis
 Abort an exception handler and evaluate a new block in place of the handler's protected block.
-Definition: <signaledException>
+Definition: \<signaledException>
 The active exception action is aborted and the exception environment and the evaluation context
 are restored to the same states that were in effect when the #on:do: message that established
 the active handler was sent. Restoring the evaluation context may result in the execution of
@@ -5132,7 +5503,7 @@ Control does not return from this message to the currently active exception acti
 Parameters
 alternativeBlock
 
-<niladicBlock> captured
+\<niladicBlock> captured
 
 Return Value
 none
@@ -5145,7 +5516,7 @@ return
 
 Synopsis
 Return nil as the value of the block protected by the active exception handler.
-Definition: <signaledException>
+Definition: \<signaledException>
 Nil is return as the value of the protected block of the active exception handler. Before returning,
 the exception environment and the evaluation context are restored to the same states that were in
 effect when the active handler was created using #on:do:. Restoring the evaluation context may
@@ -5162,7 +5533,7 @@ return: returnValue
 
 Synopsis
 Return the argument as the value of the block protected by the active exception handler.
-Definition: <signaledException>
+Definition: \<signaledException>
 The returnValue is returned as the value of the protected block of the active exception handler.
 Before returning, the exception environment and the evaluation context are restored to the same
 states that were in effect when the active handler was created using #on:do:. Restoring the
@@ -5175,7 +5546,7 @@ This message does not return to its point of invocation.
 Parameters
 returnValue
 
-<Object>
+\<Object>
 
 uncaptured
 
@@ -5185,9 +5556,9 @@ Errors
 It is erroneous to directly or indirectly send this message from within a #defaultAction method
 to the receiver of the #defaultAction method.
 
-5.5.5 Protocol: <exceptionSelector>
+5.5.5 Protocol: \<exceptionSelector>
 Conforms To:
-<Object>
+\<Object>
 Description
 This protocol describe the behavior of objects that are used to select an exception handler. In
 particular, objects that conform to this protocol may occur as the first argument to #on:do:
@@ -5202,18 +5573,18 @@ handles:
 
 Synopsis
 Create an exception set.
-Definition: <exceptionSelector>
+Definition: \<exceptionSelector>
 Return an exception set that contains the receiver and the argument exception. This is commonly
 used to specify a set of exception selectors for an exception handler.
 Parameters
 anotherException
 
-<exceptionSelector>
+\<exceptionSelector>
 
 captured
 
 Return Value
-<exceptionSet> new
+\<exceptionSet> new
 Errors
 none
 5.5.5.2 Message:
@@ -5222,7 +5593,7 @@ handles: exception
 
 Synopsis
 Determine whether an exception handler will accept a signaled exception.
-Definition: <exceptionSelector>
+Definition: \<exceptionSelector>
 This message determines whether the exception handler associated with the receiver may be used
 to process the argument. Answer true if an associated handler should be used to process
 exception. Answer false if an associated handler may not be used to process the exception.
@@ -5232,22 +5603,22 @@ Parameters
 of ANSI Smalltalk Standard
 exception
 Return Value
-<boolean>
+\<boolean>
 
 December, 1997
 revision 1.9
 
 98
 
-<exceptionDescription> unspecified
+\<exceptionDescription> unspecified
 unspecified
 
 Errors
 none
 
-5.5.6 Protocol: <exceptionInstantiator>
+5.5.6 Protocol: \<exceptionInstantiator>
 Conforms To:
-<exceptionSelector>, <exceptionSignaler>, <instantiator>
+\<exceptionSelector>, \<exceptionSignaler>, \<instantiator>
 Description
 This protocol describes the instantiation behavior of objects that can create exceptions.
 Messages
@@ -5257,13 +5628,13 @@ signal
 5.5.6.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <exceptionInstantiator>
-The object returned is an <exceptionBuilder> that may be used to signal an exception of the same
+Refinement: \<exceptionInstantiator>
+The object returned is an \<exceptionBuilder> that may be used to signal an exception of the same
 type that would be signaled if the message #signal is sent to the receiver.
 Return Value
-<exceptionBuilder>
+\<exceptionBuilder>
 
 new
 
@@ -5272,8 +5643,8 @@ none
 5.5.6.2 Message Refinement: signal
 Synopsis
 Signal the occurrence on an exceptional condition.
-Definition: <exceptionSignaler>
-Associated with the receiver is an <exceptionDescription> called the signaled exception. The
+Definition: \<exceptionSignaler>
+Associated with the receiver is an \<exceptionDescription> called the signaled exception. The
 current exception environment is searched for an exception handler whose exception selector
 matches the signaled exception. The search proceeds from the most recently created exception
 handler to the oldest exception handler.
@@ -5286,7 +5657,7 @@ If a matching handler is found, the exception action of the handler is evaluated
 environment that was current when the handler was created and the state of the current exception
 environment is preserved as the signaling environment.
 The exception action is evaluated as if the message #value: were sent to it with a
-<signaledException> passed as its argument. The <signaledException> is derived from the
+\<signaledException> passed as its argument. The \<signaledException> is derived from the
 signaled exception in an implementation dependent manner.
 If the evaluation of the exception action returns normally (as if it had returned from the #value:
 message), the handler environment is restored and the value returned from the exception action is
@@ -5295,22 +5666,22 @@ active #ensure: or #ifCurtailed: termination blocks created during evaluation of
 of the #on:do: message are evaluated.
 If a matching handler is not found when the exception environment is searched, the default action
 for the signaled exception is performed. This is accomplished as if the message #defaultAction
-were sent to the <signaledException> object derived from the signaled exception. The
+were sent to the \<signaledException> object derived from the signaled exception. The
 #defaultAction method is executed in the context of the signaling environment. If the signaled
 exception is resumable the value returned from the #defaultAction method is returned as the
 value of the #signal message. If the signaled exception is not resumable the action taken upon
 completion of the #defaultAction method is implementation defined.
-Refinement: <exceptionInstantiator>
-An exception of the type associated with the receiver is signaled. The <signaledException> is
+Refinement: \<exceptionInstantiator>
+An exception of the type associated with the receiver is signaled. The \<signaledException> is
 initialized to its default state.
 Return Value
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 
-5.5.7 Protocol: <Exception class>
+5.5.7 Protocol: \<Exception class>
 Conforms To:
-<classDescription> <exceptionInstantiator>
+\<classDescription> \<exceptionInstantiator>
 Description
 This protocol describe the behavior of class objects that are used to create, signal, and select
 exceptions that exist within a specialization hierarchy.
@@ -5328,8 +5699,8 @@ revision 1.9
 
 100
 
-A class name. Conforms to the protocol <Exception class>. Instances of
-this class conform to the protocol <Exception>.
+A class name. Conforms to the protocol \<Exception class>. Instances of
+this class conform to the protocol \<Exception>.
 
 Messages
 handles:
@@ -5337,40 +5708,40 @@ new
 signal
 
 5.5.7.1 Message Refinement: handles: exception
-Definition: <exceptionSelector>
+Definition: \<exceptionSelector>
 This message determines whether the exception handler associated with the receiver may be used
 to process the argument. Answer true if an associated handler should be used to process
 exception. Answer false if an associated handler may not be used to process the exception.
-Refinement: <Exception class>
+Refinement: \<Exception class>
 Return true if the class of exception is the receiver or a general subclass of the receiver.
 This definition implies that subclasses of an exception class are considered to be subexceptions of
 the type of exception defined by their superclass. An exception handler that handles an exception
 class will also handle any exceptions that are instances of the exception class's subclasses.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
 Errors
 none
 5.5.7.2 Message Refinement: new
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <exceptionInstantiator>
-The object returned is an <exceptionBuilder> that may be used to signal an exception of the same
+Refinement: \<exceptionInstantiator>
+The object returned is an \<exceptionBuilder> that may be used to signal an exception of the same
 type that would be signaled if the message #signal is sent to the receiver.
-Refinement: <Exception class>
-The object returned conforms to <Exception>
+Refinement: \<Exception class>
+The object returned conforms to \<Exception>
 Return Value
-<Exception>
+\<Exception>
 
 new
 
 Errors
 none
 5.5.7.3 Message Refinement: signal
-Definition: <exceptionSignaler>
-Associated with the receiver is an <exceptionDescription> called the signaled exception. The
+Definition: \<exceptionSignaler>
+Associated with the receiver is an \<exceptionDescription> called the signaled exception. The
 current exception environment is searched for an exception handler whose exception selector
 matches the signaled exception. The search proceeds from the most recently created exception
 handler to the oldest exception handler.
@@ -5383,7 +5754,7 @@ environment is preserved as the signaling environment.
 
 
 The exception action is evaluated as if the message #value: were sent to it with a
-<signaledException> passed as its argument. The <signaledException> is derived from the
+\<signaledException> passed as its argument. The \<signaledException> is derived from the
 signaled exception in an implementation dependent manner.
 If the evaluation of the exception action returns normally (as if it had returned from the #value:
 message), the handler environment is restored and the value returned from the exception action is
@@ -5392,26 +5763,26 @@ active #ensure: or #ifCurtailed: termination blocks created during evaluation of
 of the #on:do: message are evaluated.
 If a matching handler is not found when the exception environment is searched, the default action
 for the signaled exception is performed. This is accomplished as if the message #defaultAction
-were sent to the <signaledException> object derived from the signaled exception. The
+were sent to the \<signaledException> object derived from the signaled exception. The
 #defaultAction method is executed in the context of the signaling environment. If the signaled
 exception is resumable the value returned from the #defaultAction method is returned as the
 value of the #signal message. If the signaled exception is not resumable the action taken upon
 completion of the #defaultAction method is implementation defined.
-Refinement: <Exception class>
-The exception signaled conforms to <Exception> with all of its <exceptionDescription> attributes
+Refinement: \<Exception class>
+The exception signaled conforms to \<Exception> with all of its \<exceptionDescription> attributes
 set to their default values.
 Return Value
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 
-5.5.8 Protocol: <Exception>
+5.5.8 Protocol: \<Exception>
 Conforms To:
-<exceptionBuilder>, <signaledException>
+\<exceptionBuilder>, \<signaledException>
 Description
 This protocol describes the behavior of instances of class Exception. Typically, actual exceptions
 used by an application will be either direct or indirect subclasses of this class. Exception combines
-the behavior of <exceptionBuilder> and <signaledException>. Instances are used to both supplied
+the behavior of \<exceptionBuilder> and \<signaledException>. Instances are used to both supplied
 inform before an exception is signaled and to pass the information to an exception handler.
 As Exception is explicitly specified to be subclassable, conforming implementations must
 implement its behavior in a non-fragile manner.
@@ -5425,38 +5796,38 @@ any conforming implementation..
 Messages
 none
 
-5.5.9 Protocol: <Notification class>
+5.5.9 Protocol: \<Notification class>
 Conforms To:
-<Exception class>
+\<Exception class>
 Description
 This protocol describe the behavior of the global Notification. The value of the standard global
 Notification is a class object that conforms to this protocol. The class Notification is
 explicitly specified to be subclassable in a standard conforming program. Conforming
 implementations must implement its behaviors in a non-fragile manner.
-The signaled exceptions generated by this type of object conform to the protocol <Notification>.
+The signaled exceptions generated by this type of object conform to the protocol \<Notification>.
 Standard Globals
 Notification
 
-A class name. Conforms to the protocol <Notification class>.
+A class name. Conforms to the protocol \<Notification class>.
 Notification must inherit (possibly indirectly) from the class
 Exception. Instances of this class conform to the protocol
-<Notification>.
+\<Notification>.
 
 Messages
 new
 
 5.5.9.1 Message Refinement: new
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <exceptionInstantiator>
-The object returned is an <exceptionBuilder> that may be used to signal an exception of the same
+Refinement: \<exceptionInstantiator>
+The object returned is an \<exceptionBuilder> that may be used to signal an exception of the same
 type that would be signaled if the message #signal is sent to the receiver.
-Refinement: <Exception class>
-The object returned conforms to <Exception>
-Refinement: <Notification class>
-The object returned conforms to <Notification>.
+Refinement: \<Exception class>
+The object returned conforms to \<Exception>
+Refinement: \<Notification class>
+The object returned conforms to \<Notification>.
 Return Value
-<Notification>
+\<Notification>
 Errors
 none
 
@@ -5464,9 +5835,9 @@ new
 
 
 
-5.5.10 Protocol: <Notification>
+5.5.10 Protocol: \<Notification>
 Conforms To:
-<Exception>
+\<Exception>
 Description
 This protocol describes the behavior of instances of the class Notification. These are used to
 represent exceptional conditions that may occur but which are not considered errors. Actual
@@ -5481,15 +5852,15 @@ isResumable
 
 defaultAction
 
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 If the exception described by the receiver is signaled and the current exception environment does
 not contain a handler for the exception this method will be executed.
 The exact behavior and result of this method is implementation defined.
-Refinement: <Notification>
+Refinement: \<Notification>
 No action is taken. The value nil is returned as the value of the message that signaled the
 exception.
 Return Value
-<nil>
+\<nil>
 unspecified
 Errors
 none
@@ -5497,13 +5868,13 @@ none
 
 isResumable
 
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 This message is used to determine whether the receiver is a resumable exception. Answer true if
 the receiver is resumable. Answer false if the receiver is not resumable.
-Refinement: <Notification>
+Refinement: \<Notification>
 Answer true. Notification exceptions by default are specified to be resumable.
 Return Value
-<boolean>
+\<boolean>
 Errors
 none
 
@@ -5511,21 +5882,21 @@ unspecified
 
 
 
-5.5.11 Protocol: <Warning class>
+5.5.11 Protocol: \<Warning class>
 Conforms To:
-<Notification class>
+\<Notification class>
 Description
 This protocol describe the behavior of the global Warning. The value of the standard global
 Warning is a class object that conforms to this protocol. The class Warning is explicitly specified
 to be subclassable in a standard conforming program. Conforming implementations must
 implement its behaviors in a non-fragile manner.
-The signaled exceptions generated by this type of object conform to the protocol <Warning>.
+The signaled exceptions generated by this type of object conform to the protocol \<Warning>.
 Standard Globals
 Warning
 
-A class name. Conforms to the protocol <Warning class>. Warning
+A class name. Conforms to the protocol \<Warning class>. Warning
 must inherit (possibly indirectly) from the class Notification.
-Instances of this class conform to the protocol <Warning>.
+Instances of this class conform to the protocol \<Warning>.
 
 Messages
 new
@@ -5534,26 +5905,26 @@ new
 
 new
 
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <exceptionInstantiator>
-The object returned is an <exceptionBuilder> that may be used to signal an exception of the same
+Refinement: \<exceptionInstantiator>
+The object returned is an \<exceptionBuilder> that may be used to signal an exception of the same
 type that would be signaled if the message #signal is sent to the receiver.
-Refinement: <Exception class>
-The object returned conforms to <Exception>
-Refinement: <Warning class>
-The object returned conforms to <Warning>
+Refinement: \<Exception class>
+The object returned conforms to \<Exception>
+Refinement: \<Warning class>
+The object returned conforms to \<Warning>
 Return Value
-<Warning>
+\<Warning>
 
 new
 
 Errors
 none
 
-5.5.12 Protocol: <Warning>
+5.5.12 Protocol: \<Warning>
 Conforms To:
-<Notification>
+\<Notification>
 
 
 
@@ -5573,14 +5944,14 @@ defaultAction
 
 Synopsis
 The default action taken if the exception is signaled.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 If the exception described by the receiver is signaled and the current exception environment does
 not contain a handler for the exception this method will be executed.
 The exact behavior and result of this method is implementation defined.
-Refinement: <Notification>
+Refinement: \<Notification>
 No action is taken. The value nil is returned as the value of the message that signaled the
 exception.
-Refinement: <Warning>
+Refinement: \<Warning>
 The user should be notified of the occurrence of an exceptional occurrence and given an option of
 continuing or aborting the computation. The description of the occurrence should include any text
 specified as the argument of the #signal: message.
@@ -5589,9 +5960,9 @@ UNSPECIFIED
 Errors
 none
 
-5.5.13 Protocol: <Error class>
+5.5.13 Protocol: \<Error class>
 Conforms To:
-<Exception class>
+\<Exception class>
 Description
 This protocol describe the behavior of the global Error. The value of the standard global Error is
 a class object that conforms to this protocol. The class Error is explicitly specified to be
@@ -5600,13 +5971,13 @@ behaviors in a non-fragile manner.
 
 
 
-The signaled exceptions generated by this type of object conform to the protocol <Error>.
+The signaled exceptions generated by this type of object conform to the protocol \<Error>.
 Standard Globals
 Error
 
-A class name. Conforms to the protocol <Error class>. Error must
+A class name. Conforms to the protocol \<Error class>. Error must
 inherit (possibly indirectly) from the class Exception. Instances of this
-class conform to the protocol <Error>.
+class conform to the protocol \<Error>.
 
 Messages
 new
@@ -5615,23 +5986,23 @@ new
 
 new
 
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <exceptionInstantiator>
-The object returned is an <exceptionBuilder> that may be used to signal an exception of the same
+Refinement: \<exceptionInstantiator>
+The object returned is an \<exceptionBuilder> that may be used to signal an exception of the same
 type that would be signaled if the message #signal is sent to the receiver.
-Refinement: <Exception class>
-The object returned conforms to <Exception>
-Refinement: <Error class>
-The object returned conforms to <Error>
+Refinement: \<Exception class>
+The object returned conforms to \<Exception>
+Refinement: \<Error class>
+The object returned conforms to \<Error>
 Return Value
-<Error> new
+\<Error> new
 Errors
 none
 
-5.5.14 Protocol: <Error>
+5.5.14 Protocol: \<Error>
 Conforms To:
-<Exception>
+\<Exception>
 Description
 This protocol describes the behavior of instances of class Error. These are used to represent error
 conditions that prevent the normal continuation of processing. Actual error exceptions used by an
@@ -5643,7 +6014,7 @@ defaultAction
 isResumable
 
 5.5.14.1 Message Refinement:
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 
 defaultAction
 
@@ -5652,7 +6023,7 @@ defaultAction
 If the exception described by the receiver is signaled and the current exception environment does
 not contain a handler for the exception this method will be executed.
 The exact behavior and result of this method is implementation defined.
-Refinement: <Error>
+Refinement: \<Error>
 The current computation is terminated. The cause of the error should be logged or reported to the
 user. If the program is operating in an interactive debugging environment the computation should
 be suspended and the debugger activated.
@@ -5666,28 +6037,28 @@ isResumable
 
 Synopsis
 Determine whether an exception is resumable.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 This message is used to determine whether the receiver is a resumable exception. Answer true if
 the receiver is resumable. Answer false if the receiver is not resumable.
-Refinement: <Error>
+Refinement: \<Error>
 Answer false. Error exceptions by default are assumed to not be resumable. Subclasses may override this definition for situations where it is appropriate for an error to be resumable.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
 Errors
 none
 
-5.5.15 Protocol: <ZeroDivide factory>
+5.5.15 Protocol: \<ZeroDivide factory>
 Conforms To:
-<exceptionInstantiator>
+\<exceptionInstantiator>
 Description
 This protocol describe the behavior of the global ZeroDivide. It is used to as an exception
 selector to catch zero divide exceptions and can also be used to signal that a division by zero error
 has occured. Zero divide exceptions are resumable so any message in this protocol that signal
 such an exception may ultimately return to their sender. The signaled exceptions generated by this
-type of object conform to the protocol <ZeroDivide>
+type of object conform to the protocol \<ZeroDivide>
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
@@ -5700,7 +6071,7 @@ revision 1.9
 108
 
 Unspecified language element type. Conforms to the protocol
-<ZeroDivide class>.
+\<ZeroDivide class>.
 
 Messages
 dividend:
@@ -5712,17 +6083,17 @@ dividend: argument
 
 Synopsis
 Signal the occurance of a division by zero.
-Refinement: <ZeroDivide factory>
+Refinement: \<ZeroDivide factory>
 Signal the occurance of a division by zero exception. Capture the number that was being divided
 such that it is available from the signaled exception.
-If the message #dividend is subsequently sent to the <ZeroDivide> object that is the signaled
+If the message #dividend is subsequently sent to the \<ZeroDivide> object that is the signaled
 exception the value of argument is returned.
 Parameters
 argument
 Return Value
-<Object>
+\<Object>
 
-<number> captured
+\<number> captured
 state
 
 Errors
@@ -5731,8 +6102,8 @@ none
 
 signal
 
-Definition: <exceptionSignaler>
-Associated with the receiver is an <exceptionDescription> called the signaled exception. The
+Definition: \<exceptionSignaler>
+Associated with the receiver is an \<exceptionDescription> called the signaled exception. The
 current exception environment is searched for an exception handler whose exception selector
 matches the signaled exception. The search proceeds from the most recently created exception
 handler to the oldest exception handler.
@@ -5742,7 +6113,7 @@ If a matching handler is found, the exception action of the handler is evaluated
 environment that was current when the handler was created and the state of the current exception
 environment is preserved as the signaling environment.
 The exception action is evaluated as if the message #value: were sent to it with a
-<signaledException> passed as its argument. The <signaledException> is derived from the
+\<signaledException> passed as its argument. The \<signaledException> is derived from the
 signaled exception in an implementation dependent manner.
 If the evaluation of the exception action returns normally (as if it had returned from the #value:
 message), the handler environment is restored and the value returned from the exception action is
@@ -5751,7 +6122,7 @@ active #ensure: or #ifCurtailed: termination blocks created during evaluation of
 of the #on:do: message are evaluated.
 If a matching handler is not found when the exception environment is searched, the default action
 for the signaled exception is performed. This is accomplished as if the message #defaultAction
-were sent to the <signaledException> object derived from the signaled exception. The
+were sent to the \<signaledException> object derived from the signaled exception. The
 #defaultAction method is executed in the context of the signaling environment. If the signaled
 exception is resumable the value returned from the #defaultAction method is returned as the
 value of the #signal message. If the signaled exception is not resumable the action taken upon
@@ -5759,20 +6130,20 @@ completion of the #defaultAction method is implementation defined.
 
 
 
-Refinement: <exceptionInstantiator>
-An exception of the type associated with the receiver is signaled. The <signaledException> is
+Refinement: \<exceptionInstantiator>
+An exception of the type associated with the receiver is signaled. The \<signaledException> is
 initialized to its default state.
-Refinement: <ZeroDivide factory>
-The signaled exception conforms to <ZeroDivide> and all of its <exceptionDescription> attributes
+Refinement: \<ZeroDivide factory>
+The signaled exception conforms to \<ZeroDivide> and all of its \<exceptionDescription> attributes
 set to their default values.
 Return Value
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 
-5.5.16 Protocol: <ZeroDivide>
+5.5.16 Protocol: \<ZeroDivide>
 Conforms To:
-<Error>
+\<Error>
 Description
 This protocol describes the behavior of exceptions that are signalled when an attempt is made to
 divide some number (the dividend) by zero.
@@ -5786,10 +6157,10 @@ dividend
 
 Synopsis
 Answer the number that was being divided by zero.
-Definition: <ZeroDivide>
+Definition: \<ZeroDivide>
 Answer the number that was being divided by zero.
 Return Value
-<number>
+\<number>
 
 state
 
@@ -5804,36 +6175,36 @@ Determine whether an exception is resumable.
 
 
 
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 This message is used to determine whether the receiver is a resumable exception. Answer true if
 the receiver is resumable. Answer false if the receiver is not resumable.
-Refinement: <Error>
+Refinement: \<Error>
 Answer false. Error exceptions by default are assumed to not be resumable. Subclasses may override this definition for situations where it is appropriate for an error to be resumable.
-Refinement: <ZeroDivide>
+Refinement: \<ZeroDivide>
 Answer true.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
 Errors
 none
 
-5.5.17 Protocol: <MessageNotUnderstoodSelector>
+5.5.17 Protocol: \<MessageNotUnderstoodSelector>
 Conforms To:
-<ExceptionSelector>
+\<ExceptionSelector>
 Description
 This protocol describe the behavior of the value of the global named MessageNotUnderstood.
 This object is used to as an exception selector to catch failed message sends. Message not
 understood exceptions are resumable so any message in this protocol that signal such an
 exception may ultimately return to their sender.
-This object is not specifed as an <exceptionSignaler> or an <exceptionInstantiator>. It as assumed
+This object is not specifed as an \<exceptionSignaler> or an \<exceptionInstantiator>. It as assumed
 that message not understood exceptions are signaled by the implemention dependent
-implementaton of the message <Object> #doesNotUnderstand:.
+implementaton of the message \<Object> #doesNotUnderstand:.
 Standard Globals
 MessageNotUnderstood
 Unspecified language element type. Conforms to the protocol
-<MessageNotUnderstoodSelector>. Used as an exception selector .
+\<MessageNotUnderstoodSelector>. Used as an exception selector .
 Messages
 handles:
 
@@ -5843,31 +6214,31 @@ handles: exception
 
 Synopsis
 Determine whether an exception handler will accept a signaled exception.
-Definition: <exceptionSelector>
+Definition: \<exceptionSelector>
 
 
 
 This message determines whether the exception handler associated with the receiver may be used
 to process the argument. Answer true if an associated handler should be used to process
 exception. Answer false if an associated handler may not be used to process the exception.
-Refinement: <MessageNotUnderstoodSelector>
+Refinement: \<MessageNotUnderstoodSelector>
 Return true if exception is an exception that is the result of a failed message send.
 Parameters
 exception
 
-<exceptionDescription> unspecified
+\<exceptionDescription> unspecified
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
 Errors
 none
 
-5.5.18 Protocol: <MessageNotUnderstood>
+5.5.18 Protocol: \<MessageNotUnderstood>
 Conforms To:
-<Error>
+\<Error>
 Description
 This protocol describes the behavior of exceptions that are signalled if the receiver of a message
 does not have a method with a matching selector.
@@ -5883,10 +6254,10 @@ message
 
 Synopsis
 Answer the selector and arguments of the message that failed.
-Definition: <MessageNotUnderstood>
+Definition: \<MessageNotUnderstood>
 Answer the selector and arguments of the message that failed.
 Return Value
-<failedMessage> state
+\<failedMessage> state
 Errors
 none
 
@@ -5898,15 +6269,15 @@ isResumable
 
 Synopsis
 Determine whether an exception is resumable.
-Definition: <exceptionDescription>
+Definition: \<exceptionDescription>
 This message is used to determine whether the receiver is a resumable exception. Answer true if
 the receiver is resumable. Answer false if the receiver is not resumable.
-Refinement: <Error>
+Refinement: \<Error>
 Answer false. Error exceptions by default are assumed to not be resumable. Subclasses may override this definition for situations where it is appropriate for an error to be resumable.
-Refinement: <MessageNotUnderstood>
+Refinement: \<MessageNotUnderstood>
 Answer true.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -5918,10 +6289,10 @@ message
 
 Synopsis
 Answer the selector and arguments of the message that failed.
-Definition: <MessageNotUnderstood>
+Definition: \<MessageNotUnderstood>
 Answer the selector and arguments of the message that failed.
 Return Value
-<failedMessage> state
+\<failedMessage> state
 Errors
 none
 5.5.18.4 Message:
@@ -5930,21 +6301,21 @@ receiver
 
 Synopsis
 Answer the receiver the message that failed.
-Definition: <MessageNotUnderstood>
+Definition: \<MessageNotUnderstood>
 Answer the object that was the receiver of the message that failed.
 Return Value
-<Object> state
+\<Object> state
 Errors
 none
 
 
 
-5.5.19 Protocol: <exceptionSet>
+5.5.19 Protocol: \<exceptionSet>
 Conforms To:
-<exceptionSelector>
+\<exceptionSelector>
 Description
 This protocol describes the behavior of objects that may be used to group a set of
-<exceptionSelector> objects into a single <exceptionSelector>. This is useful for establishing a
+\<exceptionSelector> objects into a single \<exceptionSelector>. This is useful for establishing a
 single exception handler that may deal with several different types of exceptions.
 Messages
 ,
@@ -5953,20 +6324,20 @@ Messages
 
 , anotherException
 
-Definition: <exceptionSelector>
+Definition: \<exceptionSelector>
 Return an exception set that contains the receiver and the argument exception. This is commonly
 used to specify a set of exception selectors for an exception handler.
-Refinement: <exceptionSet>
+Refinement: \<exceptionSet>
 In addition to anotherException the exception set that is returned contains all of theexception
 selectors contained in the receiver.
 The returned object may or may not be the same object as the receiver.
 Parameters
 anotherException
 
-<exceptionSelector>
+\<exceptionSelector>
 
 Return Value
-<exceptionSet> unspecified
+\<exceptionSet> unspecified
 Errors
 none
 
@@ -5977,37 +6348,37 @@ captured
 5.6 Numeric Protocols
 This section includes protocols that define the behavior of the standard numeric classes.
 The graphs below shows the conformance relationships between the protocols defined in this
-section, including <magnitude>. The protocols <factory> and <Object> are not part of this section.
+section, including \<magnitude>. The protocols \<factory> and \<Object> are not part of this section.
 
-<Magnitude>
+\<Magnitude>
 
-<Number>
+\<Number>
 
-<rational>
+\<rational>
 
-<Integer>
+\<Integer>
 
-<Float>
+\<Float>
 
-<ScaledDecimal>
+\<ScaledDecimal>
 
-<Fraction>
+\<Fraction>
 
-<floatCharacterization>
+\<floatCharacterization>
 
-<Fraction factory>
+\<Fraction factory>
 
 
 
-5.6.1 Protocol: <magnitude>
+5.6.1 Protocol: \<magnitude>
 Conforms To
-<Object>
+\<Object>
 Description
 Provides protocol for comparing objects which are linearly ordered with respect to some
 comparison operation.
 Messages
-<
-<=
+\<
+\<=
 >
 >=
 between:and:
@@ -6016,20 +6387,20 @@ min:
 
 5.6.1.1 Message:
 
-< operand
+\< operand
 
 Synopsis
 Answer true if the receiver is less than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is less than operand with respect to the ordering defined for them.
 Answer false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
 Parameters
-operand <magnitude>
+operand \<magnitude>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -6039,18 +6410,18 @@ Errors
 Receiver and operand are not comparable
 5.6.1.2 Message:
 
-<= operand
+\<= operand
 
 Synopsis
 Answer true if the receiver is less than or equal to operand. Answer false otherwise.
-Definition: <magnitude>
-Answer true if the receiver would answer true to either the #< or #= message with operand as the
+Definition: \<magnitude>
+Answer true if the receiver would answer true to either the #\< or #= message with operand as the
 parameter. Answer false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 Parameters
-operand <magnitude>
+operand \<magnitude>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -6072,16 +6443,16 @@ revision 1.9
 
 Synopsis
 Answer true if the receiver is greater than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is greater than operand with respect to the natural ordering. Answer
 false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
 Parameters
-operand <magnitude>
+operand \<magnitude>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -6095,14 +6466,14 @@ Receiver and operand are not comparable
 
 Synopsis
 Answer true if the receiver is greater than or equal to operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver answers true to either the #> or #= message with operand as the
 parameter. Answer false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 Parameters
-operand <magnitude>
+operand \<magnitude>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -6117,17 +6488,17 @@ between: min and: max
 Synopsis
 Answer true if the receiver is less than or equal to max, and greater than or equal to min. Answer
 false otherwise.
-Definition: <magnitude>
-Answer true if the receiver answers true to the #<= message with max as the parameter, and also
+Definition: \<magnitude>
+Answer true if the receiver answers true to the #\<= message with max as the parameter, and also
 answers true to the #>= message with min as the parameter. Answer false otherwise.
 It is erroneous if the receiver and min or max are not comparable.
 Parameters
 min
-<magnitude>
+\<magnitude>
 max
-<magnitude>
+\<magnitude>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 uncaptured
@@ -6150,14 +6521,14 @@ max: operand
 
 Synopsis
 Answer the receiver if it is greater than operand. Answer operand otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer the receiver if the receiver answers true to the #> message with operand as the parameter.
 Answer operand otherwise.
 It is erroneous if the receiver and operand are not comparable.
 Parameters
-operand <magnitude>
+operand \<magnitude>
 Return Values
-<magnitude>
+\<magnitude>
 
 uncaptured
 
@@ -6171,14 +6542,14 @@ min: operand
 
 Synopsis
 Answer the receiver if it is less than operand. Answer operand otherwise.
-Definition: <magnitude>
-Answer the receiver if the receiver answers true to the #< message with operand as the parameter.
+Definition: \<magnitude>
+Answer the receiver if the receiver answers true to the #\< message with operand as the parameter.
 Answer operand otherwise.
 It is erroneous if the receiver and operand are not comparable.
 Parameters
-operand <magnitude>
+operand \<magnitude>
 Return Values
-<magnitude>
+\<magnitude>
 
 uncaptured
 
@@ -6187,9 +6558,9 @@ unspecified
 Errors
 Receiver and operand are not comparable
 
-5.6.2 Protocol: <number>
+5.6.2 Protocol: \<number>
 Conforms To
-<magnitude>
+\<magnitude>
 Description
 Provides protocol for objects that represent numeric quantities and support operations performing
 arithmetic, arithmetic progressions, and conversion on numerical quantities.
@@ -6202,102 +6573,102 @@ argument are first converted to the same numeric representation according to the
 
 
 Default Conversion Table:
-operand <integer>
+operand \<integer>
 
-<scaledDecimal> <Fraction> <Float>e <Float>d
+\<scaledDecimal> \<Fraction> \<Float>e \<Float>d
 
-<Float>q
+\<Float>q
 
-<scaledDecimal>
+\<scaledDecimal>
 
-<Fraction> <Float>e <Float>d
+\<Fraction> \<Float>e \<Float>d
 
-<Float>q
+\<Float>q
 
-<scaledDecimal> <scaledDecimal> <scaledDecimal>
+\<scaledDecimal> \<scaledDecimal> \<scaledDecimal>
 
-<Fraction> <Float>e <Float>d
+\<Fraction> \<Float>e \<Float>d
 
-<Float>q
+\<Float>q
 
 receiver
-<integer>
+\<integer>
 
-<integer>
+\<integer>
 
-<Fraction>
+\<Fraction>
 
-<Fraction>
+\<Fraction>
 
-<Fraction>
+\<Fraction>
 
-<Fraction> <Float>e <Float>d
+\<Fraction> \<Float>e \<Float>d
 
-<Float>q
+\<Float>q
 
-<Float>e
+\<Float>e
 
-<Float>e
+\<Float>e
 
-<Float>e
+\<Float>e
 
-<Float>e
+\<Float>e
 
-<Float>e <Float>d
+\<Float>e \<Float>d
 
-<Float>q
+\<Float>q
 
-<Float>d
+\<Float>d
 
-<Float>d
+\<Float>d
 
-<Float>d
+\<Float>d
 
-<Float>d
+\<Float>d
 
-<Float>d <Float>d
+\<Float>d \<Float>d
 
-<Float>q
+\<Float>q
 
-<Float>q
+\<Float>q
 
-<Float>q
+\<Float>q
 
-<Float>q
+\<Float>q
 
-<Float>q
+\<Float>q
 
-<Float>q <Float>q
+\<Float>q \<Float>q
 
-<Float>q
+\<Float>q
 
-If multiple representations of <Float> are available, the representations are ordered from smallest
-to largest precision. This table contains multiple entries for <Float>, designated by a subscript, one
-for each designation of floating point literal representation. Values that are converted to <Float> are
+If multiple representations of \<Float> are available, the representations are ordered from smallest
+to largest precision. This table contains multiple entries for \<Float>, designated by a subscript, one
+for each designation of floating point literal representation. Values that are converted to \<Float> are
 converted to the smallest precision of Float that can represent the number of digits in the original
 value.
-An <integer> converted to a <scaledDecimal> will have the scale of the other operand with the
-fractional digits set to zero. A <scaledDecimal> converted to a <Fraction> will be a fraction having
+An \<integer> converted to a \<scaledDecimal> will have the scale of the other operand with the
+fractional digits set to zero. A \<scaledDecimal> converted to a \<Fraction> will be a fraction having
 the same numeric value but having an integer numerator and a denominator which is ten raised to
-the power of the <scaledDecimal>'s scale factor.
+the power of the \<scaledDecimal>'s scale factor.
 The result type of most numeric opeations is based upon the operaand type. The Default Result
-Type for all operand types except <Fraction> is the type to which the operands have been
-converted according to the Default ConversionTable. If the converted operand type is <Fraction>
-the Default Result Type is <rational>. In all cases where the type of the return value differs from the
+Type for all operand types except \<Fraction> is the type to which the operands have been
+converted according to the Default ConversionTable. If the converted operand type is \<Fraction>
+the Default Result Type is \<rational>. In all cases where the type of the return value differs from the
 default result type it is noted in the operation's description.
 Operations can produce results that are outside the set of representable numbers, or
 mathematically undefined. It is implementation defined whether errors are raised when results are
 not representable or if unrepresentable results are wrapped in implementation-defined continuation
 values or their equivalent. The effect of underflow and overflow is therefore implementation
 defined.
-<number> conforms to <magnitude>. All object that implement the <number> protocol or any
-protocol that conforms to <number> are comparable.
+\<number> conforms to \<magnitude>. All object that implement the \<number> protocol or any
+protocol that conforms to \<number> are comparable.
 Messages
 *
 +
 - operand
 //
-<
+\<
 =
 >
 \\
@@ -6344,22 +6715,22 @@ truncateTo:
 
 Synopsis
 Answer the result of multiplying the receiver by operand.
-Definition: <number>
+Definition: \<number>
 Answer a number whose value is the result of multiplying the receiver and operand, as specified
 by the ISO/IEC 10967 multiplication operation mul. To perform the operation both the receiver and
 operand must be objects with identical numeric representations. If they have different
 representations a conversion to their common numeric representation is performed, as specified
 by the Default Conversion Table, before applying the operation. If the common representation is
-<integer>, then the result value is defined by the ISO/IEC 10967 operation mulI. If the common
-representation is <Float>, then the result value is defined by the ISO/IEC 10967 mulF . Otherwise,
+\<integer>, then the result value is defined by the ISO/IEC 10967 operation mulI. If the common
+representation is \<Float>, then the result value is defined by the ISO/IEC 10967 mulF . Otherwise,
 the result is consistent with the mathematical definition of the ISO/IEC 10967 operation mul.
 The protocol and representation of the return value is defined to be the Default Result Type. If the
-return value conforms to <scaledDecimal> then the scale of the result is at least the scale of the
+return value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the
 receiver after conversion if necessary.
 If the result value is outside of the range of the common numeric representation, the effect of
 underflow or overflow is implementation defined..
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
@@ -6373,7 +6744,7 @@ none
 
 Synopsis
 Answer the result of adding operand to the receiver.
-Definition: <number>
+Definition: \<number>
 Answer a number whose value is the result of adding the receiver and operand, as specified by
 the ISO/IEC 10967 addition operation add. To perform the operation both the receiver and
 operand must be objects with identical numeric representations. If they have different
@@ -6381,16 +6752,16 @@ operand must be objects with identical numeric representations. If they have dif
 
 
 representations a conversion to a common numeric representation is performed, as specified by
-the Default Conversion Table, before applying the operation. If the resulting protocol is <integer>,
+the Default Conversion Table, before applying the operation. If the resulting protocol is \<integer>,
 then the result value is defined by the ISO/IEC 10967 operation addI. If the resulting protocol is
-<Float>, then the result value is defined by the ISO/IEC 10967 addF . Otherwise, the result is
+\<Float>, then the result value is defined by the ISO/IEC 10967 addF . Otherwise, the result is
 consistent with the mathematical definition of the ISO/IEC 10967 operation add.
 The protocol and representation of the return value is defined by the Default Result Type. If the
-return value conforms to <scaledDecimal> then the scale of the result is at least the scale of the
+return value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the
 receiver after conversion if necessary. If the result value is outside of the range of the common
 numeric representation, the effect of underflow or overflow is implementation defined.
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
@@ -6404,21 +6775,21 @@ none
 
 Synopsis
 Answer the result of subtracting operand from the receiver.
-Definition: <number>
+Definition: \<number>
 Answer a number whose value is the result of subtracting the receiver and operand, as specified
 by the ISO/IEC 10967 subtraction operation sub. To perform the operation both the receiver and
 operand must be objects with identical numeric representations. If they have different
 representations a conversion to a common numeric representation is performed, as specified by
-the Default Conversion Table, before applying the operation. If the resulting protocol is <integer>,
+the Default Conversion Table, before applying the operation. If the resulting protocol is \<integer>,
 then the result value is defined by the ISO/IEC 10967 operation subI. If the resulting protocol is
-<Float>, then the result value is defined by the ISO/IEC 10967 subF . Otherwise, the result is
+\<Float>, then the result value is defined by the ISO/IEC 10967 subF . Otherwise, the result is
 consistent with the mathematical definition of the ISO/IEC 10967 operation sub.
 The protocol and representation of the return value is defined by the Default Result Type. If the
-return value conforms to <scaledDecimal> then the scale of the result is at least the scale of the
+return value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the
 receiver after conversion if necessary. If the result value is outside of the range of the common
 numeric representation, the effect of underflow or overflow is implementation defined.
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
@@ -6429,38 +6800,38 @@ none
 5.6.2.4 Message: / operand
 Synopsis
 Answer the result of dividing the receiver by operand.
-Definition: <number>
+Definition: \<number>
 Answer a number whose value is the result of dividing the receiver by operand, as specified by
 the ISO/IEC 10967 flooring division operation div To perform the operation both the receiver and
 operand must be objects with identical numeric representations. If they have different
 representations a conversion to a common numeric representation is performed, as specified by
-the Default Conversion Table, before applying the operation. If the resulting protocol is <integer>,
+the Default Conversion Table, before applying the operation. If the resulting protocol is \<integer>,
 
 
 
-then the result value is a <rational> with the receiver as the numerator and the operand as the
-denominator. If the resulting protocol is <Float>, then the result value is defined by the ISO/IEC
+then the result value is a \<rational> with the receiver as the numerator and the operand as the
+denominator. If the resulting protocol is \<Float>, then the result value is defined by the ISO/IEC
 10967 divF . Otherwise, the result is consistent with the mathematical definition of the ISO/IEC
 10967 operation div.
-If both operands conform to <integer> the result value will conform to <rational>. Otherwise the
+If both operands conform to \<integer> the result value will conform to \<rational>. Otherwise the
 protocol and representation of the return value are defined by the Default Result Type. If the return
-value conforms to <scaledDecimal> then the scale of the result is at least the scale of the receiver
+value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the receiver
 after conversion if necessary.
 If the result value is outside of the range of the common numeric representation, the effect of
 underflow or overflow is implementation defined. If either the receiver or operand are of type
-<Float> and the operand has a value of zero, the result is implementation defined. The
+\<Float> and the operand has a value of zero, the result is implementation defined. The
 implementation must either signal the ZeroDivide exception or provide a continuation value. For all
 other numeric representations the ZeroDivide exception is signaled.
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
 Return Values
-If the operands conform to integer then <rational>
+If the operands conform to integer then \<rational>
 otherwise the Default Result Type
 Errors
-operand = 0 unless receiver or operand are of type <Float>
+operand = 0 unless receiver or operand are of type \<Float>
 5.6.2.5 Message:
 
 // operand
@@ -6468,7 +6839,7 @@ operand = 0 unless receiver or operand are of type <Float>
 Synopsis
 Answer the truncated quotient resulting from dividing the receiver by operand. The truncation is
 towards negative infinity.
-Definition: <number>
+Definition: \<number>
 Answer an integer whose value is the truncated result of dividing the receiver by operand, as
 f
 specified by the ISO/IEC 10967 flooring division operation div . Truncation is towards negative
@@ -6477,49 +6848,49 @@ negative if the signs are different.
 To perform the operation both the receiver and operand must be objects with identical numeric
 representations. If they have different representations a conversion to a common numeric
 representation is performed, as specified by the Default Conversion Table, before applying the
-operation. If the resulting protocol is <integer>, then the result value is defined by the ISO/IEC
+operation. If the resulting protocol is \<integer>, then the result value is defined by the ISO/IEC
 f
-10967 operation div I. If the resulting protocol is <Float>, then the result value is defined by the
+10967 operation div I. If the resulting protocol is \<Float>, then the result value is defined by the
 f
 ISO/IEC 10967 div F . Otherwise, the result is consistent with the mathematical definition of the
 f
 ISO/IEC 10967 operation div .
 If the operand has a value of zero the ZeroDivide exception is signaled.
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
-operand = 0 unless receiver or operand are of type <Float>
-5.6.2.6 Message Refinement: < operand
+operand = 0 unless receiver or operand are of type \<Float>
+5.6.2.6 Message Refinement: \< operand
 Synopsis
 Answer true if the receiver is less than operand. Answer false otherwise.
 
 
 
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is less than operand with respect to the ordering defined for them.
 Answer false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <number>
+Refinement: \<number>
 Answer true if the operand is numerically less than the receiver, as specified by the ISO/IEC
 10967 comparison operation lss. Answer false otherwise.
 To perform the operation both the receiver and operand must be objects with identical numeric
 representations. If they have different representations a conversion to a common numeric
 representation is performed, as specified by the Default Conversion Table, before applying the
-operation. If the resulting protocol is <integer>, then the result value is defined by the ISO/IEC
-10967 operation lssI. If the resulting protocol is <Float>, then the result value is defined by the
+operation. If the resulting protocol is \<integer>, then the result value is defined by the ISO/IEC
+10967 operation lssI. If the resulting protocol is \<Float>, then the result value is defined by the
 ISO/IEC 10967 lssF. Otherwise, the result is consistent with the mathematical definition of the
 ISO/IEC 10967 operation lss.
 Parameters
-operand <number>
+operand \<number>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -6530,7 +6901,7 @@ none
 5.6.2.7 Message Refinement: = comparand
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Return true if the receiver is equivalent to comparand. Otherwise return
 false.
@@ -6553,14 +6924,14 @@ with the same receiver and operand objects may not always yield the same results
 
 collection that uses #= to discriminate objects may only reliably store objects whose hash values
 do not change while the objects are contained in the collection.
-Refinement: <number>
+Refinement: \<number>
 Answer true if the operand is numerically equal to the receiver, as specified by the ISO/IEC 10967
 equality operation eq. Answer false if they are not numerically equal or if operand is not a number.
 To perform the operation both the receiver and operand must be objects with identical numeric
 representations. If they have different representations a conversion to a common numeric
 representation is performed, as specified by the Default Conversion Table, before applying the
-operation. If the resulting protocol is <integer>, then the result value is defined by the ISO/IEC
-10967 operation eqI. If the resulting protocol is <Float>, then the result value is defined by the
+operation. If the resulting protocol is \<integer>, then the result value is defined by the ISO/IEC
+10967 operation eqI. If the resulting protocol is \<Float>, then the result value is defined by the
 ISO/IEC 10967 eqF. Otherwise, the result is consistent with the mathematical definition of the
 ISO/IEC 10967 operation eq.
 Numeric equality is defined by implementation defined conventions regarding round-off error and
@@ -6568,9 +6939,9 @@ representation of numbers, hence behavior of this message may differ between pla
 Parameters
 comparand
 Return Values
-<boolean>
+\<boolean>
 
-<Object>
+\<Object>
 
 uncaptured
 
@@ -6581,26 +6952,26 @@ none
 5.6.2.8 Message Refinement: > operand
 Synopsis
 Answer true if the receiver is greater than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is greater than operand with respect to the natural ordering. Answer
 false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <number>
+Refinement: \<number>
 Answer true if the operand is numerically less than the receiver, as specified by the ISO/IEC
 10967 comparison operation gtr. Answer false otherwise.
 To perform the operation both the receiver and operand must be objects with identical numeric
 representations. If they have different representations a conversion to a common numeric
 representation is performed, as specified by the Default Conversion Table, before applying the
-operation. If the resulting protocol is <integer>, then the result value is defined by the ISO/IEC
-10967 operation gtrI. If the resulting protocol is <Float>, then the result value is defined by the
+operation. If the resulting protocol is \<integer>, then the result value is defined by the ISO/IEC
+10967 operation gtrI. If the resulting protocol is \<Float>, then the result value is defined by the
 ISO/IEC 10967 gtrF. Otherwise, the result is consistent with the mathematical definition of the
 ISO/IEC 10967 operation gtr.
 Parameters
-operand <number>
+operand \<number>
 Return Values
-<boolean>
+\<boolean>
 Errors
 none
 
@@ -6621,47 +6992,47 @@ revision 1.9
 
 Synopsis
 Answer the remainder after integer division of the receiver by the operand.
-Definition: <number>
+Definition: \<number>
 Answer the remainder of truncating integer division as specified by the ISO/IEC 10967 remainder
 f
 operation rem . The remainder has the same sign as operand. To perform the operation both the
 receiver and operand must be objects with identical numeric representations. If they have different
 representations a conversion to a common numeric representation is performed, as specified by
-the Default Conversion Table, before applying the operation. If the resulting protocol is <integer>,
+the Default Conversion Table, before applying the operation. If the resulting protocol is \<integer>,
 then the result value is defined by the ISO/IEC 10967 operation remI. If the resulting protocol is
-<Float>, then the result value is defined by the ISO/IEC 10967 remF . Otherwise, the result is
+\<Float>, then the result value is defined by the ISO/IEC 10967 remF . Otherwise, the result is
 consistent with the mathematical definition of the ISO/IEC 10967 operation rem.
 The protocol and representation of the return value is defined by the Default Result Type. If the
-return value conforms to <scaledDecimal> then the scale of the result is at least the scale of the
+return value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the
 receiver.
 Within the limits of representation, the following invariant should hold:
 (receiver // operand) * operand + (receiver \\ operand) = receiver
 If the result value is outside of the range of the common numeric representation, the effect of
-underflow or overflow is implementation defined. If either the receiver or operand is of type <Float>
+underflow or overflow is implementation defined. If either the receiver or operand is of type \<Float>
 and the operand has a value of zero, the result is implementation defined. The implementation may
 signal the ZeroDivide exception or provide a continuation value. For all other numeric
 representations the ZeroDivide exception is signaled.
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
 Return Values
 The Default Result Type
 Errors
-operand = 0 unless receiver or operand are of type <Float>
+operand = 0 unless receiver or operand are of type \<Float>
 5.6.2.10 Message:
 
 abs
 
 Synopsis
 Answer the absolute value of the receiver.
-Definition: <number>
+Definition: \<number>
 Return the absolute value of the receiver, as specified by the ISO/IEC 10967 operation abs. If the
 receiver is greater than or equal to zero, answer an object equal to the receiver. Otherwise answer
 an object which is equal to the negation of the receiver.
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 unspecified
 
@@ -6673,7 +7044,7 @@ asFloat
 
 Synopsis
 Answer a floating-point number approximating the receiver.
-Definition: <number>
+Definition: \<number>
 Return the nearest floating-point number to the receiver, as specified by the ISO/IEC 10967 cvt
 operation.
 
@@ -6685,7 +7056,7 @@ digits as the receiver, truncating to the maximum precision of the representatio
 precision.
 The effect of underflow or overflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 None
 5.6.2.12 Message:
@@ -6694,14 +7065,14 @@ asFloatD
 
 Synopsis
 Answer a d precision floating-point number approximating the receiver .
-Definition: <number>
+Definition: \<number>
 Return the nearest floating-point number to the receiver, as specified by the ISO/IEC 10967 cvt
 operation.
 Use the object representation for floating point numbers that corresponds to the representation
 used for numeric literals with the exponent designation 'd'.
 The effect of underflow and overflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 None
 5.6.2.13 Message:
@@ -6710,14 +7081,14 @@ asFloatE
 
 Synopsis
 Answer a floating-point number approximating the receiver.
-Definition: <number>
+Definition: \<number>
 Return the nearest floating-point number to the receiver, as specified by the ISO/IEC 10967 cvt
 operation.
 Use the object representation for floating point numbers that corresponds to the representation
 used for numeric literals with the exponent designation 'e'.
 The effect of underflow and overflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 None
 5.6.2.14 Message:
@@ -6726,7 +7097,7 @@ asFloatQ
 
 Synopsis
 Answer a floating-point number approximating the receiver.
-Definition: <number>
+Definition: \<number>
 Return the nearest floating-point number to the receiver, as specified by the ISO/IEC 10967 cvt
 operation.
 Use the object representation for floating point numbers that corresponds to the representation
@@ -6736,7 +7107,7 @@ used for numeric literals with the exponent designation 'q'.
 
 The effect of underflow and overflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 None
 5.6.2.15 Message:
@@ -6745,11 +7116,11 @@ asFraction
 
 Synopsis
 Answer a fraction approximating the receiver.
-Definition: <number>
+Definition: \<number>
 Answer a fraction that reasonably approximates the receiver. If the receiver is an integral value the
-result may be <integer>.
+result may be \<integer>.
 Return Values
-<rational>
+\<rational>
 
 unspecified
 
@@ -6761,10 +7132,10 @@ asInteger
 
 Synopsis
 Answer an integer approximating the receiver.
-Definition: <number>
+Definition: \<number>
 Answer the result of sending #rounded to the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.2.17 Message:
@@ -6773,12 +7144,12 @@ asScaledDecimal: scale
 
 Synopsis
 Answer a scaled decimal number, with a fractional precision of scale, approximating the receiver.
-Definition: <number>
+Definition: \<number>
 This is a conversion message. Answer a scaled decimal number, with a fractional precision of
 scale, which minimizes the difference between the answered value and the receiver.
 The effect of underflow and overflow is implementation defined.
 Return Values
-<scaledDecimal> unspecified
+\<scaledDecimal> unspecified
 Errors
 None
 5.6.2.18 Message:
@@ -6787,13 +7158,13 @@ ceiling
 
 Synopsis
 Answer the smallest integer greater than or equal to the receiver.
-Definition: <number>
+Definition: \<number>
 Answer the smallest integer greater than or equal to the receiver.
 
 
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.2.19 Message:
@@ -6802,10 +7173,10 @@ floor
 
 Synopsis
 Answer the largest integer less than or equal to the receiver.
-Definition: <number>
+Definition: \<number>
 Answer the largest integer less than or equal to the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.2.20 Message:
@@ -6814,13 +7185,13 @@ fractionPart
 
 Synopsis
 Answer the fractional part of the receiver.
-Definition: <number>
+Definition: \<number>
 Return an object conforming to the protocol of the receiver that is equal to the fractional part of the
 receiver. Within the limits of representation, the following invariants should hold:
 receiver integerPart + receiver fractionPart = receiver
 receiver \\1 = receiver fractionPart
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 unspecified
 
@@ -6832,23 +7203,23 @@ integerPart
 
 Synopsis
 Answer the integer part of the receiver.
-Definition: <number>
-Return an object that is equal to the integer part of the receiver. If the receiver is type <Fraction>
-return an object conforming to <integer>. Otherwise return an object conforming to the protocol of
+Definition: \<number>
+Return an object that is equal to the integer part of the receiver. If the receiver is type \<Fraction>
+return an object conforming to \<integer>. Otherwise return an object conforming to the protocol of
 the receiver.
 Return Values
 receiver
-<rational>
-<scaledDecimal>
-<Float>
+\<rational>
+\<scaledDecimal>
+\<Float>
 
 result
-<rational>
-<scaledDecimal>
-<Float>
+\<rational>
+\<scaledDecimal>
+\<Float>
 
 Rationale
-The return value is not restricted to <integer> to avoid unnecessary mixed mode arithmetic.
+The return value is not restricted to \<integer> to avoid unnecessary mixed mode arithmetic.
 
 Errors
 none
@@ -6866,12 +7237,12 @@ negated
 
 Synopsis
 Answer the negation of the receiver.
-Definition: <number>
+Definition: \<number>
 Answer an object conforming to the receiver's protocol that is equal to the negation of the receiver
 (equal in magnitude to the receiver but opposite in sign), as specified by the ISO/IEC 10967 neg
 operation.
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 unspecified
 
@@ -6883,10 +7254,10 @@ negative
 
 Synopsis
 Answer true if the receiver is negative.
-Definition: <number>
+Definition: \<number>
 Answer true if the receiver is negative. Answer false otherwise.
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -6898,10 +7269,10 @@ positive
 
 Synopsis
 Answer true if the receiver is positive or zero.
-Definition: <number>
+Definition: \<number>
 Answer true if the receiver is positive or zero. Answer false otherwise.
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -6913,15 +7284,15 @@ printString
 
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
-Refinement: <number>
+Refinement: \<number>
 Answer a string that is a valid literal representation that approximates the numeric value of the
 receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 
 
 
@@ -6934,41 +7305,41 @@ quo: operand
 Synopsis
 Answer the truncated integer quotient resulting from dividing the receiver by operand. Truncation
 is towards zero.
-Definition: <number>
+Definition: \<number>
 Answer a number whose value is the result of dividing the receiver by operand, as specified by
 the ISO/IEC 10967 flooring division operation div To perform the operation both the receiver and
 operand must be objects with identical numeric representations. If they have different
 representations a conversion to a common numeric representation is performed, as specified by
-the Default Conversion Table, before applying the operation. If the resulting protocol is <integer>,
-then the result value is a <rational> with the receiver as the numerator and the operand as the
-denominator. If the resulting protocol is <Float>, then the result value is defined by the ISO/IEC
+the Default Conversion Table, before applying the operation. If the resulting protocol is \<integer>,
+then the result value is a \<rational> with the receiver as the numerator and the operand as the
+denominator. If the resulting protocol is \<Float>, then the result value is defined by the ISO/IEC
 10967 divF . Otherwise, the result is consistent with the mathematical definition of the ISO/IEC
 10967 operation div.
 The protocol and representation of the return value are defined by the Default Result Type. If the
-return value conforms to <scaledDecimal> then the scale of the result is at least the scale of the
+return value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the
 receiver after conversion if necessary.
 If the result value is outside of the range of the common numeric representation, the effect of
 underflow or overflow is implementation defined. If either the receiver or operand are of type
-<Float> and the operand has a value of zero, the result is implementation defined. The
+\<Float> and the operand has a value of zero, the result is implementation defined. The
 implementation must either signal the ZeroDivide exception or provide a continuation value. For all
 other numeric representations the ZeroDivide exception is signaled.
 Parameters
-operand <number>
+operand \<number>
 
 unspecified
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
-operand = 0 unless receiver or operand are of type <Float>
+operand = 0 unless receiver or operand are of type \<Float>
 5.6.2.27 Message:
 
 raisedTo: operand
 
 Synopsis
 Answer the receiver raised to the power operand.
-Definition: <number>
-If operand conforms to <integer>, answer the result of sending #raisedToInteger: with
+Definition: \<number>
+If operand conforms to \<integer>, answer the result of sending #raisedToInteger: with
 argument operand to the receiver.
 Otherwise answer
 (receiver asFloat ln * operand) exp.
@@ -6980,13 +7351,13 @@ Parameters
 operand
 Return Values
 
-<number>
+\<number>
 
 uncaptured
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
-<number>
+\<number>
 
 December, 1997
 revision 1.9
@@ -6996,26 +7367,26 @@ revision 1.9
 unspecified
 
 Errors
-receiver = 0 and operand <= 0
-receiver < 0
+receiver = 0 and operand \<= 0
+receiver \< 0
 5.6.2.28 Message:
 
 raisedToInteger: operand
 
 Synopsis
 Answer the receiver raised to the power operand.
-Definition: <number>
+Definition: \<number>
 Answer the receiver raised to the power operand, which must be a whole number. If the operand
 is a whole number greater than or equal to zero, then the result is the receiver raised to the power
 operand. If operand is a negative whole number then the result is equivalent to the reciprocal of
 the absolute value of the receiver raised to the power operand.
-It is erroneous if the operand does not conform to the protocol <integer>. If the numeric
+It is erroneous if the operand does not conform to the protocol \<integer>. If the numeric
 representation of the result has does not have unbounded precision, the effect of underflow or
 overflow is implementation defined.
 Parameters
-operand <integer>
+operand \<integer>
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 uncaptured
 
@@ -7029,7 +7400,7 @@ reciprocal
 
 Synopsis
 Answer the reciprocal of the receiver.
-Definition: <number>
+Definition: \<number>
 Answer the reciprocal of the receiver, which is equal to the result of the operation (1/receiver).
 Signal a ZeroDivide exception if the receiver is equal to zero.
 Return Values
@@ -7037,15 +7408,15 @@ receiver
 
 result
 
-<integer>
-<Fraction>
-<scaledDecimal>
-<Float>
+\<integer>
+\<Fraction>
+\<scaledDecimal>
+\<Float>
 
-<rational>
-<rational>
-<scaledDecimal>
-<Float>
+\<rational>
+\<rational>
+\<scaledDecimal>
+\<Float>
 
 Errors
 receiver = 0
@@ -7055,7 +7426,7 @@ rem: operand
 
 Synopsis
 Answer the remainder after integer division of the receiver by the operand.
-Definition: <number>
+Definition: \<number>
 Answer the remainder with respect to integer division, as specified by the ISO/IEC 10967
 remainder operation rem. The sign of the remainder is the same sign as the receiver. Within the
 limits of representation, the following invariant should hold:
@@ -7067,35 +7438,35 @@ To perform the operation both the receiver and operand must be objects with iden
 representations. If they have different representations a conversion to a common numeric
 representation is performed, as specified by the Default Conversion Table,
 The protocol and representation of the return value is defined by the Default Result Type. If the
-return value conforms to <scaledDecimal> then the scale of the result is at least the scale of the
-receiver after conversion if necessary. If either the receiver or operand are of type <Float> and the
+return value conforms to \<scaledDecimal> then the scale of the result is at least the scale of the
+receiver after conversion if necessary. If either the receiver or operand are of type \<Float> and the
 operand has a value of zero, the result is implementation defined. The implementation may signal
 the ZeroDivide exception or provide a continuation value. For all other numeric representations the
 ZeroDivide exception is signaled. If the result value is outside of the range of the common numeric
 representation, the effect of underflow or overflow is implementation defined.
 Parameters
-operand <number>
+operand \<number>
 Return Values
-<number>
+\<number>
 
 unspecified
 
 unspecified
 
 Errors
-operand = 0 unless receiver or operand are of type <Float>
+operand = 0 unless receiver or operand are of type \<Float>
 5.6.2.31 Message:
 
 rounded
 
 Synopsis
 Answer the integer nearest the receiver.
-Definition: <number>
+Definition: \<number>
 Answer the integer nearest the receiver according to the following property:
 N rounded = the nearest integer I = N + (N sign * (1/2)) truncated towards zero.
 For example, 0.5 rounded = 1 and -0.5 rounded = -1.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.6.2.32 Message:
@@ -7104,7 +7475,7 @@ roundTo: factor
 
 Synopsis
 Answer the number nearest the receiver that is a multiple of factor.
-Definition: <number>
+Definition: \<number>
 Answer the number nearest the receiver that is a multiple of factor. The result conforms to either
 the receiver's or operand's protocol, according to the Default Conversion Table.
 The result is undefined if factor equals zero. If the numeric representation of the result has does
@@ -7112,7 +7483,7 @@ not have unbounded precision, the effect of underflow or overflow is implementat
 Parameters
 factor
 
-<number>
+\<number>
 
 Return Values
 The Default Result Type
@@ -7134,11 +7505,11 @@ sign
 
 Synopsis
 Answer the sign of the receiver.
-Definition: <number>
+Definition: \<number>
 Answer 1 if the receiver is positive, 0 if the receiver equals 0, and -1 if it is negative, as specified by
 the ISO/IEC 10967 operation sign.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.2.34 Message:
@@ -7147,15 +7518,15 @@ sqrt
 
 Synopsis
 Answer the positive square root of the receiver.
-Definition: <number>
+Definition: \<number>
 Answer a number equal to the positive square root of the receiver as specified by the ISO/IEC
-10967 remainder operation sqrt. If the receiver's protocol is <integer>, then the result value is
-defined by the ISO/IEC 10967 operation sqrtI. If the receiver's protocol is <Float>, then the result
+10967 remainder operation sqrt. If the receiver's protocol is \<integer>, then the result value is
+defined by the ISO/IEC 10967 operation sqrtI. If the receiver's protocol is \<Float>, then the result
 value is defined by the ISO/IEC 10967 sqrtF . Otherwise, the result is consistent with the
 mathematical definition of the ISO/IEC 10967 operation sqrt.
 The result is undefined if the receiver is less than zero.
 Return Values
-<number>
+\<number>
 
 unspecified
 
@@ -7167,11 +7538,11 @@ squared
 
 Synopsis
 Answer the receiver squared.
-Definition: <number>
+Definition: \<number>
 Answer a number that is the receiver multiplied by itself. The answer must conform to the same
 protocol as the receiver.
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 unspecified
 
@@ -7183,10 +7554,10 @@ strictlyPositive
 
 Synopsis
 Answer true if the receiver is greater than zero.
-Definition: <number>
+Definition: \<number>
 Answer true if the receiver is greater than zero.
 Return Values
-<boolean>
+\<boolean>
 Errors
 
 unspecified
@@ -7199,9 +7570,9 @@ none
 to: stop
 
 Synopsis
-Answer an object conforming to <interval> which represents an arithmetic progression from the
+Answer an object conforming to \<interval> which represents an arithmetic progression from the
 receiver to stop in increments of 1.
-Definition: <number>
+Definition: \<number>
 Answer an interval which represents an arithmetic progression from the receiver to stop, using the
 increment 1 to compute each successive element. The elements conform to the receiver's protocol.
 Note that stop may not be the last element in the sequence, which is given by the formula
@@ -7209,9 +7580,9 @@ receiver + ((stop - receiver) // 1)
 The interval answered will be empty if the receiver is greater than stop.
 Parameters
 stop
-<number>
+\<number>
 Return Values
-<Interval>
+\<Interval>
 
 unspecified
 
@@ -7226,7 +7597,7 @@ to: stop by: step
 Synopsis
 Answer an interval which represents an arithmetic progression from receiver to stop in increments
 of step.
-Definition: <number>
+Definition: \<number>
 Answer an interval which represents an arithmetic progression from the receiver to stop, using the
 increment step to compute each successive element. The value of step can be positive or
 negative, but it must be non-zero. The elements conform to either the receiver's or step's protocol,
@@ -7234,22 +7605,22 @@ according to the Default Conversion Table.
 Note that stop may not be the last element in the sequence, which is given by the formula
 (((stop - receiver) // step) * step) + receiver
 The interval answered will be empty if:
-1. receiver < stop, and step < 0.
+1. receiver \< stop, and step \< 0.
 2. receiver > stop, and step > 0.
 Parameters
 stop
-<number>
+\<number>
 
 unspecified
 
-<number>
+\<number>
 
 unspecified
 
 step
 
 Return Values
-<Interval>
+\<Interval>
 
 unspecified
 
@@ -7264,7 +7635,7 @@ to: stop by: step do: operation
 
 Evaluate operation for each element of an interval which represents an arithmetic progression
 from the receiver to stop in increments of step.
-Definition: <number>
+Definition: \<number>
 Evaluate operation for each element of an interval starting at the receiver and stopping at stop
 where each element is step greater than the previous. The value of step can be positive or
 negative, but it must be non-zero. The elements must all conform to either the receiver's or step's
@@ -7272,26 +7643,26 @@ protocol, according to the Default Conversion Table.
 Note that stop is not necessarily an element in the sequence, which is given by the formula
 (((stop - receiver) // step) * step) + receiver
 No evaluation takes place if:
-1. receiver < stop, and step < 0.
+1. receiver \< stop, and step \< 0.
 2. receiver > stop, and step > 0.
 Implementations are not required to actually create the interval described by the receiver, stop
 and step. Implementations may restrict the definition of this message to specific classes.
 Parameters
 stop
 
-<number>
+\<number>
 
 unspecified
 
 step
 
-<number>
+\<number>
 
 unspecified
 
 operation
 
-<monadicBlock>
+\<monadicBlock>
 
 unspecified
 
@@ -7306,7 +7677,7 @@ to: stop do: operation
 Synopsis
 Evaluate operation for each element of an interval which represents an arithmetic progression
 from receiver to stop in increments of 1.
-Definition: <number>
+Definition: \<number>
 Evaluate operation for each element of an interval starting at the receiver and stopping at stop
 where each element is 1 greater than the previous. The elements must all conform to the receiver's
 protocol according to the Default Conversion Table.
@@ -7323,11 +7694,11 @@ UNSPECIFIED
 Errors
 none
 
-<number>
+\<number>
 
 unspecified
 
-<monadicBlock>
+\<monadicBlock>
 
 unspecified
 
@@ -7344,12 +7715,12 @@ truncated
 
 Synopsis
 Answer an integer equal to the receiver truncated towards zero.
-Definition: <number>
+Definition: \<number>
 As specified by the ISO/IEC 10967 truncation operation trunc. If the receiver is positive, answer the
 largest integer less than or equal to the receiver. If it is negative, answer the smallest integer
 greater than or equal to the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.2.42 Message:
@@ -7358,7 +7729,7 @@ truncateTo: factor
 
 Synopsis
 Answer the number nearest the receiver truncated towards zero which is a multiple of factor.
-Definition: <number>
+Definition: \<number>
 If the receiver is positive, answer the largest number less than or equal to the receiver which is a
 multiple of factor. If it is negative, answer the smallest number greater than or equal to the
 receiver which is a multiple of factor.
@@ -7367,7 +7738,7 @@ Default Conversion Table.
 Parameters
 factor
 
-<number>
+\<number>
 
 uncaptured
 
@@ -7376,9 +7747,9 @@ The Default Result Type
 Errors
 none
 
-5.6.3 Protocol: <rational>
+5.6.3 Protocol: \<rational>
 Conforms To
-<number>
+\<number>
 Description
 Rational numbers may be either integers or fractions. An integer is logically a fraction whose
 denominator is one. This protocol is necessary because some integer and most fraction operations
@@ -7400,10 +7771,10 @@ denominator
 
 Synopsis
 Answer the denominator of the receiver.
-Definition: <rational>
+Definition: \<rational>
 Treating the receiver as a fraction, answer the lowest common denominator of the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.3.2 Message:
@@ -7412,17 +7783,17 @@ numerator
 
 Synopsis
 Answer the numerator of the receiver.
-Definition: <rational>
+Definition: \<rational>
 Treating the receiver as a fraction reduced to its lowest common denominator, answer the integer
 numerator.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 
-5.6.4 Protocol: <Fraction>
+5.6.4 Protocol: \<Fraction>
 Conforms To
-<rational>
+\<rational>
 Description
 An exact representation for rational numbers. It is unspecific whether the rational number are
 maintain in a reduced form but messages that reveal the numerator and denominator answer
@@ -7438,44 +7809,44 @@ Answer the denominator of the receiver.
 
 
 
-Definition: <rational>
+Definition: \<rational>
 Treating the receiver as a fraction, answer the lowest common denominator of the recevier.
-Refinement: <Fraction>
+Refinement: \<Fraction>
 Answer the integer smallest integer denominator of the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.4.2 Message Refinement: numerator
 Synopsis
 Answer the numerator of the receiver.
-Definition: <rational>
+Definition: \<rational>
 Treating the receiver as a fraction, answer the integer numerator.
-Refinement: <Fraction>
+Refinement: \<Fraction>
 Answer the integer numerator of the receiver reduced to its lowest denominator.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.4.3 Message Refinement: printString
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
-Refinement: <number>
+Refinement: \<number>
 Answer a string that is a valid literal representation equal to the receiver.
-Refinement: <Fraction>
+Refinement: \<Fraction>
 Answer a string consisting of the numerator and denominator for a reduced fraction, equivalent to
 the receiver . The numerator and denominator are separated by the character '/' as follows:
 numerator/denominator
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 
-5.6.5 Protocol: <integer>
+5.6.5 Protocol: \<integer>
 Conforms To
-<rational>
+\<rational>
 
 
 
@@ -7510,7 +7881,7 @@ allMask: mask
 Synopsis
 Answer true if all of the bits that are 1 in the binary representation of mask are 1 in the binary
 representation of the receiver. Answer false otherwise.
-Definition: <integer>
+Definition: \<integer>
 Answer true if all of the bits that are 1 in the binary representation of mask are 1 in the binary
 representation of the receiver. Answer false otherwise. If the receiver has fewer bits than the
 operand, the receiver is treated as if it were extended on the left with zeros to the length of the
@@ -7518,9 +7889,9 @@ operand.
 The result is undefined if either the receiver or the operand is a negative integer.
 Parameters
 mask
-<integer>
+\<integer>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -7535,7 +7906,7 @@ anyMask: mask
 Synopsis
 Answer true if any of the bits that are 1 in the binary representation of mask are 1 in the binary
 representation of the receiver. Answer false otherwise.
-Definition: <integer>
+Definition: \<integer>
 Answer true if any of the bits that are 1 in the binary representation of mask are 1 in the binary
 representation of the receiver. Answer false otherwise. If the receiver has fewer bits than the
 operand, the receiver is treated as if it were extended on the left with zeros to the length of the
@@ -7546,9 +7917,9 @@ Result is undefined if either the receiver or the operand is a negative integer.
 of ANSI Smalltalk Standard
 Parameters
 mask
-<integer>
+\<integer>
 Return Values
-<boolean>
+\<boolean>
 
 December, 1997
 revision 1.9
@@ -7564,17 +7935,17 @@ none
 5.6.5.3 Message Refinement: asScaledDecimal: scale
 Synopsis
 Answer a scaled decimal number, with a fractional precision of scale, approximating the receiver.
-Definition: <number>
+Definition: \<number>
 This is a conversion message. Answer a scaled decimal number, with a fractional precision of
 scale, which minimizes the difference between the answered value and the receiver.
 The effect of underflow and overflow is implementation defined.
-Refinement: <integer>
+Refinement: \<integer>
 The number of significant digits of the answer is the same as the number of decimal digits in the
 receiver. The scale of the answer is 0.
 It is an error if the receiver cannot be represented within the maximum precision of the
-<scaledDecimal> implementation.
+\<scaledDecimal> implementation.
 Return Values
-<scaledDecimal> unspecified
+\<scaledDecimal> unspecified
 Errors
 scaled decimal overflow
 5.6.5.4 Message:
@@ -7583,7 +7954,7 @@ bitAnd: operand
 
 Synopsis
 Answer the bit-wise logical and of the receiver and the operand.
-Definition: <integer>
+Definition: \<integer>
 Answer the result of the bit-wise logical and of the binary representation of the receiver and the
 binary representation of operand. The shorter of the receiver or the operand is extended on the
 left with zeros to the length of the longer of the two.
@@ -7591,12 +7962,12 @@ The result is undefined if either the receiver or the operand is a negative inte
 Parameters
 operand
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.5 Message:
@@ -7605,7 +7976,7 @@ bitAt: index
 
 Synopsis
 Answer the value of the bit at index in the binary representation of the receiver.
-Definition: <integer>
+Definition: \<integer>
 Answer the value of the bit at index in the binary representation of the receiver. Answer an integer
 value of 0 or 1, depending upon the value of the bit at position index in the binary representation
 
@@ -7616,12 +7987,12 @@ to the left.
 The result is undefined if either the receiver is negative. It is erroneous if index is less that or
 equal to zero.
 Parameters
-index <integer>
+index \<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 index less than or equal to zero
 5.6.5.6 Message:
@@ -7630,7 +8001,7 @@ bitAt: index put: value
 
 Synopsis
 Set the value of the bit at index in the binary representation of the receiver.
-Definition: <integer>
+Definition: \<integer>
 Return an integer whose binary representation is identical to the receiver with the exception that
 the value of the bit at position index is equal to the low order bit of value.
 The least significant bit of the receiver is designated as position 1, with indices increasing to the
@@ -7640,12 +8011,12 @@ is less that or equal to zero.
 Parameters
 index
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 index less than or equal to zero
 5.6.5.7 Message:
@@ -7654,18 +8025,18 @@ bitOr: operand
 
 Synopsis
 Answer the logical or of the receiver and operand.
-Definition: <integer>
+Definition: \<integer>
 Answer the result of bit-wise logical or the binary representation of the receiver and the binary
 representation of operand. The shorter of the receiver or the operand is extended on the left with
 zeros to the length of the longer of the two.
 The result is undefined if either the receiver or the operand is a negative integer.
 Parameters
-operand <integer>
+operand \<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.8 Message:
@@ -7677,17 +8048,17 @@ bitShift: shift
 
 Answer the result of logically bit-wise shifting the binary representation of the receiver by shift
 bits.
-Definition: <integer>
+Definition: \<integer>
 If shift is positive, the receiver is shifted left and zeros (0) are shifted in on the right. If shift is
 negative, the receiver is shifted right and low order bits are discarded.
 The result is undefined if either the receiver is negative.
 Parameters
-shift <integer>
+shift \<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.9 Message:
@@ -7696,7 +8067,7 @@ bitXor: operand
 
 Synopsis
 Answer bit-wise exclusive or of the receiver and the operand.
-Definition: <integer>
+Definition: \<integer>
 Answer the result of the bit-wise exclusive or of the binary representation of the receiver and the
 binary representation of operand. The shorter of the receiver or the operand is extended on the
 left with zeros to the length of the longer of the two.
@@ -7704,12 +8075,12 @@ The result is undefined if either the receiver or the operand is a negative inte
 Parameters
 operand
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.10 Message:
@@ -7718,10 +8089,10 @@ even
 
 Synopsis
 Answer true if the receiver is even.
-Definition: <integer>
+Definition: \<integer>
 Answer true if the receiver is divisible by 2 with no remainder.
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -7733,14 +8104,14 @@ factorial
 
 Synopsis
 Answer the factorial of the receiver.
-Definition: <integer>
+Definition: \<integer>
 Answer the product of all numbers between the receiver and 1 inclusive. The result is undefined if
 the receiver is negative.
 
 
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.12 Message:
@@ -7749,18 +8120,18 @@ gcd: operand
 
 Synopsis
 Answer the greatest common divisor of the receiver and operand.
-Definition: <integer>
+Definition: \<integer>
 Answer the largest non-negative integer that divides both the receiver and operand with no
 remainder. Answer 0 if the receiver and operand are zero.
 Parameters
 operand
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.13 Message:
@@ -7769,13 +8140,13 @@ highBit
 
 Synopsis
 Answer the index of the most significant non-zero bit in the binary representation of the receiver.
-Definition: <integer>
+Definition: \<integer>
 Answer the index of the most significant non-zero bit in the binary representation of the receiver.
 Answer 0 if the receiver is 0. The index of the least significant bit of the receiver is 1, with indices
 increasing to the left.
 The result is undefined if the receiver is negative.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.5.14 Message:
@@ -7784,16 +8155,16 @@ lcm: operand
 
 Synopsis
 Answer the least common multiple of the receiver and operand.
-Definition: <integer>
+Definition: \<integer>
 Answer the smallest non-negative integer which is evenly divided by both the receiver and
 operand. Answer 0 if the receiver and operand are zero.
 Parameters
 operand
 
-<integer>
+\<integer>
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 
@@ -7813,7 +8184,7 @@ noMask: mask
 Synopsis
 Answer true if none of the bits that are 1 in the binary representation of mask are 1 in the binary
 representation of the receiver. Answer false otherwise.
-Definition: <integer>
+Definition: \<integer>
 Answer true if none of the bits that are 1 in the binary representation of mask are 1 in the binary
 representation of the receiver. Answer false otherwise. If the receiver has fewer bits than the
 operand, the receiver is treated as if it were extended on the left with zeros to the length of the
@@ -7821,9 +8192,9 @@ operand.
 The result is undefined if either the receiver or the operand is a negative integer.
 Parameters
 mask
-<integer>
+\<integer>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -7837,10 +8208,10 @@ odd
 
 Synopsis
 Answer true if the receiver is odd.
-Definition: <integer>
+Definition: \<integer>
 Answer true if the receiver is divisible by two (2) with remainder one (1).
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -7852,7 +8223,7 @@ printStringRadix: base
 
 Synopsis
 Answer a string which represents the receiver in radix base.
-Definition: <integer>
+Definition: \<integer>
 Return a string containing a sequence of characters that represents the numeric value of the
 receiver in the radix specified by the argument. The sequence of characters must be
 recognizable using the radixDigits production of the Smalltalk Lexical Grammar as if the numeric
@@ -7860,12 +8231,12 @@ value of the radixSpecifier was base. If the receiver is negative, a minus sign 
 to the sequence of characters. The result is undefined if base is less than two or greater than 36.
 Parameters
 base
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 5.6.5.18 Message:
@@ -7877,7 +8248,7 @@ printOn: output base: base showRadix: flag
 
 Write a sequence of characters that describes the receiver in radix base with optional radix
 specifier.
-Definition: <integer>
+Definition: \<integer>
 Write to output a sequence of characters that describes the receiver, starting at output's current
 position. If the parameter flag is true, produce a sequence of characters that are recognizable using
 the radixInteger production of the Smalltalk Lexical Grammar. If the flag is false, then the
@@ -7885,19 +8256,19 @@ sequence of characters must be recognizable using the radixDigits production as 
 value of the radixSpecifier was base. If the receiver is negative, a minus sign ('-') is prepended
 to the sequence of characters. The result is undefined if base is less than two or greater than 36.
 Parameters
-output <puttableStream>
+output \<puttableStream>
 
 uncaptured
 
 base
 
-<integer>
+\<integer>
 
 uncaptured
 
 flag
 
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -7906,9 +8277,9 @@ UNSPECIFIED
 Errors
 none
 
-5.6.6 Protocol: <scaledDecimal>
+5.6.6 Protocol: \<scaledDecimal>
 Conforms To
-<number>
+\<number>
 Description
 Provides a numeric representation of fixed point decimal numbers. The representation must be
 able to accurately represent decimal fractions. The standard recommends that the implementation
@@ -7925,20 +8296,20 @@ scale
 Synopsis
 Answer a integer which represents the total number of digits used to represent the fraction part of
 the receiver, including trailing zeroes.
-Definition: <scaledDecimal>
+Definition: \<scaledDecimal>
 Answer a integer which represents the total number of digits used to represent the fraction part of
 the receiver, including trailing zeroes.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 
 
 
 Errors
 none
 
-5.6.7 Protocol: <Float>
+5.6.7 Protocol: \<Float>
 Conforms To
-<number>
+\<number>
 Description
 Represents a floating point representation for real numbers, whose value may be approximate.
 Provides protocol for performing trigonometry, exponentiation, and conversion on numerical
@@ -7967,7 +8338,7 @@ tan
 5.6.7.1 Message Refinement: = comparand
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Return true if the receiver is equivalent to comparand. Otherwise return
 false.
@@ -7990,29 +8361,29 @@ The equivalence of objects need not be temporally invariant. Two independent inv
 with the same receiver and operand objects may not always yield the same results. Note that a
 collection that uses #= to discriminate objects may only reliably store objects whose hash values
 do not change while the objects are contained in the collection.
-Refinement: <number>
+Refinement: \<number>
 Answer true if the operand is numerically equal to the receiver, as specified by the ISO/IEC 10967
 equality operation eq. Answer false if they are not numerically equal or if operand is not a number.
 To perform the operation both the receiver and operand must be objects with identical numeric
 representations. If they have different representations a conversion to a common numeric
 representation is performed, as specified by the Default Conversion Table, before applying the
-operation. If the resulting protocol is <integer>, then the result value is defined by the ISO/IEC
-10967 operation eqI. If the resulting protocol is <Float>, then the result value is defined by the
+operation. If the resulting protocol is \<integer>, then the result value is defined by the ISO/IEC
+10967 operation eqI. If the resulting protocol is \<Float>, then the result value is defined by the
 ISO/IEC 10967 eqF. Otherwise, the result is consistent with the mathematical definition of the
 ISO/IEC 10967 operation eq.
 Numeric equality is defined by implementation defined conventions regarding round-off error and
 representation of numbers, hence behavior of this message may differ between platforms.
-Refinement: <Float>
+Refinement: \<Float>
 Answer true if the operand is a number which represents the same floating point number as the
 receiver, as specified by the ISO/IEC 10967 operation eqf. If the comparand and the receiver do
 not conform to the same protocol, they are converted according to the Default Conversion Table.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -8026,7 +8397,7 @@ arcCos
 
 Synopsis
 Answer the inverse cosine of the receiver in radians.
-Definition: <Float>
+Definition: \<Float>
 
 
 
@@ -8035,7 +8406,7 @@ trigonometric operation arccosf. Within the limits of precision, the following i
 receiver arcCos cos = receiver
 It is erroneous if the absolute value of the receiver is greater than 1.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 |receiver| > 1
 5.6.7.3 Message:
@@ -8044,13 +8415,13 @@ arcSin
 
 Synopsis
 Answer the inverse sine of the receiver in radians.
-Definition: <Float>
+Definition: \<Float>
 Answer the inverse sine of the receiver in radians, as specified by the ISO/IEC 10967 trigonometric
 operation arcsinf. Within the limits of precision, the following invariant holds:
 receiver arcSin sin = receiver
 It is erroneous if the absolute value of the receiver is greater than 1.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 |receiver| > 1
 5.6.7.4 Message:
@@ -8059,12 +8430,12 @@ arcTan
 
 Synopsis
 Answer the inverse tangent of the receiver in radians.
-Definition: <Float>
+Definition: \<Float>
 Answer the inverse tangent of the receiver in radians, as specified by the ISO/IEC 10967
 trigonometric operation arctanf. Within the limits of precision, the following invariant holds:
 receiver arcTan tan = receiver
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.5 Message:
@@ -8073,12 +8444,12 @@ cos
 
 Synopsis
 Answer the cosine of the receiver in radians.
-Definition: <Float>
-Answer a <Float> equal to the cosine of the receiver in radians, as specified by the ISO/IEC 10967
+Definition: \<Float>
+Answer a \<Float> equal to the cosine of the receiver in radians, as specified by the ISO/IEC 10967
 trigonometric operation cosf.
 The effect of underflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 
 
 
@@ -8090,11 +8461,11 @@ degreesToRadians
 
 Synopsis
 Answer the receiver converted from degrees to radians.
-Definition: <Float>
+Definition: \<Float>
 Answer a floating-point number representing the receiver converted from degrees to radians. The
 result is equivalent to multiplying the receiver by (Pi / 180).
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.7 Message:
@@ -8103,13 +8474,13 @@ exp
 
 Synopsis
 Answer the natural exponential of the receiver. This is the inverse of #ln.
-Definition: <Float>
+Definition: \<Float>
 Answer a floating-point number representing the irrational number e (= 2.718281...) raised to the
 power of the receiver, as specified by the ISO/IEC 10967 operation expf. This is the inverse of the
 #ln message.
 The effect of underflow and overflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.8 Message:
@@ -8118,7 +8489,7 @@ floorLog: operand
 
 Synopsis
 Answer the largest integer less than or equal to the logarithm to the base operand of the receiver.
-Definition: <Float>
+Definition: \<Float>
 Answer the largest integer less than or equal to the power to which the operand must be raised to
 obtain the receiver (that is, the logarithm base operand of the receiver).
 The result is undefined if the receiver is less than or equal to zero, or if the operand is less than or
@@ -8126,12 +8497,12 @@ equal to 1.
 Parameters
 operand
 
-<number>
+\<number>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.7.9 Message:
@@ -8143,13 +8514,13 @@ Answer the natural logarithm of the receiver.
 
 
 
-Definition: <Float>
+Definition: \<Float>
 Answer the natural logarithm of the receiver, as specified by the ISO/IEC 10967 operation lnf.,
 which is a floating-point number representing the power to which the irrational number e (=
 2.718281...) must be raised to obtain the receiver. This is the inverse of the #exp message.
 The result is undefined if the receiver is less than or equal to zero.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.10 Message:
@@ -8158,7 +8529,7 @@ log: operand
 
 Synopsis
 Answer the logarithm to the base operand of the receiver.
-Definition: <Float>
+Definition: \<Float>
 Answer the logarithm to the base operand of the receiver, as specified by the ISO/IEC 10967
 operation logff, which is a floating-point number representing the power to which operand must be
 raised to obtain the receiver. The receiver must be positive, and operand must be greater than
@@ -8169,12 +8540,12 @@ defined.
 Parameters
 operand
 
-<number>
+\<number>
 
 uncaptured
 
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.11 Message Refinement:
@@ -8183,19 +8554,19 @@ printString
 
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
-Refinement: <number>
+Refinement: \<number>
 Answer a string that is a valid literal representation that approximates the numeric value of the
 receiver.
-Refinement: <Float>
+Refinement: \<Float>
 Answer a string which is a valid Smalltalk literal representation approximately equal to the receiver.
 An exponent literal form is produced if the value of the exponent is greater than the precision of the
 receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 
@@ -8212,11 +8583,11 @@ radiansToDegrees
 
 Synopsis
 Answer the receiver converted from radians to degrees.
-Definition: <Float>
+Definition: \<Float>
 Answer a floating-point number representing the receiver converted from radians to degrees. The
 result is equivalent to multiplying the receiver by (180 / Pi).
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.13 Message:
@@ -8225,12 +8596,12 @@ sin
 
 Synopsis
 Answer the sine of the receiver.
-Definition: <Float>
+Definition: \<Float>
 Answer a floating-point number equal to the sine of the receiver in radians, as specified by the
 ISO/IEC 10967 trigonometric operation sinF.
 The effect of underflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.7.14 Message:
@@ -8239,20 +8610,20 @@ tan
 
 Synopsis
 Answer the tangent of the receiver.
-Definition: <Float>
+Definition: \<Float>
 Answer a floating-point number equal to the tangent of the receiver in radians, as specified by the
 ISO/IEC 10967 trigonometric root operation tanf.
 The effect of underflow and overflow is implementation defined.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 
 
 
-5.6.8 Protocol: <floatCharacterization>
+5.6.8 Protocol: \<floatCharacterization>
 Conforms To
-<Object>
+\<Object>
 Description
 Objects supporting this protocol characterize a floating point representation for real numbers.
 These characterizations are required by ISO/IEC 10967 for each precision of floating point
@@ -8260,19 +8631,19 @@ numbers provided by an implementation.
 Standard Globals
 Float
 
-Conforms to the protocol <floatCharacterization>. Its language element
+Conforms to the protocol \<floatCharacterization>. Its language element
 type is implementation defined. The value of this global is equivalent to
 the value of one of the globals: FloatE, FloatE, or FloatE.
 
 FloatE
 
-Conforms to the protocol <floatCharacterization>. Its language element
+Conforms to the protocol \<floatCharacterization>. Its language element
 type is implementation defined. This global characterizes the floating
 point representation corresponding to the 'e' floating point literal syntax.
-Conforms to the protocol <floatCharacterization>. Its language element
+Conforms to the protocol \<floatCharacterization>. Its language element
 type is implementation defined. This global characterizes the floating
 point representation corresponding to the 'd' floating point literal syntax.
-Conforms to the protocol <floatCharacterization>. Its language element
+Conforms to the protocol \<floatCharacterization>. Its language element
 type is implementation defined. This global characterizes the floating
 point representation corresponding to the 'q' floating point literal syntax.
 
@@ -8301,12 +8672,12 @@ denormalized
 Synopsis
 Indication of whether the characterized floating point object representation allows denormalized
 values.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report a boolean indicating whether the characterized floating point object representation contains
 denormalized values. This satisfies the ISO/IEC 10967 floating point characterization requirement
 denorm.
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -8321,11 +8692,11 @@ The closest floating point approximation of the irrational number e.
 
 
 
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Return the closest floating point approximation of the irrational number e for the characterized
 floating point object representation.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.8.3 Message:
@@ -8334,12 +8705,12 @@ emax
 
 Synopsis
 The largest exponent of the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the largest exponent allowed by the characterized floating point object representation,
 providing the upper bound of the range of representable floating point numbers. This satisfies the
 ISO/IEC 10967 floating point characterization requirement emax.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.8.4 Message:
@@ -8348,12 +8719,12 @@ emin
 
 Synopsis
 The smallest exponent of the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the smallest exponent allowed by the characterized floating point object representation,
 providing the lower bound of the range of representable floating point numbers. This satisfies the
 ISO/IEC 10967 floating point characterization requirement emin.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.8.5 Message:
@@ -8362,13 +8733,13 @@ epsilon
 
 Synopsis
 The maximum relative spacing in the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the maximum relative spacing in the characterized floating point object representation,
 satisfying the ISO/IEC 10967 floating point characterization requirement epsilon. The return value
 is equal to
 self radix raisedTo: (1 - self precision)
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 
@@ -8385,13 +8756,13 @@ fmax
 
 Synopsis
 The largest value allowed by the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the largest value allowed by the characterized floating point object representation. This
 satisfies the ISO/IEC 10967 floating point characterization requirement fmax, and is equal to
 (1 - (self radix raisedTo: self precision negated)) * self radix
 raisedTo: self emax
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.8.7 Message:
@@ -8400,14 +8771,14 @@ fmin
 
 Synopsis
 The minimum value allowed by the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the minimum value allowed by the characterized floating point object representation. This
 satisfies the ISO/IEC 10967 floating point characterization requirement fmin. If the described
 representation contains normalized values, then the result is equal to the result of sending
 #fminNormalized to the receiver, otherwise the result is equal to the result of sending
 #fminDenormalized to the receiver.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.8.8 Message:
@@ -8416,7 +8787,7 @@ fminDenormalized
 
 Synopsis
 The minimum denormalized value allowed by the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the minimum denormalized value allowed by the characterized floating point object
 representation. This satisfies the ISO/IEC 10967 floating point characterization requirement fminD,
 and is equal to
@@ -8424,7 +8795,7 @@ self radix raisedTo: (self emin - self precision)
 The result is unspecified if denormalized values are not allowed by the characterized
 representation.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.8.9 Message:
@@ -8435,13 +8806,13 @@ fminNormalized
 
 
 The minimum normalized value allowed by the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the minimum normalized value allowed by the characterized floating point object
 representation. This satisfies the ISO/IEC 10967 floating point characterization requirement fminN,
 and is equal to
 self radix raisedTo: (self emin - 1).
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.8.10 Message:
@@ -8450,11 +8821,11 @@ pi
 
 Synopsis
 The closest floating point approximation to Pi.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Return the closest floating point approximation to Pi for the characterized floating point object
 representation.
 Return Values
-<Float> unspecified
+\<Float> unspecified
 Errors
 none
 5.6.8.11 Message:
@@ -8463,12 +8834,12 @@ precision
 
 Synopsis
 The precision of the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the precision, the number of radix digits, of floating point objects of the characterized
 floating point object representation. This satisfies the ISO/IEC 10967 floating point characterization
 requirement p. The result must be greater than or equal to two.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.6.8.12 Message:
@@ -8477,26 +8848,26 @@ radix
 
 Synopsis
 The radix of the characterized floating point object representation.
-Definition: <floatCharacterization>
+Definition: \<floatCharacterization>
 Report the base, or radix, of the characterized floating point object representation. This satisfies the
 ISO/IEC 10967 floating point characterization requirement r. The result must be an even number
 greater than or equal to two.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 
 
 
-5.6.9 Protocol: <Fraction factory>
+5.6.9 Protocol: \<Fraction factory>
 Conforms To
-<Object>
+\<Object>
 Description
 Represents protocol for creating an exact representation for rational numbers.
 Standard Globals
 Fraction
 
-Conforms to the protocol <Fraction factory>. Its language element type is
+Conforms to the protocol \<Fraction factory>. Its language element type is
 implementation defined.
 
 Messages
@@ -8508,24 +8879,24 @@ numerator: top denominator: bottom
 
 Synopsis
 Answer a new fraction whose numerator is top, and whose denominator is bottom.
-Definition: <Fraction factory>
+Definition: \<Fraction factory>
 Answer a new fraction whose numerator is top, and whose denominator is bottom. It is
 unspecified whether the result is reduced to the smallest possible denominator. If (top = bottom)
-or ( |bottom = 1) the result conforms to <integer> otherwise it conforms to <Fraction>. If bottom =
+or ( |bottom = 1) the result conforms to \<integer> otherwise it conforms to \<Fraction>. If bottom =
 0 a ZeroDivide exception is signaled.
 Parameters
 top
-<integer>
+\<integer>
 
 unspecified
 
-bottom <integer>
+bottom \<integer>
 
 unspecified
 
 Return Values
-<Fraction>
-<integer>
+\<Fraction>
+\<integer>
 Errors
 none
 
@@ -8537,58 +8908,58 @@ unspecified
 5.7 Collection Protocols
 This section includes protocols that define the behavior of the standard collection classes.
 The graphs below shows the conformance relationships between the protocols defined in this
-section (except for <magnitude>, which is contained in the section on numeric protocols).
-<collection>
+section (except for \<magnitude>, which is contained in the section on numeric protocols).
+\<collection>
 
-<abstractDictionary>
+\<abstractDictionary>
 
-<magnitude>
+\<magnitude>
 
-<extensibleCollection> <sequencedContractibleCollection> <sequencedReadableCollection>
+\<extensibleCollection> \<sequencedContractibleCollection> \<sequencedReadableCollection>
 
-<Dictionary><IdentityDictionary> <Bag>
+\<Dictionary>\<IdentityDictionary> \<Bag>
 
-<Set>
+\<Set>
 
-<SortedCollection>
+\<SortedCollection>
 
-<sequencedCollection> <Interval>
+\<sequencedCollection> \<Interval>
 
-<OrderedCollection>
+\<OrderedCollection>
 
-<Array>
+\<Array>
 
-<ByteArray>
+\<ByteArray>
 
-<readableString>
+\<readableString>
 
-<string>
+\<string>
 
-<symbol>
+\<symbol>
 
-<collection factory>
-<Interval factory>
-< Dictionary factory >
+\<collection factory>
+\<Interval factory>
+\< Dictionary factory >
 
-<Bag factory>
+\<Bag factory>
 
-<Array factory>
+\<Array factory>
 
-<initializableCollection factory>
+\<initializableCollection factory>
 
-<IdentityDictionary factory>
+\<IdentityDictionary factory>
 
-<ByteArray factory>
-<SortedCollection factory>
-<OrderedCollection factory>
-<Set factory>
-<string factory>
+\<ByteArray factory>
+\<SortedCollection factory>
+\<OrderedCollection factory>
+\<Set factory>
+\<string factory>
 
 
 
-5.7.1 Protocol: <collection>
+5.7.1 Protocol: \<collection>
 Conforms To
-<Object>
+\<Object>
 Description
 Provides protocol for manipulating and operating on a collection of objects, called elements, either
 individually or as a whole. A collection can be fixed or variable sized, ordered or unordered, and its
@@ -8636,15 +9007,15 @@ allSatisfy: discriminator
 Synopsis
 Return true if the discriminator evaluates to true for every element of the receiver. Otherwise
 return false.
-Definition: <collection>
+Definition: \<collection>
 Return true if the discriminator evaluates to true for every element of the receiver. Return true
 if the receiver is empty. Otherwise return false.
 It is unspecified whether the discriminator will be evaluated with every element of the receiver.
 
 
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 Return Values
-<boolean>
+\<boolean>
 
 158
 
@@ -8654,7 +9025,7 @@ unspecified
 
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for
 each element of the receiver.
 5.7.1.2 Message:
 
@@ -8663,14 +9034,14 @@ anySatisfy: discriminator
 Synopsis
 Return true if the discriminator evaluates to true for any element of the receiver. Otherwise
 return false.
-Definition: <collection>
+Definition: \<collection>
 Return true if the discriminator evaluates to true for any element of the receiver. Otherwise
 return false. Return false if the receiver is empty.
 It is unspecified whether the discriminator will be evaluated with every element of the receiver.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -8678,7 +9049,7 @@ unspecified
 
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 5.7.1.3 Message:
 
@@ -8686,13 +9057,13 @@ asArray
 
 Synopsis
 Answer an array whose elements are the elements of the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer an array with the same elements as the receiver. The result has the same size as the
 receiver, as defined by the #size message.
 If the receiver maintains an ordering for its elements, the order of those elements will be preserved
 in the result.
 Return Values
-<Array> unspecified
+\<Array> unspecified
 Errors
 none
 5.7.1.4 Message:
@@ -8701,14 +9072,14 @@ asBag
 
 Synopsis
 Answer a bag with the same elements as the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer a bag with the same elements as the receiver.
 The result is unspecified if the receiver contains nil.
 
 
 
 Return Values
-<Bag> unspecified
+\<Bag> unspecified
 Errors
 none
 5.7.1.5 Message:
@@ -8717,13 +9088,13 @@ asByteArray
 
 Synopsis
 Answer a byte array whose elements are the elements of the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer a byte array with the same elements as the receiver. The result has the same size as the
 receiver, as defined by the #size message.
 If the receiver maintains an ordering for its elements, the order of those elements will be preserved
 in the result.
 Return Values
-<ByteArray>
+\<ByteArray>
 
 unspecified
 
@@ -8735,13 +9106,13 @@ asOrderedCollection
 
 Synopsis
 Answer an ordered collection whose elements are the elements of the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer a ordered collection with the same elements as the receiver. The result has the same size
 as the receiver, as defined by the #size message.
 If the receiver maintains an ordering for its elements, the order of those elements will be preserved
 in the result.
 Return Values
-<OrderedCollection>
+\<OrderedCollection>
 
 unspecified
 
@@ -8753,12 +9124,12 @@ asSet
 
 Synopsis
 Answer a set with the same elements as the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer a set with the same elements as the receiver. Since sets do not store duplicate elements,
 the result may have fewer elements than the receiver.
 The result is undefined if the receiver contains nil.
 Return Values
-<Set>
+\<Set>
 unspecified
 Errors
 none
@@ -8770,10 +9141,10 @@ asSortedCollection
 
 
 Answer a sorted collection with the same elements as the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer a sorted collection with the same elements as the receiver. The default sort block is used.
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 unspecified
 
@@ -8786,24 +9157,24 @@ asSortedCollection: sortBlock
 Synopsis
 Answer a sorted collection with the same elements as the receiver. The parameter sortBlock is
 used as the sort block.
-Definition: <collection>
+Definition: \<collection>
 Answer a sorted collection with the same elements as the receiver. The parameter sortBlock is
 used as the sort block and must meet the requirements of a sort block as specified by
-<SortedCollection>.
+\<SortedCollection>.
 Parameters
 sortBlock
 
-<dyadicValuable>
+\<dyadicValuable>
 
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 captured
 
 unspecified
 
 Errors
-If sortBlock does not meet the requirements for a sort block as specified by <SortedCollection>.
+If sortBlock does not meet the requirements for a sort block as specified by \<SortedCollection>.
 If any element of the receiver is not appropriate as a parameter to the sortBlock.
 5.7.1.10 Message:
 
@@ -8812,7 +9183,7 @@ collect: transformer
 Synopsis
 Answer a new collection constructed by gathering the results of evaluating transformer with
 each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, transformer is evaluated with the element as the parameter.
 The results of these evaluations are collected into a new collection.
 The elements are traversed in the same order as they would be if the message #do: had been
@@ -8822,9 +9193,9 @@ protocol as the receiver.
 Parameters
 transformer
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -8849,7 +9220,7 @@ detect: discriminator
 Synopsis
 Return the first element of the receiver which causes discriminator to evaluate to true when
 the element is used as the argument.
-Definition: <collection>
+Definition: \<collection>
 Return the first element of the receiver for which the discriminator evaluates to true when
 given that element as an argument. The discriminator will only be evaluated until such an
 object is found or until all of the elements of the collection have been used as arguments. That is,
@@ -8858,15 +9229,15 @@ The elements are traversed in the same order as they would be if the message #do
 sent to the receiver.
 The result is undefined if discriminator does not evaluate to true for any element.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 5.7.1.12 Message:
 
@@ -8876,7 +9247,7 @@ Synopsis
 Return the first element of the receiver which causes discriminator to evaluate to true when
 used as the argument to the evaluation. Answer the result of evaluating exceptionHandler if no
 such element is found.
-Definition: <collection>
+Definition: \<collection>
 Return the first element of the receiver for which the discriminator evaluates to true when
 given that element as an argument. The discriminator will only be evaluated until such an
 object is found or until all of the elements of the collection have been used as arguments. That is,
@@ -8889,20 +9260,20 @@ Parameters
 discriminator
 exceptionHandler
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
-<Object> unspecified
+\<Object> state
+\<Object> unspecified
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 
 NCITS J20 DRAFT
@@ -8918,14 +9289,14 @@ do: operation
 
 Synopsis
 Evaluate operation with each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, operation is evaluated with the element as the parameter.
 Unless specifically refined, the elements are not traversed in a particular order. Each element is
 visited exactly once. Conformant protocols may refine this message to specify a particular ordering.
 Parameters
 operation
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -8939,7 +9310,7 @@ do: operation separatedBy: separator
 
 Synopsis
 Evaluate operation with each element of the receiver interspersed by evaluation of separator.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, operation is evaluated with the element as the parameter.
 Before evaluating operation the second and subsequent times evaluate separator.
 Separator is not evaluated if there are less than two elements nor after the last element.
@@ -8947,8 +9318,8 @@ Parameters
 operation
 separator
 
-<monadicValuable>
-<niladicValuable>
+\<monadicValuable>
+\<niladicValuable>
 
 uncaptured
 uncaptured
@@ -8963,13 +9334,13 @@ includes: target
 
 Synopsis
 Answer true if an element of the receiver is equivalent to target. Answer false otherwise.
-Definition: <collection>
+Definition: \<collection>
 This message is used to test an object for inclusion among the receiver's elements. Answer true if
 at least one of the receiver's elements is equivalent to target. Answer false otherwise.
 Parameters
-target <Object>
+target \<Object>
 Return Values
-<boolean>
+\<boolean>
 
 uncaptured
 
@@ -8986,7 +9357,7 @@ inject: initialValue into: operation
 
 Answer the final result of evaluating operation using each element of the receiver and the
 previous evaluation result as the parameters.
-Definition: <collection>
+Definition: \<collection>
 The first evaluation of operation is performed with initialValue as the first parameter, and
 the first element of the receiver as the second parameter. Subsequent evaluations are done with
 the result of the previous evaluation as the first parameter, and the next element as the second
@@ -8994,16 +9365,16 @@ parameter. The result of the last evaluation is answered.
 The elements are traversed in the same order as they would be if the message #do: had been
 sent to the receiver.
 Parameters
-initialValue <Object>
+initialValue \<Object>
 operation
 
-<dyadicValuable>
+\<dyadicValuable>
 
 uncaptured
 uncaptured
 
 Return Values
-<Object> unspecified
+\<Object> unspecified
 Errors
 none
 5.7.1.17 Message:
@@ -9012,12 +9383,12 @@ isEmpty
 
 Synopsis
 Return true if the receiver contains no elements. Return false otherwise.
-Definition: <collection>
+Definition: \<collection>
 Return true if and only if
 receiver size = 0
 is true. Otherwise return false.
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -9029,11 +9400,11 @@ notEmpty
 
 Synopsis
 Return true if the receiver contains elements. Return false otherwise.
-Definition: <collection>
+Definition: \<collection>
 Return true if the receiver contains elements. Return false otherwise. This is equivalent to
 receiver isEmpty not
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -9048,15 +9419,15 @@ Answer the number of elements of the receiver which are equivalent to target.
 
 
 
-Definition: <collection>
+Definition: \<collection>
 Answer the number of elements of the receiver which are equivalent to target.
 Parameters
-target <Object>
+target \<Object>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.7.1.20 Message:
@@ -9065,7 +9436,7 @@ rehash
 
 Synopsis
 Re-establish hash invariants, if any.
-Definition: <collection>
+Definition: \<collection>
 Re-establish any hash invariants of the receiver.
 Return Values
 UNSPECIFIED
@@ -9078,7 +9449,7 @@ reject: discriminator
 Synopsis
 Answer a new collection which includes only the elements in the receiver which cause
 discriminator to evaluate to false.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Each element which causes discriminator to evaluate to false is included in the
 new collection.
@@ -9088,9 +9459,9 @@ Unless specifically refined, this message is defined to answer an object conform
 protocol as the receiver. If both the receiver and the result maintain an ordering of their elements,
 the elements of the result will be in the same relative order as the elements of the receiver.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 uncaptured
 
@@ -9098,7 +9469,7 @@ new
 
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 5.7.1.22 Message:
 
@@ -9110,7 +9481,7 @@ discriminator to evaluate to true.
 
 
 
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Each element which causes discriminator to evaluate to true is included in the new
 collection.
@@ -9120,9 +9491,9 @@ Unless specifically refined, this message is defined to answer an object conform
 protocol as the receiver. If both the receiver and the result maintain an ordering of their elements,
 the elements of the result will be in the same relative order as the elements of the receiver.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 uncaptured
 
@@ -9130,7 +9501,7 @@ new
 
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 5.7.1.23 Message:
 
@@ -9138,16 +9509,16 @@ size
 
 Synopsis
 Answer the number of elements in the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer the number of elements in the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 
-5.7.2 Protocol: <abstractDictionary>
+5.7.2 Protocol: \<abstractDictionary>
 Conforms To
-<collection>
+\<collection>
 Description
 Provides protocol for accessing, adding, removing, and iterating over the elements of an unordered
 collection whose elements are accessed using an explicitly assigned external key.
@@ -9182,14 +9553,14 @@ addAll: dictionary
 
 Synopsis
 Store the elements of dictionary in the receiver at the corresponding keys from dictionary.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 This message is equivalent to repeatedly sending the #at:put: message to the receiver with
 each of the keys and elements in dictionary in turn. If a key in dictionary is key equivalent to
 a key in the receiver, the associated element in dictionary replaces the element in the receiver.
 Parameters
 dictionary
 
-<abstractDictionary>
+\<abstractDictionary>
 
 unspecified
 
@@ -9203,7 +9574,7 @@ at: key
 
 Synopsis
 Answer the element at key in the receiver.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 This message defines element lookup based on a key. Answer the element stored at key.
 Lookup is successful if an element has been previously stored in the receiver at a key that is key
 equivalent to key. This element is answered. Specifically, the following expression must return true
@@ -9214,7 +9585,7 @@ The result is undefined if the receiver does not contain an element keyed by key
 Parameters
 key
 
-<Object>
+\<Object>
 
 Return Values
 
@@ -9222,7 +9593,7 @@ uncaptured
 
 
 
-<Object> state
+\<Object> state
 Errors
 none
 5.7.2.3 Message:
@@ -9232,7 +9603,7 @@ at: key ifAbsent: operation
 Synopsis
 Answer the element at key in the receiver. If key lookup for key fails, then answer the result of
 evaluating operation.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 Answer the element stored at the specified key if key lookup is successful. If the key lookup fails,
 answer the result of evaluating operation with no parameters.
 The result is undefined if the key is nil.
@@ -9240,17 +9611,17 @@ Parameters
 key
 operation
 
-<Object>
+\<Object>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
-<ANY> unspecified
+\<Object> state
+\<ANY> unspecified
 Errors
 none
 5.7.2.4 Message:
@@ -9260,7 +9631,7 @@ at: key ifAbsentPut: operation
 Synopsis
 Answer the element at key in the receiver. If key lookup for key fails, then store and return the
 result of evaluating operation.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 This message is the same as the #at: message if key lookup is successful. If the key lookup fails,
 the result of evaluating operation with no parameters is added at key and answered.
 The result is undefined if the key is nil.
@@ -9268,16 +9639,16 @@ Parameters
 key
 operation
 
-<Object>
+\<Object>
 
 unspecified
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 5.7.2.5 Message:
@@ -9286,7 +9657,7 @@ at: key put: newElement
 
 Synopsis
 Store newElement at key in the receiver. Answer newElement.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 If lookup succeeds for key, then newElement replaces the element previously stored at key.
 Otherwise, the newElement is stored at the new key. In either case, subsequent successful
 lookups for key will answer newElement. Answer newElement.
@@ -9298,39 +9669,39 @@ Parameters
 key
 newElement
 
-<Object>
+\<Object>
 
 unspecified
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 5.7.2.6 Message Refinement: collect: transformer
 Synopsis
 Answer a new collection constructed by gathering the results of evaluating transformer with
 each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, transformer is evaluated with the element as the parameter.
 The results of these evaluations are collected into a new collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an object conforming to the same
 protocol as the receiver.
-Refinement: <abstractDictionary>
+Refinement: \<abstractDictionary>
 Answer a new instance of the receiver's type with the same keys. For each key of the answer, a
 new element is obtained by evaluating transformer with the corresponding element of the
 receiver as the parameter.
 Parameters
 transformer
 
-<monadicValuable>
+\<monadicValuable>
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -9346,14 +9717,14 @@ includesKey: key
 
 Synopsis
 Answer true if the receiver contains an element stored at key. Answer false otherwise.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 Answer true if the key lookup for the key succeeds. Answer false otherwise.
 The result is undefined if the key is nil.
 Parameters
 key
-<Object>
+\<Object>
 Return Values
-<boolean>
+\<boolean>
 Errors
 none
 
@@ -9375,18 +9746,18 @@ keyAtValue: value
 Synopsis
 Answer a key such that the element stored at this key is equal to value. Answer nil if no such key
 is found.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 Answer an object such that key lookup with this object will answer an element in the receiver
 equivalent to value. Note that if there are multiple elements in the receiver that are equivalent to
 value, then the one whose key is answered is arbitrary.
 The result is undefined if the receiver does not contain an element equivalent to value.
 Parameters
-value <Object>
+value \<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 5.7.2.9 Message:
@@ -9396,7 +9767,7 @@ keyAtValue: value ifAbsent: operation
 Synopsis
 Answer a key such that the element stored at this key is equivalent to value. Answer the result of
 evaluating operation if no such key is found.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 Answer an object such that key lookup with this object will answer an element in the receiver
 equivalent to value. If no element equivalent to value is found, then the result of evaluating
 operation with no parameters is answered.
@@ -9404,17 +9775,17 @@ Parameters
 value
 operation
 
-<Object>
+\<Object>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
-<ANY> unspecified
+\<Object> state
+\<ANY> unspecified
 Errors
 none
 5.7.2.10 Message:
@@ -9423,11 +9794,11 @@ keys
 
 Synopsis
 Answer a collection of keys at which there is an element stored in the receiver.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 Answer a collection of all the keys in the receiver. The size of the result is equal to the size of the
 receiver.
 Return Values
-<collection>
+\<collection>
 Errors
 none
 
@@ -9446,14 +9817,14 @@ keysAndValuesDo: operation
 
 Synopsis
 Iteratively evaluate operation with each of the receiver's keys and values.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 For each element in the receiver, operation is evaluated with the corresponding key as the first
 argument and the element as the second argument.
 The order in which the elements are traversed is not specified. Each key is visited exactly once.
 Parameters
 operation
 
-<dyadicValuable>
+\<dyadicValuable>
 
 uncaptured
 
@@ -9468,13 +9839,13 @@ keysDo: operation
 Synopsis
 Iteratively evaluate operation with each of the receiver's keys at which there are elements
 stored.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 For each key in the receiver, operation is evaluated with the key used as the parameter.
 The order in which the elements are traversed is not specified. Each key is visited exactly once.
 Parameters
 operation
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -9489,22 +9860,22 @@ reject: discriminator
 Synopsis
 Answer a new collection which excludes the elements in the receiver which cause
 discriminator to evaluate to true.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Each element which causes discriminator to evaluate to false is added to the new
 collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an object conforming to the same
 protocol as the receiver.
-Refinement: <abstractDictionary>
+Refinement: \<abstractDictionary>
 For each key of the receiver, discriminator is evaluated with the corresponding element as the
 parameter. If the element causes discriminator to evaluate to false, the key is added to the
 answer with the element as its corresponding value.
 Parameters
 
- <monadicValuable>
+ \<monadicValuable>
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 171
 
@@ -9514,7 +9885,7 @@ new
 
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 5.7.2.14 Message:
 
@@ -9522,14 +9893,14 @@ removeAllKeys: keys
 
 Synopsis
 Remove any elements from the receiver which are stored at the keys specified in keys.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 This message has the same effect on the receiver as repeatedly sending the #removeKey:
 message for each element in keys.
 The result is undefined if duplicate keys, as defined by key equivalence, are in the keys or if any
 element in keys is not a valid key of the receiver.
 Parameters
 keys
-<collection>
+\<collection>
 
 uncaptured
 
@@ -9545,7 +9916,7 @@ Synopsis
 Remove any elements from the receiver which are stored at the keys specified in keys. For any
 element in keys which is not a valid key of the receiver, evaluate operation with that element as
 the argument, but do not stop the enumeration.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 This message has the same effect on the receiver as repeatedly sending the
 #removeKey:ifAbsent: message for each element in keys. If any element in keys is not a
 valid key of the receiver, evaluate operation with that element as the parameter and continue the
@@ -9554,11 +9925,11 @@ Parameters
 keys
 operation
 
-<collection>
+\<collection>
 
 uncaptured
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -9576,19 +9947,19 @@ Remove the element which is stored at key in the receiver. Answer the removed el
 
 
 
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 This message defines removal of a key from the receiver. If key lookup for key is successful, then
 both key and its corresponding element are removed. Answer the removed element.
 The result is undefined if the receiver does not contain an element keyed by key.
 The result is undefined if the key is nil.
 Parameters
 key
-<Object>
+\<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 5.7.2.17 Message:
@@ -9598,7 +9969,7 @@ removeKey: key ifAbsent: operation
 Synopsis
 Remove the element which is stored at key in the receiver and answer the removed element.
 Answer the result of evaluating operation if no such key is found in the receiver.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 If key lookup for key is successful, then both key and its corresponding element are removed.
 Answer the removed element.
 If the key lookup fails, the result of evaluating operation with no parameters is answered.
@@ -9607,17 +9978,17 @@ Parameters
 key
 operation
 
-<Object>
+\<Object>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
-<ANY> unspecified
+\<Object> state
+\<ANY> unspecified
 Errors
 none
 5.7.2.18 Message Refinement:
@@ -9627,26 +9998,26 @@ select: discriminator
 Synopsis
 Answer a new collection which contains the elements in the receiver which cause
 discriminator to evaluate to true.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Each element which causes discriminator to evaluate to true is added to the new
 collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an object conforming to the same
 protocol as the receiver.
-Refinement: <abstractDictionary>
+Refinement: \<abstractDictionary>
 For each key of the receiver, discriminator is evaluated with the element as the parameter. If
 element causes discriminator to evaluate to true, the key is added to the answer with value
 element.
 
 
 
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 uncaptured
 
@@ -9660,25 +10031,25 @@ values
 
 Synopsis
 Answer a collection of the receiver's elements.
-Definition: <abstractDictionary>
+Definition: \<abstractDictionary>
 Answer a collection of the receiver's elements.
 Return Values
-<sequencedReadableCollection> unspecified
+\<sequencedReadableCollection> unspecified
 Errors
 none
 
-5.7.3 Protocol: <Dictionary>
+5.7.3 Protocol: \<Dictionary>
 Conforms To
-<abstractDictionary>
+\<abstractDictionary>
 Description
 Represents an unordered collection whose elements can be accessed using an explicitly assigned
 external key. Key equivalence is defined as sending the #= message.
 Messages
 none
 
-5.7.4 Protocol: <IdentityDictionary>
+5.7.4 Protocol: \<IdentityDictionary>
 Conforms To
-<abstractDictionary>
+\<abstractDictionary>
 
 
 
@@ -9688,9 +10059,9 @@ an explicitly-assigned, external key. Key equivalence is defined as sending the 
 Messages
 none
 
-5.7.5 Protocol: <extensibleCollection>
+5.7.5 Protocol: \<extensibleCollection>
 Conforms To
-<collection>
+\<collection>
 Description
 Provides protocol for adding elements to and removing elements from a variable sized collection.
 Messages
@@ -9706,7 +10077,7 @@ add: newElement
 
 Synopsis
 Add newElement to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds a newElement to the receiver. Unless specifically refined, the position of the
 newElement in the element traversal order is unspecified.
 Conformant protocols may place restrictions on the type of objects that are valid elements. Unless
@@ -9714,7 +10085,7 @@ otherwise specified, any object is acceptable.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
@@ -9728,7 +10099,7 @@ addAll: newElements
 
 Synopsis
 Add each element of newElements to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds each element of newElements to the receiver.
 
 
@@ -9739,7 +10110,7 @@ specified by the #do: message for newElements.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
@@ -9754,7 +10125,7 @@ remove: oldElement
 Synopsis
 Remove the first element of the receiver which is equivalent to oldElement and return the
 removed element.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 Remove the first element of the receiver which is equivalent to oldElement and return the
 removed element.
 The elements are tested in the same order in which they would be enumerated by the message
@@ -9763,12 +10134,12 @@ The behavior is undefined if an object equivalent to oldElement is not found.
 Parameters
 oldElement
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 5.7.5.4 Message:
@@ -9778,7 +10149,7 @@ remove: oldElement ifAbsent: exceptionHandler
 Synopsis
 Remove the first element of the receiver which is equivalent to oldElement. If it is not found,
 answer the result of evaluating exceptionHandler.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 The first element of the receiver which is equivalent to oldElement is removed from the receiver's
 elements. If no such element is found, answer the result of evaluating exceptionHandler with
 no parameters.
@@ -9788,16 +10159,16 @@ Parameters
 oldElement
 exceptionHandler
 Return Values
-<Object> state
-<Object> unspecified
+\<Object> state
+\<Object> unspecified
 Errors
 none
 
-<Object>
+\<Object>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
@@ -9815,7 +10186,7 @@ removeAll: oldElements
 Synopsis
 For each element in oldElements, remove the first element from the receiver which is equivalent
 to this element.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message is used to remove each element of a given collection from the receiver's elements.
 The operation is defined to be equivalent to removing each element of oldElements from the
 receiver using the #remove: message with the element as the parameter.
@@ -9823,7 +10194,7 @@ The behavior is undefined if any element of oldElements is not found.
 Parameters
 oldElements
 
-<collection>
+\<collection>
 
 uncaptured
 
@@ -9832,9 +10203,9 @@ UNSPECIFIED
 Errors:
 none
 
-5.7.6 Protocol: <Bag>
+5.7.6 Protocol: \<Bag>
 Conforms To
-<extensibleCollection>
+\<extensibleCollection>
 Description
 Represents an unordered, variable sized collection whose elements can be added or removed, but
 cannot be individually accessed by external keys. A bag is similar to a set but can contain duplicate
@@ -9848,7 +10219,7 @@ collect:
 5.7.6.1 Message Refinement: add: newElement
 Synopsis
 Add newElement to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds a newElement to the receiver. Unless specifically refined, the position of the
 newElement in the element traversal order is unspecified.
 Conformant protocols may place restrictions on the type of objects that are valid elements. Unless
@@ -9856,12 +10227,12 @@ otherwise specified, any object is acceptable.
 
 
 
-Refinement: <Bag>
+Refinement: \<Bag>
 The result is undefined if newElement is nil.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
@@ -9875,7 +10246,7 @@ add: newElement withOccurrences: count
 
 Synopsis
 Add newElement count times to the receiver's elements.
-Definition: <Bag>
+Definition: \<Bag>
 This message adds an element to the receiver multiple times. The operation is equivalent to adding
 newElement to the receiver count times using the #add: message with newElement as the
 parameter.
@@ -9884,11 +10255,11 @@ Parameters
 newElement
 count
 
-<Object>
+\<Object>
 
 captured
 
-<integer>
+\<integer>
 
 unspecified
 
@@ -9899,12 +10270,12 @@ none
 5.7.6.3 Message Refinement: addAll: newElements
 Synopsis
 Add each element of newElements to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds each element of newElements to the receiver.
 The operation is equivalent to adding each element of newElements to the receiver using the
 #add: message with the element as the parameter. The newElements are traversed in the order
 specified by the #do: message for newElements.
-Refinement: <Bag>
+Refinement: \<Bag>
 The result is undefined if newElements contains nil.
 The traversal order is unspecified.
 Parameters
@@ -9914,7 +10285,7 @@ UNSPECIFIED
 Errors
 none
 
-<collection>
+\<collection>
 
 uncaptured
 
@@ -9924,20 +10295,20 @@ uncaptured
 Synopsis
 Answer a new collection constructed by gathering the results of evaluating transformer with
 each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, transformer is evaluated with the element as the parameter.
 The results of these evaluations are collected into a new collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an objects conforming to the same
 protocol as the receiver.
-Refinement: <Bag>
+Refinement: \<Bag>
 The result is undefined if transformer evaluates to nil for any element of the receiver.
 Parameters
 transformer
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -9948,9 +10319,9 @@ If the elements of the receiver are inappropriate for use as arguments to transf
 If the result of evaluating the transformer does not conform to any element type restrictions of
 the collection to be returned.
 
-5.7.7 Protocol: <Set>
+5.7.7 Protocol: \<Set>
 Conforms To
-<extensibleCollection>
+\<extensibleCollection>
 Description
 Represents an unordered, variable sized collection whose elements can be added or removed, but
 cannot be individually accessed by external keys. A set is similar to a bag but cannot contain
@@ -9963,7 +10334,7 @@ collect:
 5.7.7.1 Message Refinement: add: newElement
 Synopsis
 Add newElement to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds a newElement to the receiver. Unless specifically refined, the position of the
 newElement in the element traversal order is unspecified.
 
@@ -9971,7 +10342,7 @@ newElement in the element traversal order is unspecified.
 
 Conformant protocols may place restrictions on the type of objects that are valid elements. Unless
 otherwise specified, any object is acceptable.
-Refinement: <Set>
+Refinement: \<Set>
 Since sets may not contain duplicates, if there is already an element in the receiver that is
 equivalent to newElement, this operation has no effect.
 The results are undefined if newElement is nil.
@@ -9981,7 +10352,7 @@ placed within the collection.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
@@ -9992,18 +10363,18 @@ none
 5.7.7.2 Message Refinement: addAll: newElements
 Synopsis
 Add each element of newElements to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds each element of newElements to the receiver.
 The operation is equivalent to adding each element of newElements to the receiver using the
 #add: message with the element as the parameter. The newElements are traversed in the order
 specified by the #do: message for newElements.
-Refinement: <Set>
+Refinement: \<Set>
 Duplicates will not be added.
 The results are undefined if newElements contains nil.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
@@ -10015,13 +10386,13 @@ none
 Synopsis
 Answer a new collection constructed by gathering the results of evaluating transformer with
 each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, transformer is evaluated with the element as the parameter.
 The results of these evaluations are collected into a new collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an objects conforming to the same
 protocol as the receiver.
-Refinement: <Set>
+Refinement: \<Set>
 
 
 
@@ -10030,10 +10401,10 @@ The results are undefined if newElements contains nil.
 Parameters
 transformer
 
-<monadicValuable>
+\<monadicValuable>
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -10044,9 +10415,9 @@ If the elements of the receiver are inappropriate for use as arguments to transf
 If the result of evaluating the transformer does not conform to any element type restrictions of
 the collection to be returned.
 
-5.7.8 Protocol: <sequencedReadableCollection>
+5.7.8 Protocol: \<sequencedReadableCollection>
 Conforms To
-<collection>
+\<collection>
 Description
 Provides protocol for reading an ordered collection of objects whose elements can be accessed
 using external integer keys. The keys are between one (1) and the number of elements in the
@@ -10094,16 +10465,16 @@ revision 1.9
 
 Synopsis
 Answer a new collection which is the concatenation of the receiver and operand.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection containing all of the receiver's elements in their original order followed by
 all of the elements of operand, in their original order. The size of the new collection is equal to the
 sum of the sizes of the receiver and operand, as defined by the #size message.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
 Parameters
-operand <sequencedReadableCollection>
+operand \<sequencedReadableCollection>
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 uncaptured
 
@@ -10114,7 +10485,7 @@ If the elements of operand are not suitable for storage in instances of the rece
 5.7.8.2 Message Refinement: = comparand
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Answer true if the receiver is equivalent to comparand. Otherwise answer
 false.
@@ -10134,7 +10505,7 @@ The equivalence of objects need not be temporally invariant. Two independent inv
 with the same receiver and operand objects may not always yield the same results. However, only
 objects whose implementation of #= is temporally invariant can be reliably stored within collections
 that use #= to discriminate objects.
-Refinement: <sequenceReadableCollection>
+Refinement: \<sequenceReadableCollection>
 Unless specifically refined, the receiver and operand are equivalent if all of the following are true:
 1. The receiver and operand are instances of the same class.
 2. They answer the same value for the #size message.
@@ -10147,10 +10518,10 @@ Element lookup is defined by the #at: message for the receiver and operand.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -10165,7 +10536,7 @@ after: target
 Synopsis
 Answer the object immediately following the first element which is equivalent to target in the
 receiver.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer the object immediately following the first element which is equivalent to target in the
 receiver. An element immediately follows another if its index is one greater than that of the other.
 The order used to determine which of the receiver's elements is the first to be equivalent to
@@ -10173,12 +10544,12 @@ target is the traversal order defined by #do: for the receiver.
 It is an error if the first occurrence of target is the last element of the receiver, or if the receiver
 does not include target.
 Parameters
-target <Object>
+target \<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 If there is no element in the receiver which is equivalent to target.
 If the element which is equal to target is the last element in the receiver.
@@ -10188,18 +10559,18 @@ at: index
 
 Synopsis
 Answer the element at the position index in the receiver.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message defines element retrieval based on an index. Answer the element at the specified
 index. The result is undefined if the receiver has no element at position index.
 Parameters
-index <integer>
+index \<integer>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
-If index is <= 0.
+If index is \<= 0.
 If index is greater than the receiver's size.
 
 NCITS J20 DRAFT
@@ -10216,7 +10587,7 @@ at: index ifAbsent: exceptionBlock
 Synopsis
 Answer the element at the position index in the receiver. If there is no position corresponding to
 index in the receiver, then answer the result of evaluating exceptionBlock.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message defines element retrieval based on an index. Answer the element at the specified
 index. If there is no position corresponding to index in the receiver, then answer the result of
 evaluating exceptionBlock.
@@ -10224,17 +10595,17 @@ Parameters
 index
 exceptionBlock
 
-<integer>
+\<integer>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<Object> state
-<ANY> unspecified
+\<Object> state
+\<ANY> unspecified
 Errors
 none
 5.7.8.6 Message:
@@ -10244,18 +10615,18 @@ before: target
 Synopsis
 Answer the object immediately preceding the first element which is equivalent to target in the
 receiver.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer the object immediately preceding the first element which is equivalent to target in the
 receiver. An element immediately precedes another if its index is one less than that of the other.
 It is an error if target is the first element of the receiver, or if the receiver does not include
 target.
 Parameters
-target <Object>
+target \<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 If there is no element in the receiver which is equivalent to target.
 If the element which is equal to target is the first element in the receiver.
@@ -10265,8 +10636,8 @@ copyFrom: start to: stop
 
 Synopsis
 Answer a new collection containing all of the elements of the receiver between the indices start
-and stop inclusive. If stop < start, the result has a size of zero.
-Definition: <sequenceReadableCollection>
+and stop inclusive. If stop \< start, the result has a size of zero.
+Definition: \<sequenceReadableCollection>
 Answer a new collection containing the specified range of elements of the receiver in their original
 order. The element at index start in the receiver is at index 1 in the new collection; the element at
 index start+1 is at index 2, etc. If stop is less than start, then the new collection is empty.
@@ -10276,26 +10647,26 @@ Parameters
 
 
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 184
 
 new
 
 Errors
-If stop >= start and (start < 1 or start > the receiver's size).
-If stop >= start and (stop < 1 or stop > the receiver's size).
+If stop >= start and (start \< 1 or start > the receiver's size).
+If stop >= start and (stop \< 1 or stop > the receiver's size).
 5.7.8.8 Message:
 
 copyReplaceAll: targetElements with: replacementElements
@@ -10303,7 +10674,7 @@ copyReplaceAll: targetElements with: replacementElements
 Synopsis
 Answer a new collection in which all subsequences of elements in the receiver matching
 targetElements are replaced in the new collection by the elements in replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with the elements of the receiver in their original order, except where a
 subsequence in the receiver matches targetElements. A subsequence in the receiver is said to
 match the elements of targetElements if:
@@ -10319,16 +10690,16 @@ reorder the result.
 Parameters
 targetElements
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 
 uncaptured
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -10343,7 +10714,7 @@ Synopsis
 Answer a new collection, containing the same elements as the receiver, but with the elements in
 the receiver between start and stop inclusive replaced by the elements in
 replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. The size of replacementElements (as
 defined by #size) need not be the same as the number of elements being replaced. There are
 three cases:
@@ -10367,29 +10738,29 @@ reorder the result.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 
 uncaptured
 
 Return Values
-<RECEIVER> new
+\<RECEIVER> new
 Errors
 The elements in replacementElements are not suitable for storage in instances of the receiver's
 class.
 start > receiver's size + 1
-start < 1
+start \< 1
 stop > receiver's size
-stop < start - 1
+stop \< start - 1
 5.7.8.10 Message:
 
 copyReplaceFrom: start to: stop withObject: replacementElement
@@ -10397,7 +10768,7 @@ copyReplaceFrom: start to: stop withObject: replacementElement
 Synopsis
 Answer a new collection conforming to the same protocols as the receiver, in which the elements of
 the receiver between start and stop inclusive have been replaced with replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. There are three cases:
 1. If stop = start - 1 , and start is less than or equal to the size of the receiver, then
 replacementElement is inserted between the elements at index stop and start. None of the
@@ -10412,30 +10783,30 @@ message to reorder the result.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElement <Object>
+replacementElement \<Object>
 
 uncaptured
 
 
 
 Return Values
-<RECEIVER> new
+\<RECEIVER> new
 Errors
 The replacementElement is not suitable for storage in instances of the receiver's class.
 start > receiver's size + 1
-start < 1
+start \< 1
 stop > receiver's size
-stop < start - 1
+stop \< start - 1
 5.7.8.11 Message:
 
 copyReplacing: targetElement withObject: replacementElement
@@ -10443,7 +10814,7 @@ copyReplacing: targetElement withObject: replacementElement
 Synopsis
 Answer a new collection conforming to the same protocols as the receiver, in which any
 occurrences of targetElement are replaced by replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 A new collection is created and initialized with the same elements as the receiver in the same
 order, except that any objects in the receiver which are equivalent to targetElement are
 replaced in the new collection by replacementElement.
@@ -10452,16 +10823,16 @@ reorder the result.
 Parameters
 targetElement
 
-<Object>
+\<Object>
 
 uncaptured
 
-replacementElement <Object>
+replacementElement \<Object>
 
 uncaptured
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -10473,7 +10844,7 @@ copyWith: newElement
 
 Synopsis
 Answer a new collection containing the same elements as the receiver, with newElement added.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with size one greater than the size of the receiver containing the elements
 of the receiver and newElement placed at the end.
 Unless specifically refined, this message is defined to answer an instance of the same class as the
@@ -10483,10 +10854,10 @@ reorder the result.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -10504,16 +10875,16 @@ copyWithout: oldElement
 Synopsis
 Answer a new collection, containing the same elements as the receiver in their original order
 omitting any elements equivalent to oldElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with all of the elements of the receiver that are not equivalent to
 oldElement, in their original order.
 Parameters
 oldElement
 
-<Object>
+\<Object>
 
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -10527,18 +10898,18 @@ do: operation
 
 Synopsis
 Evaluate operation with each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, operation is evaluated with the element as the parameter.
 Unless specifically refined, the elements are not traversed in a particular order. Each element is
 visited exactly once. Conformant protocols may refine this message to specify a particular ordering.
-Refinement: <sequenceReadableCollection>
+Refinement: \<sequenceReadableCollection>
 The operation is evaluated with each element of the receiver in indexed order starting at 1. The
 first element is at index 1, the second at index 2, etc. The index of the last element is equal to the
 receiver's size.
 Parameters
 operation
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -10553,22 +10924,22 @@ findFirst: discriminator
 Synopsis
 Answer the index of the first element of the receiver which causes discriminator to evaluate to
 true when the element is used as the parameter. Answer zero (0) if no such element is found.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Answer the index of the first element which results in an evaluation of true; no further
 elements are considered. If no such element exists in the receiver, answer 0.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 Return Values
 
 uncaptured
 
 
 
-<integer> unspecified
+\<integer> unspecified
 Errors
-If an evaluation of discriminator results in an object that does not conform to <boolean> .
+If an evaluation of discriminator results in an object that does not conform to \<boolean> .
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
 5.7.8.16 Message:
 
@@ -10577,21 +10948,21 @@ findLast: discriminator
 Synopsis
 Answer the index of the last element of the receiver which causes discriminator to evaluate to
 true when the element is used as the parameter. Answer zero (0) if no such element is found.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 For each element of the receiver, in reverse order starting with the last, discriminator is
 evaluated with the element as the parameter. Answer the index of the first element which results in
 an evaluation of true; no further elements are considered. Answer 0 if no such element is found in
 the receiver.
 The elements are traversed in the order specified by the #reverseDo: message for the receiver.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
-If an evaluation of discriminator results in an object that does not conform to <boolean> .
+If an evaluation of discriminator results in an object that does not conform to \<boolean> .
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
 5.7.8.17 Message:
 
@@ -10599,11 +10970,11 @@ first
 
 Synopsis
 Answer the first element of the receiver.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer the element at index 1 in the receiver. The result is undefined if the receiver is empty
 (answers true to the #isEmpty message).
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 5.7.8.18 Message:
@@ -10613,25 +10984,25 @@ from: start to: stop do: operation
 Synopsis
 For those elements of the receiver between positions start and stop, inclusive, evaluate
 operation with each element of the receiver.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 For each index in the range start to stop, the operation is evaluated with the element at that
 index as its argument.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
 operation
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -10641,7 +11012,7 @@ Return Values
 UNSPECIFIED
 Errors
 If the elements of the receiver are inappropriate for use as arguments to operation.
-start < 1
+start \< 1
 stop > receiver's size
 5.7.8.19 Message:
 
@@ -10651,25 +11022,25 @@ Synopsis
 For those elements of the receiver between positions start and stop, inclusive, evaluate
 operation with an element of the receiver as the first argument and the element's position (index)
 as the second.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 For each index in the range start to stop, the operation is evaluated with the index as the first
 argument and the element at that index as the second argument.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
 operation
 
-<dyadicValuable>
+\<dyadicValuable>
 
 uncaptured
 
@@ -10677,7 +11048,7 @@ Return Values
 UNSPECIFIED
 Errors
 If the elements of the receiver or its indices are inappropriate for use as arguments to operation.
-start < 1
+start \< 1
 stop > receiver's size
 5.7.8.20 Message:
 
@@ -10686,17 +11057,17 @@ indexOf: target
 Synopsis
 Answer the index of the first element of the receiver which is equivalent to target. Answer zero
 (0) if no such element is found.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer the index of the first element which is equivalent to target; no further elements are
 considered. Answer 0 if no such element exists in the receiver.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Parameters
-target <Object>
+target \<Object>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.7.8.21 Message:
@@ -10708,7 +11079,7 @@ indexOf: target ifAbsent: exceptionHandler
 
 Answer the index of the first element of the receiver which is equivalent to target. Answer the
 result of evaluating exceptionHandler with no parameters if no such element is found.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer the index of the first element which is equivalent to target; no further elements are
 considered. Answer exceptionHandler evaluated with no parameters if no such element is
 found.
@@ -10717,17 +11088,17 @@ Parameters
 target
 exceptionHandler
 
-<Object>
+\<Object>
 
 uncaptured
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<integer> unspecified
-<Object> unspecified
+\<integer> unspecified
+\<Object> unspecified
 Errors
 none
 5.7.8.22 Message:
@@ -10738,7 +11109,7 @@ Synopsis
 Answer the index of the first element of the receiver which is the start of a subsequence which
 matches targetSequence. Start searching at index start in the receiver. Answer 0 if no such
 subsequence is found.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Each subsequence of the receiver starting at index start is checked for a match with
 targetSequence. To match, each element of a subsequence of the receiver must be equivalent
 to the corresponding element of targetSequence. Answer the index of the first element which
@@ -10749,18 +11120,18 @@ Parameters
 targetSequence
 start
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
-start < 1
+start \< 1
 start > the receiver's size
 5.7.8.23 Message:
 exceptionHandler
@@ -10771,7 +11142,7 @@ Synopsis
 Answer the index of the first element of the receiver which is the start of a subsequence which
 matches targetSequence. Start searching at index start in the receiver. Answer the result of
 evaluating exceptionHandler with no parameters if no such subsequence is found.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 
 
 
@@ -10785,27 +11156,27 @@ The elements are traversed in the order specified by the #do: message for the re
 Parameters
 targetSequence
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 exceptionHandler
 
-<niladicValuable>
+\<niladicValuable>
 
 uncaptured
 
 Return Values
-<integer> unspecified
-<Object> unspecified
+\<integer> unspecified
+\<Object> unspecified
 Errors
-start < 1
+start \< 1
 start > the receiver's size
 5.7.8.24 Message:
 
@@ -10814,7 +11185,7 @@ keysAndValuesDo: operation
 Synopsis
 Evaluate operation with the index of each element of the receiver, in order, together with the
 element itself.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 The operation is evaluated with the index of each element of the receiver as the first argument
 and the element itself as the second argument. Evaluation is in indexed order starting at 1. The first
 element is at index 1, the second at index 2, etc. The index of the last element is equal to the
@@ -10822,7 +11193,7 @@ receiver's size.
 Parameters
 operation
 
-<dyadicValuable>
+\<dyadicValuable>
 
 uncaptured
 
@@ -10836,11 +11207,11 @@ last
 
 Synopsis
 Answer the last element of the receiver.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer the last element of the receiver, the element at the index equal to the receiver's size. The
 result is unspecified if the receiver is empty (answers true to the #isEmpty message).
 Return Values
-<Object> state
+\<Object> state
 Errors
 none
 
@@ -10857,7 +11228,7 @@ reverse
 
 Synopsis
 Answer a collection with the elements of the receiver arranged in reverse order.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a collection conforming to the same protocols as the receiver, but with its elements
 arranged in reverse order.
 This operation is equivalent to:
@@ -10866,7 +11237,7 @@ This operation is equivalent to:
 adding each element of the receiver to the new collection;
 3. Answer the new collection.
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 new
 
@@ -10879,14 +11250,14 @@ reverseDo: operation
 Synopsis
 Evaluate operation with each element of the receiver in the reverse of the receiver's standard
 traversal order.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 For each element of the receiver, evaluate operation with the element as the parameter. The
 elements are traversed in the opposite order from the #do: message. Each element is visited
 exactly once.
 Parameters
 operation
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -10901,18 +11272,18 @@ with: otherCollection do: operation
 Synopsis
 Evaluate operation with each element of the receiver and the corresponding element of
 otherCollection as parameters.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 For each element of the receiver and the corresponding element of otherCollection, evaluate
 operation with the receiver's element as the first parameter, and the element of
 otherCollection as the second parameter. The receiver and otherCollection must have
 the same size.
 The elements of the receiver and otherCollection are traversed in indexed order starting at 1.
 The operation is first evaluated with the elements at index 1 in the two
-<sequencedReadableCollection>s, then index 2, etc.
+\<sequencedReadableCollection>s, then index 2, etc.
 Parameters
 otherCollection
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
@@ -10922,7 +11293,7 @@ operation
 
 December, 1997
 revision 1.9
-<dyadicValuable>
+\<dyadicValuable>
 
 193
 
@@ -10935,9 +11306,9 @@ If the elements of the receiver or the elements of otherCollection are inappropr
 arguments to operation.
 If the receiver's size is not equal to the size of otherCollection.
 
-5.7.9 Protocol: <Interval>
+5.7.9 Protocol: \<Interval>
 Conforms To
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 Description
 Represents a collection whose elements are numbers which form an arithmetic progression.
 Elements cannot be accessed externally.
@@ -10958,7 +11329,7 @@ select:
 5.7.9.1 Message Refinement: , operand
 Synopsis
 Answer a new collection which is the concatenation of the receiver and operand.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection containing all of the receiver's elements in their original order followed by
 all of the elements of operand, in their original order. The size of the new collection is equal to the
 sum of the sizes of the receiver and operand, as defined by the #size message.
@@ -10966,50 +11337,50 @@ Collections that enforce an ordering on their elements are permitted to refine t
 reorder the result.
 Unless specifically refined, this message is defined to answer an instance of the same type as the
 receiver.
-Refinement: <Interval>
+Refinement: \<Interval>
 Answer a collection containing the elements of operand appended to the elements of the receiver.
 The enumeration order defined by the #do: message is used. The return type is generalized to
-<sequencedReadableCollection>.
+\<sequencedReadableCollection>.
 
 
-operand <sequencedReadableCollection>
+operand \<sequencedReadableCollection>
 
 194
 
 uncaptured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 5.7.9.2 Message Refinement: collect: transformer
 Synopsis
 Answer a new collection constructed by gathering the results of evaluating transformer with
 each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, transformer is evaluated with the element as the parameter.
 The results of these evaluations are collected into a new collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an objects conforming to the same
 protocol as the receiver.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 transformer
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 If the elements of the receiver are inappropriate for use as arguments to transformer.
 5.7.9.3 Message Refinement: copyFrom: start to: stop
 Synopsis
 Answer a new collection containing all of the elements of the receiver between the indices start
-and stop inclusive. If stop < start, the result has a size of zero.
-Definition: <sequenceReadableCollection>
+and stop inclusive. If stop \< start, the result has a size of zero.
+Definition: \<sequenceReadableCollection>
 Answer a new collection containing the specified range of elements of the receiver in their original
 order. The element at index start in the receiver is at index 1 in the new collection; the element at
 index start+1 is at index 2, etc. If stop is less than start, then the new collection is empty.
@@ -11017,34 +11388,34 @@ Otherwise, the size of the new collection is the maximum of (stop - start + 1) a
 The parameters start and stop must be positive.
 Unless specifically refined, this message is defined to answer an instance of the same class as the
 receiver's class.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 
 
 
 Errors
-If start < 1 or start > self size.
-If stop < 1 or stop > self size.
+If start \< 1 or start > self size.
+If stop \< 1 or stop > self size.
 5.7.9.4 Message Refinement: copyReplaceAll: targetElements with: replacementElements
 Synopsis
 Answer a new collection in which all subsequences of elements in the receiver matching
 targetElements are replaced in the new collection by the elements in replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with the elements of the receiver in their original order, except where a
 subsequence in the receiver matches targetElements. A subsequence in the receiver is said to
 match the elements of targetElements if:
@@ -11057,21 +11428,21 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 targetElements
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 
 unspecified
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 If any of the elements in replacementElements is inappropriate for storage in instances of the
 result.
@@ -11080,7 +11451,7 @@ Synopsis
 Answer a new collection, containing the same elements as the receiver, but with the elements in
 the receiver between start and stop inclusive replaced by the elements in
 replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. The size of replacementElements (as
 defined by #size) need not be the same as the number of elements being replaced. There are
 three cases:
@@ -11103,34 +11474,34 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver's class.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 
 unspecified
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 The elements in replacementElements are not suitable for storage in instances of the result.
 5.7.9.6 Message Refinement: copyReplaceFrom: start to: stop withObject: replacementElement
 Synopsis
 Answer a new collection conforming to the same protocols as the receiver, in which the elements of
 the receiver between start and stop inclusive have been replaced with replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. There are three cases:
 1. If stop = start - 1 , and start is less than or equal to the size of the receiver, then
 replacementElement is inserted between the elements at index stop and start. None of
@@ -11144,36 +11515,36 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver's class.
 Collections that by definition enforce an ordering on their elements are permitted to refine this
 message to reorder the result.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
- <Object>
+ \<Object>
 
 197
 
 captured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 5.7.9.7 Message Refinement: copyReplacing: targetElement withObject: replacementElement
 Synopsis
 Answer a new collection conforming to the same protocols as the receiver, in which any
 occurrences of targetElement are replaced by replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 A new collection is created and initialized with the same elements as the receiver in the same
 order, except that any objects in the receiver which are equivalent to targetElement are
 replaced in the new collection by replacementElement.
@@ -11181,43 +11552,43 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 targetElement
 
-<Object>
+\<Object>
 
-replacementElement <Object>
+replacementElement \<Object>
 
 uncaptured
 captured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 5.7.9.8 Message Refinement: copyWith: newElement
 Synopsis
 Answer a new collection containing the same elements as the receiver, with newElement added.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with size one greater than the size of the receiver containing the elements
 of the receiver and newElement placed at the end.
 Unless specifically refined, this message is defined to answer an instance of the same class as the
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 
 
@@ -11227,22 +11598,22 @@ none
 Synopsis
 Answer a new collection, containing the same elements as the receiver in their original order
 omitting any elements equivalent to oldElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with all of the elements of the receiver that are not equivalent to
 oldElement, in their original order.
 Unless specifically refined, this message is defined to answer an instance of the same type as the
 receiver.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Parameters
 oldElement
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 5.7.9.10 Message Refinement:
@@ -11252,25 +11623,25 @@ reject: discriminator
 Synopsis
 Answer a new collection which excludes the elements in the receiver which cause
 discriminator to evaluate to true.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Each element which causes discriminator to evaluate to false is added to the new
 collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an object conforming to the same
 protocol as the receiver.
-Refinement: <Interval>
-The return type is refined to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is refined to \<sequencedReadableCollection>.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 
 uncaptured
 
 Return Values
-<sequenceReadableCollection> new
+\<sequenceReadableCollection> new
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 5.7.9.11 Message Refinement:
 
@@ -11281,7 +11652,7 @@ Answer a collection with the elements of the receiver arranged in reverse order.
 
 
 
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a collection conforming to the same protocols as the receiver, but with its elements
 arranged in reverse order.
 This operation is equivalent to:
@@ -11289,10 +11660,10 @@ This operation is equivalent to:
 2. Traverse the elements of the receiver in the order specified by the #reverseDo: message,
 adding each element of the receiver to the new collection;
 3. Answer the new collection.
-Refinement: <Interval>
-The return type is generalized to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is generalized to \<sequencedReadableCollection>.
 Return Values
-<sequenceReadableCollection> new
+\<sequenceReadableCollection> new
 Errors
 none
 5.7.9.12 Message Refinement:
@@ -11302,39 +11673,39 @@ select: discriminator
 Synopsis
 Answer a new collection which contains the elements in the receiver which cause
 discriminator to evaluate to true.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, discriminator is evaluated with the element as the
 parameter. Each element which causes discriminator to evaluate to true is added to the new
 collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an objects conforming to the same
 protocol as the receiver.
-Refinement: <Interval>
-The return type is refined to <sequencedReadableCollection>.
+Refinement: \<Interval>
+The return type is refined to \<sequencedReadableCollection>.
 Parameters
-discriminator <monadicValuable>
+discriminator \<monadicValuable>
 
 uncaptured
 
 Return Values
-<sequenceReadableCollection> new
+\<sequenceReadableCollection> new
 Errors
 If the elements of the receiver are inappropriate for use as arguments to discriminator.
-If discriminator evaluates to an object that does not conform to the protocol <boolean> for any
+If discriminator evaluates to an object that does not conform to the protocol \<boolean> for any
 element of the receiver.
 
 
 
-5.7.10 Protocol: <readableString>
+5.7.10 Protocol: \<readableString>
 Conforms To
-<magnitude> <sequencedReadableCollection>
+\<magnitude> \<sequencedReadableCollection>
 Description
 Provides protocol for string operations such as copying, comparing, replacing, converting, indexing,
-and matching. All objects that conform to the protocol <readableString> are comparable.
+and matching. All objects that conform to the protocol \<readableString> are comparable.
 Messages
 ,
-<
-<=
+\<
+\<=
 >
 >=
 asLowercase
@@ -11354,7 +11725,7 @@ subStrings:
 
 Synopsis
 Answer a new collection which is the concatenation of the receiver and operand.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection containing all of the receiver's elements in their original order followed by
 all of the elements of operand, in their original order. The size of the new collection is equal to the
 sum of the sizes of the receiver and operand, as defined by the #size message.
@@ -11362,26 +11733,26 @@ Collections that enforce an ordering on their elements are permitted to refine t
 reorder the result.
 Unless specifically refined, this message is defined to answer an instance of the same type as the
 receiver.
-Refinement: <readableString>
-The parameter operand must be a <readableString>.
+Refinement: \<readableString>
+The parameter operand must be a \<readableString>.
 Parameters
 operand
 
-<readableString>
+\<readableString>
 
 uncaptured
 
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 5.7.10.2 Message Refinement:
 
-< operand
+\< operand
 
 Synopsis
 Answer true if the receiver is less than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 
 
 
@@ -11390,15 +11761,15 @@ Answer false otherwise.
 The result is undefined if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <readableString>
+Refinement: \<readableString>
 Answer true if the receiver collates before operand, according to the implementation defined
 collating algorithm. Answer false otherwise.
 Parameters
 operand
 Return Values
-<boolean>
+\<boolean>
 
-<readableString>
+\<readableString>
 
 uncaptured
 
@@ -11408,23 +11779,23 @@ Errors
 none
 5.7.10.3 Message Refinement:
 
-<= operand
+\<= operand
 
 Synopsis
 Answer true if the receiver is less than or equal to operand. Answer false otherwise.
-Definition: <magnitude>
-Answer true if the receiver would answer true to either the #< or #= message with operand as the
+Definition: \<magnitude>
+Answer true if the receiver would answer true to either the #\< or #= message with operand as the
 parameter. Answer false otherwise.
 The result is undefined if the receiver and operand are not comparable.
-Refinement: <readableString>
-Answer true if the receiver answers true to either the #< or #sameAs: messages with operand as
+Refinement: \<readableString>
+Answer true if the receiver answers true to either the #\< or #sameAs: messages with operand as
 the parameter. Answer false otherwise.
 Parameters
 operand
 Return Values
-<boolean>
+\<boolean>
 
-<readableString>
+\<readableString>
 
 uncaptured
 
@@ -11438,13 +11809,13 @@ none
 
 Synopsis
 Answer true if the receiver is greater than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is greater than operand with respect to the natural ordering. Answer
 false otherwise.
 The result is undefined if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <readableString>
+Refinement: \<readableString>
 Answer true if the receiver collates after operand, according to the implementation defined
 collating algorithm. Answer false otherwise.
 Parameters
@@ -11453,12 +11824,12 @@ Parameters
 of ANSI Smalltalk Standard
 operand
 Return Values
-<boolean>
+\<boolean>
 
 December, 1997
 revision 1.9
 
-<readableString>
+\<readableString>
 
 202
 
@@ -11474,20 +11845,20 @@ none
 
 Synopsis
 Answer true if the receiver is greater than or equal to operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver answers true to either the #> or #= message with operand as the
 parameter. Answer false otherwise.
 The result is undefined if the receiver and operand are not comparable.
-Refinement: <readableString>
+Refinement: \<readableString>
 Answer true if the receiver answers true to either the #> or #sameAs: messages with operand as
 the parameter. Answer false otherwise.
 Parameters
 operand
 
-<readableString>
+\<readableString>
 
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -11502,12 +11873,12 @@ asLowercase
 Synopsis
 Answer a new string which contains all of the elements of the receiver converted to their lower case
 equivalents.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a new string which contains all of the elements of the receiver converted to their lower case
 equivalents. Individual element of the string are converted as if they were receivers of the message
 #asLowercase.
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 5.7.10.7 Message:
@@ -11516,10 +11887,10 @@ asString
 
 Synopsis
 Answer a string containing the same characters as the receiver.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a string containing the same characters as the receiver, in their original order.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 
 
@@ -11531,10 +11902,10 @@ asSymbol
 
 Synopsis
 Answer a symbol containing the same characters as the receiver.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a symbol containing the same characters as the receiver, in their original order.
 Return Values
-<symbol>
+\<symbol>
 
 unspecified
 
@@ -11547,12 +11918,12 @@ asUppercase
 Synopsis
 Answer a new string which contains all of the elements of the receiver converted to their upper
 case equivalents.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a new string which contains all of the elements of the receiver converted to their upper
 case equivalents. Individual element of the string are converted as if they were receivers of the
 message #asUppercase.
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 5.7.10.10 Message Refinement:
@@ -11562,7 +11933,7 @@ copyReplaceAll: targetElements with: replacementElements
 Synopsis
 Answer a new collection in which all subsequences of elements in the receiver matching
 targetElements are replaced in the new collection by the elements in replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with the elements of the receiver in their original order, except where a
 subsequence in the receiver matches targetElements. A subsequence in the receiver is said to
 match the elements of targetElements if:
@@ -11575,23 +11946,23 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <readableString>
+Refinement: \<readableString>
 The elements of targetElements and replacementElements must conform to the protocol
-<character> and be valid elements for the result.
+\<character> and be valid elements for the result.
 Parameters
 
 
 
-<sequenceReadableCollection> uncaptured
+\<sequenceReadableCollection> uncaptured
 
 replacementElements
 
-<sequenceReadableCollection> unspecified
+\<sequenceReadableCollection> unspecified
 
 204
 
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 5.7.10.11 Message Refinement:
@@ -11602,7 +11973,7 @@ Synopsis
 Answer a new collection, containing the same elements as the receiver, but with the elements in
 the receiver between start and stop inclusive replaced by the elements in
 replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. The size of replacementElements (as
 defined by #size) need not be the same as the number of elements being replaced. There are
 three cases:
@@ -11622,24 +11993,24 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver's class.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <readableString>
+Refinement: \<readableString>
 The elements of replacementElements must be characters.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElements <sequenceReadableCollection> unspecified
+replacementElements \<sequenceReadableCollection> unspecified
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 
@@ -11653,7 +12024,7 @@ copyReplacing: targetElement withObject:
 Synopsis
 Answer a new collection conforming to the same protocols as the receiver, in which any
 occurrences of targetElement are replaced by replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 A new collection is created and initialized with the same elements as the receiver in the same
 order, except that any objects in the receiver which are equivalent to targetElement are
 replaced in the new collection by replacementElement.
@@ -11661,20 +12032,20 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <readableString>
+Refinement: \<readableString>
 The parameters targetElement and replacementElement must be characters.
 Parameters
 targetElement
 
-<character>
+\<character>
 
-replacementElement <character>
+replacementElement \<character>
 
 uncaptured
 captured
 
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 5.7.10.13 Message Refinement:
@@ -11683,24 +12054,24 @@ copyWith: newElement
 
 Synopsis
 Answer a new collection containing the same elements as the receiver, with newElement added.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with size one greater than the size of the receiver containing the elements
 of the receiver and newElement placed at the end.
 Unless specifically refined, this message is defined to answer an instance of the same class as the
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <readableString>
+Refinement: \<readableString>
 The parameter newElement must be characters.
 Parameters
 newElement
 
-<character>
+\<character>
 
 captured
 
 Return Values
-<readableString> new
+\<readableString> new
 Errors
 none
 5.7.10.14 Message:
@@ -11712,7 +12083,7 @@ Answer true if the receiver collates the same as operand. Answer false otherwise
 
 
 
-Definition: <readableString>
+Definition: \<readableString>
 Answer true if the receiver collates the same as operand, according to the implementation-defined
 collating algorithm. Answer false otherwise.
 This message differs from the #= message because two strings which are not equal can collate the
@@ -11720,10 +12091,10 @@ same, and because the receiver and operand do not need to conform to the same pr
 Parameters
 operand
 
-<readableString>
+\<readableString>
 
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -11738,24 +12109,24 @@ subStrings: separators
 Synopsis
 Answer an array containing the substrings in the receiver separated by the elements of
 separators.
-Definition: <readableString>
+Definition: \<readableString>
 Answer an array of strings. Each element represents a group of characters separated by any of the
 characters in the list of separators.
 Parameters
 separators
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
 Return Values
-<Array> unspecified
+\<Array> unspecified
 Errors
 If the list of separators contains anything other than characters.
 
-5.7.11 Protocol: <symbol>
+5.7.11 Protocol: \<symbol>
 Conforms To
-<readableString>
+\<readableString>
 Description
 Represents an ordered, variable sized and immutable collection of characters. There is a unique
 object conforming to this protocol for every possible sequence of characters. Symbols are identity
@@ -11772,12 +12143,12 @@ asString
 
 Synopsis
 Answer a string containing the same characters as the receiver.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a string containing the same characters as the receiver, in their original order.
-Refinement: <symbol>
+Refinement: \<symbol>
 Answer an object that is not identical to the receiver
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 
@@ -11787,12 +12158,12 @@ asSymbol
 
 Synopsis
 Answer a symbol containing the same characters as the receiver.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a symbol containing the same characters as the receiver, in their original order.
-Refinement: <symbol>
+Refinement: \<symbol>
 Answer the receiver.
 Return Values
-<RECEIVER>
+\<RECEIVER>
 
 unspecified
 
@@ -11801,9 +12172,9 @@ none
 See Also
 #asString
 
-5.7.12 Protocol: <sequencedCollection>
+5.7.12 Protocol: \<sequencedCollection>
 Conforms To
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 Description
 Provides protocol for writing to an ordered collection of objects, whose elements can be accessed
 using external integer keys.
@@ -11828,7 +12199,7 @@ at: index put: newElement
 
 Synopsis
 Replace the element in the receiver at index with newElement. Answer newElement.
-Definition: <sequencedCollection>
+Definition: \<sequencedCollection>
 This message sets one of the receiver's elements based on index. The newElement is stored at
 index in the receiver's elements, replacing any previously stored object. Subsequent retrievals at
 this index will answer newElement.
@@ -11836,18 +12207,18 @@ Parameters
 index
 newElement
 
-<integer>
+\<integer>
 
 uncaptured
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
-If index < 0.
+If index \< 0.
 If index > the receiver's size.
 If newElement does not conform to any element type restrictions of the receiver.
 5.7.12.2 Message:
@@ -11856,7 +12227,7 @@ atAll: indices put: newElement
 
 Synopsis
 Replace the elements in the receiver specified by indices with newElement.
-Definition: <sequencedCollection>
+Definition: \<sequencedCollection>
 The newElement is stored at each index in the receiver specified by the elements of the indices
 collection, replacing any previously stored objects at these indices. Subsequent retrievals at these
 indices will answer newElement.
@@ -11866,19 +12237,19 @@ Parameters
 indices
 newElement
 
-<collection>
+\<collection>
 
 uncaptured
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
 UNSPECIFIED
 Errors
-If any element of indices does not conform to <integer>.
-If any element in indices is <= 0 or greater than the receiver's size.
+If any element of indices does not conform to \<integer>.
+If any element in indices is \<= 0 or greater than the receiver's size.
 If newElement does not conform to any element type restrictions of the receiver.
 5.7.12.3 Message:
 
@@ -11886,7 +12257,7 @@ atAllPut: newElement
 
 Synopsis
 Replace all the elements in the receiver with newElement.
-Definition: <sequencedCollection>
+Definition: \<sequencedCollection>
 The newElement is stored at each index in the receiver, replacing any previously stored objects.
 This message is equivalent to storing newElement in the receiver at each index from 1 to the
 receiver's size using the #at:put: message for the receiver.
@@ -11899,7 +12270,7 @@ newElement
 December, 1997
 revision 1.9
 
-<Object>
+\<Object>
 
 209
 
@@ -11916,7 +12287,7 @@ replaceFrom: start to: stop with: replacementElements
 Synopsis
 Replace the elements of the receiver between positions start and stop inclusive, with the
 elements of replacementElements in their original order. Answer the receiver.
-Definition: <sequencedCollection>
+Definition: \<sequencedCollection>
 The first element of replacementElements is stored in the receiver at position start, the
 second at position start + 1, etc. Any previously stored elements at these positions are replaced.
 If the size of replacementElements is not equal to stop - start + 1, the result of sending this
@@ -11924,26 +12295,26 @@ message is unspecified.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 
 unspecified
 
 Return Values
 UNSPECIFIED
 Errors
-If start < 1 or start > the receiver's size.
-If stop < 1 or stop > the receiver's size.
-If replacementElements size <> stop - start + 1.
+If start \< 1 or start > the receiver's size.
+If stop \< 1 or stop > the receiver's size.
+If replacementElements size \<> stop - start + 1.
 5.7.12.5 Message:
 replacementStart
 
@@ -11953,7 +12324,7 @@ Synopsis
 Replace the elements of the receiver between positions start and stop inclusive with the
 elements of replacementElements, in their original order, starting at position
 replacementStart. Answer the receiver.
-Definition: <sequencedCollection>
+Definition: \<sequencedCollection>
 The element at position replacementStart in replacementElements is stored in the receiver
 at position start; the element at replacementStart + 1 is stored at position start + 1; etc.
 Any previously stored elements at these positions in the receiver are replaced.
@@ -11962,20 +12333,20 @@ result of sending this message is unspecified.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 replacementStart
 
-<integer>
+\<integer>
 
 uncaptured
 
@@ -11986,10 +12357,10 @@ unspecified
 Return Values
 UNSPECIFIED
 Errors
-If start < 1 or start > the receiver's size.
-If stop < 1 or stop > the receiver's size.
-If replacementStart < 1 or replacementStart > replacementElements size.
-If replacementElements size - replacementStart + 1 < stop - start + 1.
+If start \< 1 or start > the receiver's size.
+If stop \< 1 or stop > the receiver's size.
+If replacementStart \< 1 or replacementStart > replacementElements size.
+If replacementElements size - replacementStart + 1 \< stop - start + 1.
 5.7.12.6 Message:
 
 replaceFrom: start to: stop withObject: replacementElement
@@ -11997,39 +12368,39 @@ replaceFrom: start to: stop withObject: replacementElement
 Synopsis
 Replace the elements of the receiver between start and stop inclusive with
 replacementElement. Answer the receiver.
-Definition: <sequencedCollection>
+Definition: \<sequencedCollection>
 Replace the elements of the receiver between start and stop inclusive with
 replacementElement. Answer the receiver.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElement <Object>
+replacementElement \<Object>
 
 captured
 
 Return Values
 UNSPECIFIED
 Errors
-If start < 1 or start > the receiver's size.
-If stop < 1 or stop > the receiver's size.
+If start \< 1 or start > the receiver's size.
+If stop \< 1 or stop > the receiver's size.
 
-5.7.13 Protocol: <String>
+5.7.13 Protocol: \<String>
 Conforms To
-<readableString> <sequencedCollection>
+\<readableString> \<sequencedCollection>
 Description
 Provides protocol for string operations such as copying, storing, comparing, replacing, converting,
-indexing, and matching. The element type of <String> is <Character>. The range of codePoints of
-characters that may be elements of a <String> is implementation defined.
+indexing, and matching. The element type of \<String> is \<Character>. The range of codePoints of
+characters that may be elements of a \<String> is implementation defined.
 Messages
 asString
 
@@ -12038,29 +12409,29 @@ asString
 5.7.13.1 Message Refinement: asString
 Synopsis
 Answer a string containing the same characters as the receiver.
-Definition: <readableString>
+Definition: \<readableString>
 Answer a string containing the same characters as the receiver, in their original order.
-Refinement: <String>
+Refinement: \<String>
 Answer the receiver.
 Return Values
-<String> unspecified
+\<String> unspecified
 Errors
 none
 
-5.7.14 Protocol: <Array>
+5.7.14 Protocol: \<Array>
 Conforms To
-<sequencedCollection>
+\<sequencedCollection>
 Description
 Represents a keyed collection of objects which can be accessed externally using sequential integer
 keys. The index of the first element is one (1).
 Messages
 none
 
-5.7.15 Protocol: <ByteArray>
+5.7.15 Protocol: \<ByteArray>
 Conforms To
-<sequencedCollection>
+\<sequencedCollection>
 Description
-Represents a keyed collection whose element type is <integer> and is limited to the range 0 to 255,
+Represents a keyed collection whose element type is \<integer> and is limited to the range 0 to 255,
 inclusive. The elements can be accessed externally using sequential integer keys. The index of the
 first element is one (1).
 Messages
@@ -12068,9 +12439,9 @@ none
 
 
 
-5.7.16 Protocol: <sequencedContractibleCollection>
+5.7.16 Protocol: \<sequencedContractibleCollection>
 Conforms To
-<collection>
+\<collection>
 Description
 Provides protocol for removing elements from an ordered collection of objects, whose elements
 can be accessed using external integer keys.
@@ -12087,17 +12458,17 @@ removeAtIndex: index
 
 Synopsis
 Remove the element of the receiver at position index, and answer the removed element.
-Definition: <sequenceContractibleCollection>
+Definition: \<sequenceContractibleCollection>
 The element of the receiver which is at position index is removed from the receiver's elements.
 Answer the removed element.
 index must be a positive integer less than or equal to the receiver's size.
 Parameters
-index <integer>
+index \<integer>
 
 uncaptured
 
 Return Values
-<Object> unspecified
+\<Object> unspecified
 Errors
 If index is 0 or negative.
 If index is greater than the receiver's size.
@@ -12107,12 +12478,12 @@ removeFirst
 
 Synopsis
 Remove and answer the first element of the receiver.
-Definition: <sequenceContractibleCollection>
+Definition: \<sequenceContractibleCollection>
 The first element of the receiver is removed and answered. The element (if any) that was
 previously the second element in the traversal order now becomes the first, and the receiver has
 one fewer elements.
 Return Values
-<Object> state
+\<Object> state
 Errors
 The receiver is empty
 5.7.16.3 Message:
@@ -12121,7 +12492,7 @@ removeLast
 
 Synopsis
 Remove and answer the last element of the receiver.
-Definition: <sequenceContractibleCollection>
+Definition: \<sequenceContractibleCollection>
 
 
 
@@ -12129,16 +12500,16 @@ The last element of the receiver is removed and answered. The element (if any) t
 previously the second from last element in the traversal order now becomes the last, and the
 receiver has one fewer elements.
 Return Values
-<Object> state
+\<Object> state
 Errors
 The receiver is empty
 
-5.7.17 Protocol: <SortedCollection>
+5.7.17 Protocol: \<SortedCollection>
 Conforms To
-<extensibleCollection> <sequencedContractibleCollection> <sequencedReadableCollection>
+\<extensibleCollection> \<sequencedContractibleCollection> \<sequencedReadableCollection>
 Description
 Represents a variable sized collection of objects whose elements are ordered based on a sort
-order. The sort order is specified by a <dyadicValuable> called the sort block. Elements may be
+order. The sort order is specified by a \<dyadicValuable> called the sort block. Elements may be
 added, removed or inserted, and can be accessed using external integer keys.
 Messages
 ,
@@ -12159,7 +12530,7 @@ sortBlock:
 
 Synopsis
 Answer a new collection which is the concatenation of the receiver and operand.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection containing all of the receiver's elements in their original order followed by
 all of the elements of operand, in their original order. The size of the new collection is equal to the
 sum of the sizes of the receiver and operand, as defined by the #size message.
@@ -12167,14 +12538,14 @@ Collections that enforce an ordering on their elements are permitted to refine t
 reorder the result.
 Unless specifically refined, this message is defined to answer an instance of the same type as the
 receiver.
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 Since the receiver sorts its elements, the result will also be sorted as defined by the receiver's sort
 block.
 Parameters
 
- <sequencedReadableCollection>
+ \<sequencedReadableCollection>
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 214
 
@@ -12190,18 +12561,18 @@ add: newElement
 
 Synopsis
 Add newElement to the receiver's elements.
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds a newElement to the receiver. Unless specifically refined, the position of the
 newElement in the element traversal order is unspecified.
 Conformant protocols may place restrictions on the type of objects that are valid elements. Unless
 otherwise specified, any object is acceptable.
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 Since the receiver maintains its elements in sorted order, the position of newElement will depend
 on the receiver's sort block.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
@@ -12215,13 +12586,13 @@ asSortedCollection
 
 Synopsis
 Answer a sorted collection with the same elements as the receiver.
-Definition: <collection>
+Definition: \<collection>
 Answer a sorted collection with the same elements as the receiver. The default sort block is used
 unless another sort block is specified in a refinement.
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 The receiver's sort block is used in the result.
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 unspecified
 
@@ -12234,7 +12605,7 @@ collect: transformer
 Synopsis
 Answer a new collection constructed by gathering the results of evaluating transformer with
 each element of the receiver.
-Definition: <collection>
+Definition: \<collection>
 For each element of the receiver, transformer is evaluated with the element as the parameter.
 The results of these evaluations are collected into a new collection.
 
@@ -12243,15 +12614,15 @@ The results of these evaluations are collected into a new collection.
 The elements are traversed in the order specified by the #do: message for the receiver.
 Unless specifically refined, this message is defined to answer an objects conforming to the same
 protocol as the receiver.
-Refinement: <SortedCollection>
-Answer a <sequencedCollection>.
+Refinement: \<SortedCollection>
+Answer a \<sequencedCollection>.
 Parameters
 transformer
 
-<monadicValuable>
+\<monadicValuable>
 
 Return Values
-<sequencedCollection>
+\<sequencedCollection>
 
 uncaptured
 
@@ -12268,7 +12639,7 @@ copyReplaceAll: targetElements with: replacementElements
 Synopsis
 Answer a new collection in which all subsequences of elements in the receiver matching
 targetElements are replaced in the new collection by the elements in replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a new collection with the elements of the receiver in their original order, except where a
 subsequence in the receiver matches targetElements. A subsequence in the receiver is said to
 match the elements of targetElements if:
@@ -12281,22 +12652,22 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 Since the receiver maintains its elements in sorted order, the positions of elements of
 replacementElements will depend on the receiver's sort block.
 Parameters
 targetElements
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 
 unspecified
 
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 new
 
@@ -12315,7 +12686,7 @@ Synopsis
 Answer a new collection, containing the same elements as the receiver, but with the elements in
 the receiver between start and stop inclusive replaced by the elements in
 replacementElements.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. The size of replacementElements (as
 defined by #size) need not be the same as the number of elements being replaced. There are
 three cases:
@@ -12335,25 +12706,25 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver's class.
 Collections that enforce an ordering on their elements are permitted to refine this message to
 reorder the result.
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 Since the receiver maintains its elements in sorted order, the positions of elements of
 replacementElements will depend on the receiver's sort block.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElements <sequencedReadableCollection>
+replacementElements \<sequencedReadableCollection>
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 unspecified
 
@@ -12363,9 +12734,9 @@ Errors
 The elements in replacementElements are not suitable for storage in instances of the receiver's
 class.
 start > receiver's size + 1
-start < 1
+start \< 1
 stop > receiver's size
-stop < start - 1
+stop \< start - 1
 If the elements of replacementElements cannot be sorted using receiver's sort block.
 5.7.17.7 Message Refinement:
 replacementElement
@@ -12377,7 +12748,7 @@ copyReplaceFrom: start to: stop withObject:
 
 Answer a new collection conforming to the same protocols as the receiver, in which the elements of
 the receiver between start and stop inclusive have been replaced with replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 This message can be used to insert, append, or replace. There are three cases:
 1. If stop = start - 1 , and start is less than or equal to the size of the receiver, then
 replacementElement is inserted between the elements at index stop and start. None of the
@@ -12391,25 +12762,25 @@ Unless specifically refined, this message is defined to answer an instance of th
 receiver's class.
 Collections that by definition enforce an ordering on their elements are permitted to refine this
 message to reorder the result.
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 Since the receiver maintains its elements in sorted order, the position(s) occupied by
 replacementElement will depend on the receiver's sort block.
 Parameters
 start
 
-<integer>
+\<integer>
 
 uncaptured
 
 stop
 
-<integer>
+\<integer>
 
 uncaptured
 
-replacementElement <Object>
+replacementElement \<Object>
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 captured
 
@@ -12418,9 +12789,9 @@ new
 Errors
 The replacementElement is not suitable for storage in instances of the receiver's class.
 start > receiver's size + 1
-start < 1
+start \< 1
 stop > receiver's size
-stop < start - 1
+stop \< start - 1
 If replacementElement cannot be sorted using receiver's sort block.
 5.7.17.8 Message Refinement:
 replacementElement
@@ -12430,7 +12801,7 @@ copyReplacing: targetElement withObject:
 Synopsis
 Answer a new collection conforming to the same protocols as the receiver, in which any
 occurrences of targetElement are replaced by replacementElement.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 A new collection is created and initialized with the same elements as the receiver in the same
 order, except that any objects in the receiver which are equivalent to targetElement are
 replaced in the new collection by replacementElement.
@@ -12441,17 +12812,17 @@ reorder the result.
 
 
 
-Refinement: <SortedCollection>
+Refinement: \<SortedCollection>
 Since the receiver maintains its elements in sorted order, the position occupied by
 replacementElement will depend on the receiver's sort block.
 Parameters
 targetElement
 
-<Object>
+\<Object>
 
-replacementElement <Object>
+replacementElement \<Object>
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 uncaptured
 captured
@@ -12467,7 +12838,7 @@ reverse
 
 Synopsis
 Answer a collection with the elements of the receiver arranged in reverse order.
-Definition: <sequenceReadableCollection>
+Definition: \<sequenceReadableCollection>
 Answer a collection conforming to the same protocols as the receiver, but with its elements
 arranged in reverse order.
 This operation is equivalent to:
@@ -12475,10 +12846,10 @@ This operation is equivalent to:
 2. Traverse the elements of the receiver in the order specified by the #reverseDo: message,
 adding each element of the receiver to the new collection;
 3. Answer the new collection.
-Refinement: <SortedCollection>
-Answer a <sequencedReadableCollection>.
+Refinement: \<SortedCollection>
+Answer a \<sequencedReadableCollection>.
 Return Values
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 5.7.17.10 Message:
@@ -12487,10 +12858,10 @@ sortBlock
 
 Synopsis
 Answer the receiver's sort block.
-Definition: <SortedCollection>
+Definition: \<SortedCollection>
 Answer the receiver's sort block. The sort block is defined by the #sortBlock: message.
 Return Values
-<dyadicValuable>
+\<dyadicValuable>
 
 state
 
@@ -12502,12 +12873,12 @@ sortBlock: discriminator
 
 Synopsis
 Set the receiver's sort block to discriminator.
-Definition: <SortedCollection>
+Definition: \<SortedCollection>
 
 
 
 This message defines the sort block used to specify the receiver's ordering criteria. The sortBlock
-is a 2-parameter <block>, which when evaluated with any two elements in the receiver, answers
+is a 2-parameter \<block>, which when evaluated with any two elements in the receiver, answers
 true if the first parameter should be ordered before the second parameter, and false otherwise. The
 sort block must obey the following properties:
 1. Given the same 2 parameters, the sort block must answer the same result.
@@ -12515,9 +12886,9 @@ sort block must obey the following properties:
 be before c.
 The receiver's sort block is set to discriminator, and the elements are re-sorted.
 Parameters
-discriminator <dyadicValuable>
+discriminator \<dyadicValuable>
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 captured
 
@@ -12526,9 +12897,9 @@ receiver
 Errors
 If the elements of the receiver cannot be sorted using the discriminator.
 
-5.7.18 Protocol: <OrderedCollection>
+5.7.18 Protocol: \<OrderedCollection>
 Conforms To
-<extensibleCollection> <sequencedContractibleCollection> <sequencedCollection>
+\<extensibleCollection> \<sequencedContractibleCollection> \<sequencedCollection>
 Description
 Represents an ordered, variable sized collection of objects. Elements may be added, removed or
 inserted, and can be accessed using external integer keys.
@@ -12556,19 +12927,19 @@ Add newElement to the receiver's elements.
 
 
 
-Definition: <extensibleCollection>
+Definition: \<extensibleCollection>
 This message adds a newElement to the receiver. Unless specifically refined, the position of the
 newElement in the element traversal order is unspecified.
 Conformant protocols may place restrictions on the type of objects that are valid elements. Unless
 otherwise specified, any object is acceptable.
-Refinement: <OrderedCollection>
+Refinement: \<OrderedCollection>
 The newElement is added to the end of the receiver's elements so that it becomes the last
 element in the traversal order. This message is equivalent to #addLast: for the receiver with
 newElement as the parameter.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
@@ -12583,7 +12954,7 @@ add: newElement after: target
 Synopsis
 Add newElement to the receiver immediately following the first element which is equivalent to
 target.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add newElement to the receiver immediately following the first element which is equivalent to
 target. An element immediately follows another if its index is one greater than that of the other.
 The order used to determine which of the receiver's elements is the first to equal target is the
@@ -12592,18 +12963,18 @@ If the receiver does not include target, the operation fails.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
 target
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 If there is no element in the receiver which is equivalent to target.
 5.7.18.3 Message:
@@ -12612,7 +12983,7 @@ add: newElement afterIndex: index
 
 Synopsis
 Add newElement to the receiver immediately following the element at position index.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add newElement to the receiver immediately following the element at position index.
 newElement is inserted at position index + 1. If index is equal to 0, newElement becomes the
 first element of the receiver.
@@ -12621,19 +12992,19 @@ newElement
 index
 Return Values
 
-<Object>
+\<Object>
 
 captured
 
-<integer>
+\<integer>
 
 uncaptured
 
 
 
-<Object> state
+\<Object> state
 Errors
-If index < 0.
+If index \< 0.
 If index > receiver's size.
 5.7.18.4 Message:
 
@@ -12642,7 +13013,7 @@ add: newElement before: target
 Synopsis
 Add newElement to the receiver immediately before the first element which is equivalent to
 target.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add newElement to the receiver immediately before the first element which is equivalent to
 target. An element immediately precedes another if its index is one less than that of the other.
 The order used to determine which of the receiver's elements is the first to equal target in the
@@ -12651,18 +13022,18 @@ If the receiver does not include target, the operation fails.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
 target
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
 If there is no element in the receiver which is equivalent to target.
 If the element which is equal to target is the last element in the receiver.
@@ -12672,7 +13043,7 @@ add: newElement beforeIndex: index
 
 Synopsis
 Add newElement to the receiver immediately before the element at position index.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add newElement to the receiver immediately before the element at position index in the receiver.
 If index equals the receiver's size plus 1 newElement will be inserted at the end of the receiver.
 The parameter index must be a positive integer less than or equal to the receiver's size plus 1.
@@ -12680,18 +13051,18 @@ Parameters
 newElement
 index
 
-<Object>
+\<Object>
 
 captured
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
-<Object> state
+\<Object> state
 Errors
-If index <=0.
+If index \<=0.
 If index > receiver's size + 1.
 5.7.18.6 Message:
 
@@ -12703,7 +13074,7 @@ receiver which is equivalent to target. Answer newElements.
 
 
 
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add the elements of newElements to the receiver in the traversal order defined by #do: for
 newElements. The new elements are inserted in the receiver immediately after the first element in
 the receiver which is equivalent to target.
@@ -12715,11 +13086,11 @@ Parameters
 newElements
 target
 
-<collection>
+\<collection>
 
 unspecified
 
-<Object>
+\<Object>
 
 uncaptured
 
@@ -12734,7 +13105,7 @@ addAll: newElements afterIndex: index
 Synopsis
 Insert the elements of newElements in the receiver immediately after the element at position
 index. Answer newElements.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add the elements of newElements to the receiver in the traversal order defined by #do: for
 newElements. The new elements are inserted in the receiver immediately after the element in the
 receiver at position index. If index is equal to 0, newElements are inserted at the beginning of
@@ -12744,18 +13115,18 @@ Parameters
 newElements
 index
 
-<collection>
+\<collection>
 
 unspecified
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
 UNSPECIFIED
 Errors
-If index < 0.
+If index \< 0.
 If index > receiver's size.
 5.7.18.8 Message:
 
@@ -12764,7 +13135,7 @@ addAll: newElements before: target
 Synopsis
 Add each element of newElements to the receiver immediately before the first element in the
 receiver which is equivalent to target. Answer newElements.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add the elements of newElements to the receiver in the traversal order defined by #do: for
 newElements. The new elements are inserted in the receiver immediately before the first element
 in the receiver which is equivalent to target.
@@ -12778,13 +13149,13 @@ If the receiver does not include target, the operation fails.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
 target
 
-<Object>
+\<Object>
 
 uncaptured
 
@@ -12799,7 +13170,7 @@ addAll: newElements beforeIndex: index
 Synopsis
 Insert the elements of newElements in the receiver immediately before the element at position
 index. Answer newElements.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 Add the elements of newElements to the receiver in the traversal order defined by #do: for
 newElements. The new elements are inserted in the receiver immediately before the element in
 the receiver at position index. If index equals the receiver's size plus 1 newElements will be
@@ -12808,20 +13179,20 @@ The parameter index must be a positive integer less than or equal to the receive
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
 index
 
-<integer>
+\<integer>
 
 uncaptured
 
 Return Values
 UNSPECIFIED
 Errors
-If index <=0.
+If index \<=0.
 If index > receiver's size + 1.
 5.7.18.10 Message:
 
@@ -12830,7 +13201,7 @@ addAllFirst: newElements
 Synopsis
 Add each element of newElements to the beginning of the receiver's elements. Answer
 newElements.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 This message is used to iteratively add each element of a given collection to the beginning of the
 receiver's elements.
 The operation is equivalent to adding each successive element of newElements to the receiver
@@ -12841,7 +13212,7 @@ newElements
 Return Values
 UNSPECIFIED
 
-<sequencedCollection> unspecified
+\<sequencedCollection> unspecified
 
 
 
@@ -12853,7 +13224,7 @@ addAllLast: newElements
 
 Synopsis
 Add each element of newElements to the end of the receiver's elements. Answer newElements.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 This message is used to iteratively add each element of a given collection to the end of the
 receiver's elements.
 The operation is equivalent to adding each successive element of newElements to the receiver
@@ -12862,7 +13233,7 @@ traversed in the order specified by the #do: message for newElements.
 Parameters
 UNSPECIFIED
 Return Values
-<sequencedCollection>
+\<sequencedCollection>
 
 parameter
 
@@ -12874,13 +13245,13 @@ addFirst: newElement
 
 Synopsis
 Add newElement to the beginning of the receiver's elements. Answer newElement.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 The newElement is added to the beginning of the receiver's elements so that it becomes the first
 element in the traversal order.
 Parameters
 newElement
 
-<Object>
+\<Object>
 
 captured
 
@@ -12894,7 +13265,7 @@ addLast: newElement
 
 Synopsis
 Add newElement to the end of the receiver's elements. Answer newElement.
-Definition: <OrderedCollection>
+Definition: \<OrderedCollection>
 The newElement is added to the end of the receiver's elements so that it becomes the last
 element in the traversal order.
 Parameters
@@ -12904,24 +13275,24 @@ UNSPECIFIED
 Errors
 none
 
-<Object>
+\<Object>
 
 captured
 
 
 
-5.7.19 Protocol: <Interval factory>
+5.7.19 Protocol: \<Interval factory>
 Conforms To
-<Object>
+\<Object>
 Description
 Represents protocol for creating a collection whose elements are numbers which form an
 arithmetic progression.
 Standard Globals
 Interval
 
-Conforms to the protocol <Interval factory>. Its language element type is
+Conforms to the protocol \<Interval factory>. Its language element type is
 unspecified. This is a factory and discriminator for collections that
-conform to <Interval>.
+conform to \<Interval>.
 
 Messages
 from:to:
@@ -12934,7 +13305,7 @@ from: start to: stop
 Synopsis
 Answer an interval which represents an arithmetic progression from start to stop in increments
 of 1.
-Definition: <Interval factory>
+Definition: \<Interval factory>
 Answer an interval which represents an arithmetic progression from start to stop, using the
 increment 1 to compute each successive element. The elements are numbers which have the
 same type as start. Note that stop may not be the last element in the sequence; the last
@@ -12942,18 +13313,18 @@ element is given by the formula
 start + ((stop - start) // 1)
 The interval answered will be empty (it will answer 0 to the #size message) if start > stop
 Parameters
-start <number>
+start \<number>
 
 unspecified
 
-<number>
+\<number>
 
 unspecified
 
 stop
 
 Return Values
-<Interval>
+\<Interval>
 
 unspecified
 
@@ -12966,7 +13337,7 @@ from: start to: stop by: step
 Synopsis
 Answer an interval which represents an arithmetic progression from start to stop in increments
 of step.
-Definition: <Interval factory>
+Definition: \<Interval factory>
 Answer an interval which represents an arithmetic progression from start to stop, using the
 increment step to compute each successive element. The value of step can be positive or
 
@@ -12977,36 +13348,36 @@ start and step. Note that stop is not necessarily an element in the sequence; th
 is given by the formula
 (((stop - start) // step) * step) + start
 The interval answered will be empty (it will answer 0 to the #size message) if:
-start < stop and step < 0, or
+start \< stop and step \< 0, or
 start > stop and step > 0.
 Parameters
-start <number>
+start \<number>
 
 unspecified
 
 stop
 
-<number>
+\<number>
 
 unspecified
 
 step
 
-<number>
+\<number>
 
 unspecified
 
 Return Values
-<Interval>
+\<Interval>
 
 unspecified
 
 Errors
 step = 0
 
-5.7.20 Protocol: <collection factory>
+5.7.20 Protocol: \<collection factory>
 Conforms To
-<instantiator>
+\<instantiator>
 Description
 Provides protocol for creating a collection of objects. A collection can be fixed or variable sized,
 ordered or unordered, and its elements may or may not be accessible by external keys.
@@ -13020,12 +13391,12 @@ new
 
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0.
 Return Values
-<Collection>
+\<Collection>
 Errors
 none
 
@@ -13044,7 +13415,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13052,9 +13423,9 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements, if any, of the new collection are unspecified.
 Parameters
-count <integer>
+count \<integer>
 Return Values
-<collection>
+\<collection>
 
 unspecified
 
@@ -13063,18 +13434,18 @@ new
 Errors
 none
 
-5.7.21 Protocol: <Dictionary factory>
+5.7.21 Protocol: \<Dictionary factory>
 Conforms To
-<collection factory>
+\<collection factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to the
-protocol <Dictionary>.
+protocol \<Dictionary>.
 Standard Globals
 Dictionary
 
-Conforms to the protocol <Dictionary factory>. Its language element type
+Conforms to the protocol \<Dictionary factory>. Its language element type
 is unspecified. This is a factory and discriminator for collections that
-conform to <Dictionary>.
+conform to \<Dictionary>.
 
 Messages
 new
@@ -13084,19 +13455,19 @@ withAll:
 5.7.21.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
 
 
 
-Refinement: <Dictionary factory>
-Return a new <Dictionary> that is optimized to store an implementation defined number of
+Refinement: \<Dictionary factory>
+Return a new \<Dictionary> that is optimized to store an implementation defined number of
 elements. The new collection initially contains no elements.
 Return Values
-<Dictionary>
+\<Dictionary>
 
 new
 
@@ -13108,7 +13479,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13116,14 +13487,14 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <Dictionary factory>
+Refinement: \<Dictionary factory>
 The parameter count represents a hint for space allocation. The new collection is to optimized to
 contain count elements. The new collection initially contains no elements.
-The new collection conforms to the protocol <Dictionary>.
+The new collection conforms to the protocol \<Dictionary>.
 Parameters
-count <integer>
+count \<integer>
 Return Values
-<Dictionary>
+\<Dictionary>
 
 unspecified
 
@@ -13137,16 +13508,16 @@ withAll: newElements
 
 Synopsis
 Create a collection containing all the elements of newElements.
-Definition: <Dictionary factory>
+Definition: \<Dictionary factory>
 Return a new collection whose elements are the elements of newElements. The effect is the
 same as evaluating Dictionary new addAll: newElements; yourself.
 Parameters
 newElements
 
-<abstractDictionary>
+\<abstractDictionary>
 
 Return Values
-<Dictionary>
+\<Dictionary>
 
 new
 
@@ -13157,16 +13528,16 @@ unspecified
 
 
 
-5.7.22 Protocol: <IdentityDictionary factory>
+5.7.22 Protocol: \<IdentityDictionary factory>
 Conforms To
-<abstractDictionary factory>
+\<abstractDictionary factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to the
-protocol <IdentityDictionary>.
+protocol \<IdentityDictionary>.
 Standard Globals
-IdentityDictionary Conforms to the protocol <IdentityDictionary factory>. Its language
+IdentityDictionary Conforms to the protocol \<IdentityDictionary factory>. Its language
 element type is unspecified. This is a factory and discriminator for
-collections that conform to <IdentityDictionary>.
+collections that conform to \<IdentityDictionary>.
 Messages
 new
 new:
@@ -13175,16 +13546,16 @@ withAll:
 5.7.22.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <IdentityDictionary factory>
-Return a new <IdentityDictionary> that is optimized to store an implementation defined number of
+Refinement: \<IdentityDictionary factory>
+Return a new \<IdentityDictionary> that is optimized to store an implementation defined number of
 elements. The new collection initially contains no elements.
 Return Values
-<IdentityDictionary>
+\<IdentityDictionary>
 
 new
 
@@ -13196,7 +13567,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13207,17 +13578,17 @@ no guarantee that the requested number of instance variables will actually be al
 
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <IdentityDictionary factory>
+Refinement: \<IdentityDictionary factory>
 The parameter count represents a hint for space allocation. The new collection is to optimized to
 contain count elements. The new collection initially contains no elements.
-The new collection conforms to the protocol <IdentityDictionary>.
+The new collection conforms to the protocol \<IdentityDictionary>.
 Parameters
-count <integer>
+count \<integer>
 
 unspecified
 
 Return Values
-<IdentityDictionary>
+\<IdentityDictionary>
 
 new
 
@@ -13229,16 +13600,16 @@ withAll: newElements
 
 Synopsis
 Create a collection containing all the elements of newElements.
-Definition: <IdentityDictionary factory>
+Definition: \<IdentityDictionary factory>
 Return a new collection whose elements are the elements of newElements. The effect is the
 same as evaluating IdentityDictionary new addAll: newElements; yourself.
 Parameters
 newElements
 
-<abstractDictionary>
+\<abstractDictionary>
 
 Return Values
-<IdentityDictionary>
+\<IdentityDictionary>
 
 unspecified
 
@@ -13247,9 +13618,9 @@ new
 Errors
 none
 
-5.7.23 Protocol: <initializableCollection factory>
+5.7.23 Protocol: \<initializableCollection factory>
 Conforms To
-<collection factory>
+\<collection factory>
 Description
 This protocol defines the behavior of objects that can be used to create non-empty collections.
 Messages
@@ -13268,7 +13639,7 @@ Message: with: element1 with: element2 with: element3
 Message: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
@@ -13276,30 +13647,30 @@ element types.
 Parameters
 element1
 
-<Object>
+\<Object>
 
 captured
 
 element2
 
-<Object>
+\<Object>
 
 captured
 
 element3
 
-<Object>
+\<Object>
 
 captured
 
 element4
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<collection>
+\<collection>
 
 new
 
@@ -13311,16 +13682,16 @@ withAll: newElements
 
 Synopsis
 Create a collection containing all the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 Return Values
-<collection>
+\<collection>
 
 new
 
@@ -13330,12 +13701,12 @@ Errors
 If any of the elements in newElements do not meet the element type constraints of the result
 object
 
-5.7.24 Protocol: <Array factory>
+5.7.24 Protocol: \<Array factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to
-<Array>. These objects are created with a specified size. If element values are not explicitly
+\<Array>. These objects are created with a specified size. If element values are not explicitly
 provided they default to nil.
 
 NCITS J20 DRAFT
@@ -13348,9 +13719,9 @@ revision 1.9
 
 232
 
-Conforms to the protocol <Array factory>. Its language element type is
+Conforms to the protocol \<Array factory>. Its language element type is
 unspecified. This is a factory and discriminator for collections that
-conform to <Array>.
+conform to \<Array>.
 
 Messages
 new
@@ -13364,15 +13735,15 @@ withAll:
 5.7.24.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <Array factory>
-Create a new <Array> that contains no elements.
+Refinement: \<Array factory>
+Create a new \<Array> that contains no elements.
 Return Values
-<Array> new
+\<Array> new
 Errors
 none
 5.7.24.2 Message Refinement:
@@ -13381,7 +13752,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13389,63 +13760,63 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <Array factory>
+Refinement: \<Array factory>
 The parameter count specifies the size of the receiver. The initial value of each element of the
-new instance of the receiver is nil. The new collections conforms to the protocol <Array>.
+new instance of the receiver is nil. The new collections conforms to the protocol \<Array>.
 Parameters
 count
 
-<integer>
+\<integer>
 
 Return Values
-<Array> new
+\<Array> new
 Errors
 
 unspecified
 
 
 
-count<0
+count\<0
 5.7.24.3 Message Refinement: with: element1
 Message Refinement: with: element1 with: element2
 Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <Array factory>
+Refinement: \<Array factory>
 The first argument is at index position 1, the second argument is at index position 2, and so on...
 Parameters
 element1
 
-<Object>
+\<Object>
 
 captured
 
 element2
 
-<Object>
+\<Object>
 
 captured
 
 element3
 
-<Object>
+\<Object>
 
 captured
 
 element4
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<Array> new
+\<Array> new
 Errors
 If any of the arguments do not meet the element type constraints of the result object
 5.7.24.4 Message Refinement:
@@ -13454,39 +13825,39 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <Array factory>
+Refinement: \<Array factory>
 If the elements of newElements are ordered then their ordering establishing their index positions
 in the new collection.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
 Return Values
-<Array> new
+\<Array> new
 Errors
 If any of the elements of newElements do not meet the element type constraints of the result
 object
 
 
 
-5.7.25 Protocol: <Bag factory>
+5.7.25 Protocol: \<Bag factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to the
-protocol <Bag>.
+protocol \<Bag>.
 Standard Globals
 Bag
 
-Conforms to the protocol <Bag factory>. Its language element type is
+Conforms to the protocol \<Bag factory>. Its language element type is
 unspecified. This is a factory and discriminator for collections that
-conform to <Bag>.
+conform to \<Bag>.
 
 Messages
 new
@@ -13503,16 +13874,16 @@ new
 
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <Bag factory>
-Return a new <Bag> that is optimized to store an implementation defined number of elements. The
+Refinement: \<Bag factory>
+Return a new \<Bag> that is optimized to store an implementation defined number of elements. The
 new collection initially contains no elements.
 Return Values
-<Bag> new
+\<Bag> new
 Errors
 none
 5.7.25.2 Message Refinement:
@@ -13521,7 +13892,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 
 
 
@@ -13532,17 +13903,17 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <Bag factory>
+Refinement: \<Bag factory>
 The parameter count represents a hint to the implementation as to the likely number of elements
 that may be added to the new collection. The new collection initially contains no elements.
-The new collections conforms to the protocol <Bag>.
+The new collections conforms to the protocol \<Bag>.
 Parameters
-count <integer>
+count \<integer>
 
 unspecified
 
 Return Values
-<Bag> new
+\<Bag> new
 Errors
 none
 5.7.25.3 Message Refinement: with: element1
@@ -13551,40 +13922,40 @@ Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <Bag factory>
+Refinement: \<Bag factory>
 The result is undefined if any of the arguments are nil.
 Parameters
 element1
 
-<Object>
+\<Object>
 
 captured
 
 element2
 
-<Object>
+\<Object>
 
 captured
 
 element3
 
-<Object>
+\<Object>
 
 captured
 
 element4
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<Bag> new
+\<Bag> new
 Errors
 If any of the arguments do not meet the element type constraints of the result object
 5.7.25.4 Message Refinement:
@@ -13593,40 +13964,40 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 
 
 
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <Bag factory>
+Refinement: \<Bag factory>
 The result is unspecified if newElements contains nil.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
 Return Values
-<Bag> new
+\<Bag> new
 Errors
 If any of the elements of newElements do not meet the element type constraints of the result
 object
 
-5.7.26 Protocol: <ByteArray factory>
+5.7.26 Protocol: \<ByteArray factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to
-<ByteArray>. These objects are created with a specified size. If the element values are not
+\<ByteArray>. These objects are created with a specified size. If the element values are not
 explicitly provided, they default to 0.
 Standard Globals
 ByteArray
 
-Conforms to the protocol <ByteArray factory>. Its language element type
+Conforms to the protocol \<ByteArray factory>. Its language element type
 is unspecified. This is a factory and discriminator for collections that
-conform to <ByteArray>.
+conform to \<ByteArray>.
 
 Messages
 new
@@ -13640,18 +14011,18 @@ withAll:
 5.7.26.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
 
 
 
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <ByteArray factory>
-Create a new <ByteArray> that contains no elements.
+Refinement: \<ByteArray factory>
+Create a new \<ByteArray> that contains no elements.
 Return Values
-<ByteArray>
+\<ByteArray>
 
 new
 
@@ -13663,7 +14034,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13671,60 +14042,60 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <ByteArray factory>
+Refinement: \<ByteArray factory>
 The parameter count specifies the size of the receiver. The initial value of each element of the
-new instance of the receiver is 0. The new collections conforms to the protocol <ByteArray>.
+new instance of the receiver is 0. The new collections conforms to the protocol \<ByteArray>.
 Parameters
-count <integer>
+count \<integer>
 Return Values
-<ByteArray>
+\<ByteArray>
 
 unspecified
 
 new
 
 Errors
-count<0
+count\<0
 5.7.26.3 Message Refinement: with: element1
 Message Refinement: with: element1 with: element2
 Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <ByteArray factory>
+Refinement: \<ByteArray factory>
 The first argument is at index position 1, the second argument is at index position 2, and so on...
 Parameters
 element1
 
-<integer>
+\<integer>
 
 captured
 
 
 
-<integer>
+\<integer>
 
 captured
 
 element3
 
-<integer>
+\<integer>
 
 captured
 
 element4
 
-<integer>
+\<integer>
 
 captured
 
 Return Values
-<ByteArray>
+\<ByteArray>
 
 238
 
@@ -13738,18 +14109,18 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <ByteArray factory>
+Refinement: \<ByteArray factory>
 If the elements of newElements are ordered then their ordering establishing their index positions
 in the new collection.
 Parameters
 newElements
 Return Values
-<ByteArray>
+\<ByteArray>
 
-<collection>
+\<collection>
 
 unspecified
 
@@ -13759,9 +14130,9 @@ Errors
 If any of the elements of newElements do not meet the element type constraints of the result
 object
 
-5.7.27 Protocol: <OrderedCollection factory>
+5.7.27 Protocol: \<OrderedCollection factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 This protocol defines the behavior of objects that can be used to create fixed sized ordered
 collections of objects which can be accessed externally using integer keys.
@@ -13772,9 +14143,9 @@ Messages
 new
 new:
 
-Conforms to the protocol <OrderedCollection factory>. Its language
+Conforms to the protocol \<OrderedCollection factory>. Its language
 element type is unspecified. This is a factory and discriminator for
-collections that conform to <OrderedCollection>.
+collections that conform to \<OrderedCollection>.
 
 
 
@@ -13787,16 +14158,16 @@ withAll:
 5.7.27.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <OrderedCollection factory>
-Create a new <OrderedCollection> that is optimized to store an implementation defined number of
+Refinement: \<OrderedCollection factory>
+Create a new \<OrderedCollection> that is optimized to store an implementation defined number of
 elements. The new collection initially contains no elements.
 Return Values
-<OrderedCollection>
+\<OrderedCollection>
 
 new
 
@@ -13808,7 +14179,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13816,21 +14187,21 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <OrderedCollection factory>
+Refinement: \<OrderedCollection factory>
 The parameter count represents a hint for space allocation. The new collection is to optimized to
 contain count elements. The new collection initially contains no elements.
 Parameters
-count <integer>
+count \<integer>
 
 unspecified
 
 Return Values
-<OrderedCollection>
+\<OrderedCollection>
 
 new
 
 Errors
-count<0
+count\<0
 
 
 
@@ -13840,40 +14211,40 @@ Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <OrderedCollection factory>
+Refinement: \<OrderedCollection factory>
 The first argument is at index position 1, the second argument is at index position 2, and so on.
 Parameters
 element1
 
-<Object>
+\<Object>
 
 captured
 
 element2
 
-<Object>
+\<Object>
 
 captured
 
 element3
 
-<Object>
+\<Object>
 
 captured
 
 element4
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<OrderedCollection>
+\<OrderedCollection>
 
 new
 
@@ -13885,19 +14256,19 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <OrderedCollection factory>
+Refinement: \<OrderedCollection factory>
 If the elements of newElements are ordered then their ordering establishing their index positions
 in the new collection.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 Return Values
-<OrderedCollection>
+\<OrderedCollection>
 
 unspecified
 
@@ -13909,18 +14280,18 @@ object
 
 
 
-5.7.28 Protocol: <Set factory>
+5.7.28 Protocol: \<Set factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to the
-protocol <Set>.
+protocol \<Set>.
 Standard Globals
 Set
 
-Conforms to the protocol <Set factory>. Its language element type is
+Conforms to the protocol \<Set factory>. Its language element type is
 unspecified. This is a factory and discriminator for collections that
-conform to <Set>.
+conform to \<Set>.
 
 Messages
 new
@@ -13934,16 +14305,16 @@ withAll:
 5.7.28.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <Set factory>
-Return a new <Set> that is optimized to store an arbitrary number of elements. The new collection
+Refinement: \<Set factory>
+Return a new \<Set> that is optimized to store an arbitrary number of elements. The new collection
 initially contains no elements.
 Return Values
-<Set>
+\<Set>
 new
 Errors
 none
@@ -13953,7 +14324,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -13961,21 +14332,21 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <Set factory>
+Refinement: \<Set factory>
 
 
 
 The parameter count represents a hint for space allocation. The new collection is to optimized to
 contain count elements. If the value of count is zero the collection should be optimize to hold an
 arbitrary number of elements. The new collection initially contains no elements.
-The new collections conforms to the protocol <Set>.
+The new collections conforms to the protocol \<Set>.
 Parameters
-count <integer>
+count \<integer>
 
 unspecified
 
 Return Values
-<Set>
+\<Set>
 new
 Errors
 none
@@ -13985,40 +14356,40 @@ Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <Set factory>
+Refinement: \<Set factory>
 The result is undefined if any of the arguments are nil.
 Parameters
 element1
 
-<Object>
+\<Object>
 
 captured
 
 element2
 
-<Object>
+\<Object>
 
 captured
 
 element3
 
-<Object>
+\<Object>
 
 captured
 
 element4
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<Set>
+\<Set>
 new
 Errors
 If any of the arguments do not meet the element type constraints of the result object
@@ -14028,30 +14399,30 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <Set factory>
+Refinement: \<Set factory>
 The result is unspecified if newElements contains nil.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
 
 
 Return Values
-<Set>
+\<Set>
 new
 Errors
 If any of the elements of newElements do not meet the element type constraints of the result
 object
 
-5.7.29 Protocol: <SortedCollection factory>
+5.7.29 Protocol: \<SortedCollection factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 Represents protocol for creating a variable sized collection of objects whose elements are ordered
 based on a sort order specified by a two parameter block called the sort block. Elements may be
@@ -14059,9 +14430,9 @@ added, removed or inserted, and can be accessed using external integer keys.
 Standard Globals
 SortedCollection
 
-Conforms to the protocol <SortedCollection factory>. Its language
+Conforms to the protocol \<SortedCollection factory>. Its language
 element type is unspecified. This is a factory and discriminator for
-collections that conform to <SortedCollection>.
+collections that conform to \<SortedCollection>.
 
 Messages
 new
@@ -14076,17 +14447,17 @@ withAll:
 5.7.29.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <SortedCollection factory>
+Refinement: \<SortedCollection factory>
 
 
 
 A sort block is supplied which guarantees that the elements will be sorted in ascending order as
-specified by the #< message for the elements. The collection's representation should be optimized
+specified by the #\< message for the elements. The collection's representation should be optimized
 to store an arbitrary number of elements.
 Return Values
 SortedCollection
@@ -14101,7 +14472,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -14109,18 +14480,18 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <SortedCollection factory>
+Refinement: \<SortedCollection factory>
 The parameter count represents an estimate of the maximum number of elements in the
 collection. The representation may be optimized for this size.
 A sort block is supplied which guarantees that the elements will be sorted in ascending order as
-specified by the #< message for the elements.
+specified by the #\< message for the elements.
 Parameters
-count <integer>
+count \<integer>
 
 unspecified
 
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 new
 
@@ -14132,7 +14503,7 @@ sortBlock: sortBlock
 
 Synopsis
 Create a new sorted collection with sortBlock as the sort block.
-Definition: <SortedCollection factory>
+Definition: \<SortedCollection factory>
 Return a new sorted collection with sortBlock as the sort block. The sortBlock specifies the
 ordering criteria for the new collection and is a two-parameter valuable, which when evaluated with
 any two elements in the receiver, answers true if the first parameter should be ordered before the
@@ -14143,10 +14514,10 @@ be before c.
 Parameters
 sortBlock
 
-<dyadicValuable>
+\<dyadicValuable>
 
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 new
 
@@ -14162,42 +14533,42 @@ Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <SortedCollection factory>
+Refinement: \<SortedCollection factory>
 A sort block is supplied which guarantees that the elements will be sorted in ascending order as
-specified by the #< message for the elements. The initial elements are ordered according to this
+specified by the #\< message for the elements. The initial elements are ordered according to this
 sort block.
 Parameters
 firstElement
 
-<Object>
+\<Object>
 
 captured
 
 secondElement
 
-<Object>
+\<Object>
 
 captured
 
 thirdElement
 
-<Object>
+\<Object>
 
 captured
 
 fourthElement
 
-<Object>
+\<Object>
 
 captured
 
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 new
 
@@ -14209,20 +14580,20 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <SortedCollection factory>
+Refinement: \<SortedCollection factory>
 A sort block is supplied which guarantees that the elements will be sorted in ascending order as
-specified by the #< message for the elements. The initial elements are ordered according to this
+specified by the #\< message for the elements. The initial elements are ordered according to this
 sort block.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 Return Values
-<SortedCollection>
+\<SortedCollection>
 
 unspecified
 
@@ -14233,18 +14604,18 @@ If any element of newElements is not appropriate as a parameter to the default s
 
 
 
-5.7.30 Protocol: <String factory>
+5.7.30 Protocol: \<String factory>
 Conforms To
-<initializableCollection factory>
+\<initializableCollection factory>
 Description
 This protocol defines the behavior of objects that can be used to create objects that conform to
-<String>. These objects are created with a specified size.
+\<String>. These objects are created with a specified size.
 Standard Globals
 String
 
-Conforms to the protocol <String factory>. Its language element type is
+Conforms to the protocol \<String factory>. Its language element type is
 unspecified. This is a factory and discriminator for collections that
-conform to <String>.
+conform to \<String>.
 
 Messages
 new
@@ -14258,15 +14629,15 @@ withAll:
 5.7.30.1 Message Refinement: new
 Synopsis
 Create a new object.
-Definition: <instantiator>
+Definition: \<instantiator>
 Return a newly created object initialized to a standard initial state.
-Refinement: <collection factory>
+Refinement: \<collection factory>
 This message has the same effect as sending the message #new: with the argument 0, and will
 return an empty collection.
-Refinement: <String factory>
-Create a new <String> that contains no elements.
+Refinement: \<String factory>
+Create a new \<String> that contains no elements.
 Return Values
-<String> new
+\<String> new
 Errors
 none
 5.7.30.2 Message Refinement:
@@ -14275,7 +14646,7 @@ new: count
 
 Synopsis
 Create a new collection. The parameter count constrains the number of elements in the result.
-Definition: <collection factory>
+Definition: \<collection factory>
 Return a new collection that has space for at least count elements.
 Conforming protocols may refine this message. In particular, the effect of the parameter count
 should be specified in refinements. It can be used to specify the exact number of elements, the
@@ -14286,60 +14657,60 @@ minimum number, or in some cases can even be interpreted as a hint from the prog
 no guarantee that the requested number of instance variables will actually be allocated.
 Unless otherwise stated the initial values of elements of the new instance of the receiver are
 unspecified.
-Refinement: <String factory>
+Refinement: \<String factory>
 The parameter count specifies the size of the receiver. The initial value of each element of the
-new instance of the receiver is unspecified. The new collections conforms to the protocol <String>.
+new instance of the receiver is unspecified. The new collections conforms to the protocol \<String>.
 Parameters
 count
 
-<Integer>
+\<Integer>
 
 unspecified
 
 Return Values
-<String> new
+\<String> new
 Errors
-count<0
+count\<0
 5.7.30.3 Message Refinement: with: element1
 Message Refinement: with: element1 with: element2
 Message Refinement: with: element1 with: element2 with: element3
 Message Refinement: with: element1 with: element2 with: element3 with: element4
 Synopsis
 Create a collection initially containing the argument elements
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection containing a number of elements equal to the number of arguments to this
 message. The collection contains the arguments as its elements.
 Conforming protocols may impose restrictions on the values of the arguments and hence the
 element types.
-Refinement: <String factory>
+Refinement: \<String factory>
 The first argument is at index position 1, the second argument is at index position 2, and so on.
 Parameters
 element1
 
-<Character>
+\<Character>
 
 captured
 
 element2
 
-<Character>
+\<Character>
 
 captured
 
 element3
 
-<Character>
+\<Character>
 
 captured
 
 element4
 
-<Character>
+\<Character>
 
 captured
 
 Return Values
-<String> new
+\<String> new
 Errors
 If any of the arguments do not meet the element type constraints of the result object
 5.7.30.4 Message Refinement:
@@ -14348,10 +14719,10 @@ withAll: newElements
 
 Synopsis
 Create a collection containing only the elements of newElements.
-Definition: <initializableCollection factory>
+Definition: \<initializableCollection factory>
 Return a new collection whose elements are the elements of newElements.
 Conforming protocols may impose restrictions on the values of newElements.
-Refinement: <String factory>
+Refinement: \<String factory>
 
 
 
@@ -14360,12 +14731,12 @@ in the new collection.
 Parameters
 newElements
 
-<collection>
+\<collection>
 
 unspecified
 
 Return Values
-<String> new
+\<String> new
 Errors
 If any of the elements of newElements do not meet the element type constraints of the result
 object
@@ -14376,15 +14747,15 @@ object
 The standard defines protocols for date and time objects that refer to a specific point in time, and
 duration objects that represent a length of time.
 
-<magnitude>
+\<magnitude>
 
-<DateAndTime>
+\<DateAndTime>
 
-<Duration>
+\<Duration>
 
-<Object>
+\<Object>
 
-<DateAndTime factory> <Duration factory>
+\<DateAndTime factory> \<Duration factory>
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
@@ -14396,10 +14767,10 @@ revision 1.9
 
 250
 
-<DateAndTime>
+\<DateAndTime>
 
 Conforms To
-<magnitude>
+\<magnitude>
 Description
 This protocol describes the behavior that is common to date time objects. Date time objects
 represent individual points in Coordinated Universal Time (UTC) as represented in an
@@ -14411,7 +14782,7 @@ adoption of the Gregorian calendar are given in the retrospective astronomical G
 The year 1 B.C. is astronomical Gregorian year 0. The year 2 B.C. is astronomical Gregorian year 1. The year 1 A.D. is astronomical Gregorian year 1. The offset of the UTC local time is zero.
 Messages:
 +
-<
+\<
 =
 >
 asLocal
@@ -14444,17 +14815,17 @@ year
 
 Synopsis
 Answer the result of adding operand to the receiver.
-Definition: <DateAndTime>
-Answer a <DateAndTime> that represents the UTC time that is operand after the receiver and
-whose local time is the same as the receiver's. If operand is less than <Duration factory> #zero,
-the result is the <DateAndTime> that is that is the absolute value of operand before the receiver.
+Definition: \<DateAndTime>
+Answer a \<DateAndTime> that represents the UTC time that is operand after the receiver and
+whose local time is the same as the receiver's. If operand is less than \<Duration factory> #zero,
+the result is the \<DateAndTime> that is that is the absolute value of operand before the receiver.
 Parameters
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
 operand
 
-<Duration>
+\<Duration>
 
 December, 1997
 revision 1.9
@@ -14464,7 +14835,7 @@ revision 1.9
 uncaptured
 
 Return Values
-<DateAndTime> new
+\<DateAndTime> new
 Errors
 None
 5.8.1.2 Message:
@@ -14473,48 +14844,48 @@ None
 
 Synopsis
 Answer the result of adding operand to the receiver.
-Definition: <DateAndTime>
-If operand is a <DateAndTime>, answer a <Duration> whose value is the period of time between
-the operand and the receiver. If operand is a <DateAndTime> prior to the receiver then the result
-is a <Duration> less than <Duration factory> #zero.
-If operand is a <Duration>, answer a new <DateAndTime> which represents the UTC time that is
+Definition: \<DateAndTime>
+If operand is a \<DateAndTime>, answer a \<Duration> whose value is the period of time between
+the operand and the receiver. If operand is a \<DateAndTime> prior to the receiver then the result
+is a \<Duration> less than \<Duration factory> #zero.
+If operand is a \<Duration>, answer a new \<DateAndTime> which represents the UTC time that is
 operand before the receiver and whose local time is the same as the receiver's. If operand is a
-duration less than <Duration factory> #zero then the result is a <DateAndTime> that is the
+duration less than \<Duration factory> #zero then the result is a \<DateAndTime> that is the
 absolute value of operand after the receiver.
 Parameters
 operand
 
-<DateAndTime> | <Duration>
+\<DateAndTime> | \<Duration>
 
 uncaptured
 
 Return Values
-<Duration> unspecified
-<DateAndTime> unspecified
+\<Duration> unspecified
+\<DateAndTime> unspecified
 Errors
 none.
-5.8.1.3 Message Refinement: < operand
+5.8.1.3 Message Refinement: \< operand
 Synopsis
 Answer true if the receiver is less than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is less than operand with respect to the ordering defined for them.
 Answer false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <DateAndTime>
+Refinement: \<DateAndTime>
 Answer true if the UTC time represented by operand follows the UTC time represented by the
 receiver. Answer false otherwise.
 If the offsets of the receiver and operand are the same then their order is determined by their
 lexical order in the sequence #year, #month, #day, #hour24, #minute, #second. If their
-offsets differ then result is the same as if receiver asUTC < operand asUTC were evaluated.
+offsets differ then result is the same as if receiver asUTC \< operand asUTC were evaluated.
 Parameters
 operand
 
-<DateAndTime>
+\<DateAndTime>
 
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -14528,7 +14899,7 @@ uncaptured
 5.8.1.4 Message Refinement: = comparand
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Return true if the receiver is equivalent to comparand. Otherwise return
 false.
@@ -14552,17 +14923,17 @@ The equivalence of objects need not be temporally invariant. Two independent inv
 with the same receiver and operand objects may not always yield the same results. Note that a
 collection that uses #= to discriminate objects may only reliably store objects whose hash values
 do not change while the objects are contained in the collection.
-Refinement: <DateAndTime>
-Answer true if the comparand conforms to <DateAndTime> and if it represents the
+Refinement: \<DateAndTime>
+Answer true if the comparand conforms to \<DateAndTime> and if it represents the
 same UTC time as the receiver. Answer false otherwise. The local times of the receiver and
 operand are ignored.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -14573,7 +14944,7 @@ none
 5.8.1.5 Message Refinement: > operand
 Synopsis
 Answer true if the receiver is greater than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is greater than operand with respect to the natural ordering. Answer
 false otherwise.
 It is erroneous if the receiver and operand are not comparable.
@@ -14582,7 +14953,7 @@ type of operand.
 
 
 
-Refinement: <DateAndTime>
+Refinement: \<DateAndTime>
 Answer true if the UTC time represented by operand precedes the UTC time represented by the
 receiver. Answer false otherwise.
 If the offsets of the receiver and operand are the same then their order is determined by their
@@ -14591,12 +14962,12 @@ offsets differ then result is the same as if receiver asUTC > operand asUTC were
 Parameters
 operand
 
-<DateAndTime>
+\<DateAndTime>
 
 uncaptured
 
 Return Values
-<boolean> unspecified
+\<boolean> unspecified
 Errors
 none
 5.8.1.6 Message:
@@ -14604,13 +14975,13 @@ none
 asLocal
 
 Synopsis
-Answer a <DateAndTime> that represents the same UTC time as the receiver but in the local time
+Answer a \<DateAndTime> that represents the same UTC time as the receiver but in the local time
 specified by the implementation.
-Definition: <DateAndTime>
-Answer a <DateAndTime> that represents the same UTC time as the receiver but in the local time
+Definition: \<DateAndTime>
+Answer a \<DateAndTime> that represents the same UTC time as the receiver but in the local time
 specified by the implementation.
 Return Values
-<DateAndTime> unspecified
+\<DateAndTime> unspecified
 Errors
 None
 5.8.1.7 Message:
@@ -14618,17 +14989,17 @@ None
 asUTC
 
 Synopsis
-Answer a <DateAndTime> that represents the same absolute time as the receiver but in the local
+Answer a \<DateAndTime> that represents the same absolute time as the receiver but in the local
 time UTC.
-Definition: <DateAndTime>
-Answer a <DateAndTime> that represents the same absolute time as the receiver but in the local
+Definition: \<DateAndTime>
+Answer a \<DateAndTime> that represents the same absolute time as the receiver but in the local
 time UTC. The exact meaning of UTC local time is specified by the implementation. The UTC local
-time must use the Gregorian calendar. <DateAndTimes> representing UTC times prior to the
+time must use the Gregorian calendar. \<DateAndTimes> representing UTC times prior to the
 adoption of the Gregorian calendar must use the retrospective astronomical Gregorian calendar. It
 is an invariant that
-<DateAndTime> asUTC offset = Duration zero.
+\<DateAndTime> asUTC offset = Duration zero.
 Return Values
-<DateAndTime> unspecified
+\<DateAndTime> unspecified
 Errors
 None
 5.8.1.8 Message:
@@ -14638,14 +15009,14 @@ dayOfMonth
 Synopsis
 Answer the number of the day in the month in the local time of the receiver which includes the
 receiver.
-Definition: <DateAndTime>
+Definition: \<DateAndTime>
 
 
 
-Answer an <integer> between 1 and 31 inclusive representing the number of the day in the month,
+Answer an \<integer> between 1 and 31 inclusive representing the number of the day in the month,
 in the local time of the receiver, which includes the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.1.9 Message:
@@ -14655,11 +15026,11 @@ dayOfWeek
 Synopsis
 Answer the number of the day in the week, in the local time of the receiver, which includes the
 receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 1 and 7 inclusive representing the number of the day in the week, in
+Definition: \<DateAndTime>
+Answer an \<integer> between 1 and 7 inclusive representing the number of the day in the week, in
 the local time of the receiver, which includes the receiver. Sunday is 1, Monday is 2, and so on.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.1.10 Message:
@@ -14669,11 +15040,11 @@ dayOfWeekAbbreviation
 Synopsis
 Answer the abbreviation of the name, in the local time of the receiver, of the day of the week which
 includes the receiver.
-Definition: <DateAndTime>
-Answer an <readableString> which is the abbreviation of the name, in the local time of the
+Definition: \<DateAndTime>
+Answer an \<readableString> which is the abbreviation of the name, in the local time of the
 receiver, of the day of the week which includes the receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.1.11 Message:
@@ -14683,11 +15054,11 @@ dayOfWeekName
 Synopsis
 Answer the name, in the local time of the receiver, of the day of the week which includes the
 receiver.
-Definition: <DateAndTime>
-Answer an <readableString> which is the name, in the local time of the receiver, of the day of the
+Definition: \<DateAndTime>
+Answer an \<readableString> which is the name, in the local time of the receiver, of the day of the
 week which includes the receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.1.12 Message:
@@ -14699,11 +15070,11 @@ dayOfYear
 
 Answer the number of the day in the year, in the local time of the receiver, which includes the
 receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 1 and 366 inclusive representing the number of the day in the year,
+Definition: \<DateAndTime>
+Answer an \<integer> between 1 and 366 inclusive representing the number of the day in the year,
 in the local time of the receiver, which includes the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.1.13 Message:
@@ -14713,13 +15084,13 @@ hour
 Synopsis
 Answer the number of the hour in the day, in the local time of the receiver, which includes the
 receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 0 and 23 inclusive representing the number of the hour in the day, in
+Definition: \<DateAndTime>
+Answer an \<integer> between 0 and 23 inclusive representing the number of the hour in the day, in
 the local time of the receiver, which includes the receiver. It is implementation defined whether a
 given local time uses the 12-hour clock or the 24-hour clock, except that the UTC local time must
 use the 24-hour clock.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.1.14 Message:
@@ -14728,11 +15099,11 @@ hour12
 
 Synopsis
 Answer the hour in the day in the 12-hour clock of the local time of the receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 1 and 12 inclusive representing the hour in the day in the 12-hour
+Definition: \<DateAndTime>
+Answer an \<integer> between 1 and 12 inclusive representing the hour in the day in the 12-hour
 clock of the local time of the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.1.15 Message:
@@ -14741,11 +15112,11 @@ hour24
 
 Synopsis
 Answer the hour in the day in the 24-hour clock of the local time of the receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 0 and 23 inclusive representing the hour in the day in the 24-hour
+Definition: \<DateAndTime>
+Answer an \<integer> between 0 and 23 inclusive representing the hour in the day in the 24-hour
 clock of the local time of the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 
@@ -14762,13 +15133,13 @@ isLeapYear
 
 Synopsis
 Test for leap year.
-Definition: <DateAndTime>
+Definition: \<DateAndTime>
 Answer true if the year, which includes the receiver, in the local time of the receiver is a leap year,
 false otherwise.
-Two <DateAndTime> objects that are equal can give different results for #isLeapYear. Equality
+Two \<DateAndTime> objects that are equal can give different results for #isLeapYear. Equality
 depends on their UTC time whereas #isLeapYear depends on their local time.
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -14781,11 +15152,11 @@ meridianAbbreviation
 Synopsis
 Answer the abbreviation, in the local time of the receiver, of the name of the half of the day, which
 includes the receiver.
-Definition: <DateAndTime>
-Answer a <readableString> that is the abbreviation, in the local time of the receiver, of the name of
+Definition: \<DateAndTime>
+Answer a \<readableString> that is the abbreviation, in the local time of the receiver, of the name of
 the half of the day, which includes the receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.1.18 Message:
@@ -14794,11 +15165,11 @@ minute
 
 Synopsis
 Answer the minute of the hour in the local time of the receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 0 and 59 inclusive representing the minute of hour in the local time
+Definition: \<DateAndTime>
+Answer an \<integer> between 0 and 59 inclusive representing the minute of hour in the local time
 of the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.1.19 Message:
@@ -14808,11 +15179,11 @@ month
 Synopsis
 Answer the number of the month in the year, in the local time of the receiver, which includes the
 receiver.
-Definition: <DateAndTime>
-Answer an <integer> between 1 and 12 inclusive representing the number of the month in the year,
+Definition: \<DateAndTime>
+Answer an \<integer> between 1 and 12 inclusive representing the number of the month in the year,
 in the local time of the receiver, which includes the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 
 
 
@@ -14825,11 +15196,11 @@ monthAbbreviation
 Synopsis
 Answer the abbreviation of the name of the month, in the local time of the receiver, which includes
 the receiver.
-Definition: <DateAndTime>
-Answer a <readableString> that is the abbreviation of the name of the month, in the local time of
+Definition: \<DateAndTime>
+Answer a \<readableString> that is the abbreviation of the name of the month, in the local time of
 the receiver, which includes the receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.1.21 Message:
@@ -14838,11 +15209,11 @@ monthName
 
 Synopsis
 Answer the name of the month, in the local time of the receiver, which includes the receiver.
-Definition: <DateAndTime>
-Answer a <readableString> that is the name of the month, in the local time of the receiver, which
+Definition: \<DateAndTime>
+Answer a \<readableString> that is the name of the month, in the local time of the receiver, which
 includes the receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.1.22 Message:
@@ -14851,11 +15222,11 @@ offset
 
 Synopsis
 Answer the difference between the local time of the receiver and UTC at the time of the receiver.
-Definition: <DateAndTime>
-Answer a <Duration> representing the difference between the local time of the receiver and UTC at
+Definition: \<DateAndTime>
+Answer a \<Duration> representing the difference between the local time of the receiver and UTC at
 the time of the receiver.
 Return Values
-<Duration>
+\<Duration>
 
 unspecified
 
@@ -14866,10 +15237,10 @@ None
 offset: offset
 
 Synopsis
-Answer a <DateAndTime> equivalent to the receiver but with its local time being offset from UTC
+Answer a \<DateAndTime> equivalent to the receiver but with its local time being offset from UTC
 by offset.
-Definition: <DateAndTime>
-Answer a <DateAndTime> equivalent to the receiver but with its local time being offset from UTC
+Definition: \<DateAndTime>
+Answer a \<DateAndTime> equivalent to the receiver but with its local time being offset from UTC
 by offset. The impact of this on any other local time property is unspecified.
 
 Implementations may define a limit to the range of offset, but it must be at least
@@ -14877,16 +15248,16 @@ Implementations may define a limit to the range of offset, but it must be at lea
 
 
 
-It is an invariant that if x is a <Duration> in range then
-(<DateAndTime> offset: x) offset = x
+It is an invariant that if x is a \<Duration> in range then
+(\<DateAndTime> offset: x) offset = x
 Parameters
 offset
-<Duration>
+\<Duration>
 
 unspecified
 
 Return Values
-<DateAndTime> unspecified
+\<DateAndTime> unspecified
 Errors
 offset out of range
 5.8.1.24 Message Refinement:
@@ -14895,15 +15266,15 @@ printString
 
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object are implementation defined.
-Refinement: <DateAndTime>
+Refinement: \<DateAndTime>
 The returned string will represent the UTC time of the receiver offset from UTC by the offset of the
 receiver. All dates are in the astronomical Gregorian calendar. The result will be formatted as
 -YYYY-MM-DDThh:mm:ss.s+ZZ:zz:z where
-is the <Character> $- if the year is less than 0 otherwise it is the <Character> that is
+is the \<Character> $- if the year is less than 0 otherwise it is the \<Character> that is
 returned from the message #space sent to the standard global Character,
 
 YYYY
@@ -14925,24 +15296,24 @@ zz
 z
 
 is the year left zero filled to four places,
-is the <Character> $-,
+is the \<Character> $-,
 is the month of the year left zero filled to two places,
-is the <Character> $-,
+is the \<Character> $-,
 is the day of the month left zero filled to two places,
-is the <Character> $T,
+is the \<Character> $T,
 is the hour in the 24-hour clock left zero filled to two places,
-is the <Character> $:,
+is the \<Character> $:,
 is the minute left zero filled to two places,
-is the <Character> $:,
+is the \<Character> $:,
 is the second left zero filled to two places,
-is the <Character> $. and is present only if the fraction of a second is non-zero,
+is the \<Character> $. and is present only if the fraction of a second is non-zero,
 is the fraction of a second and is present only if non-zero,
-is the <Character> $+ if the offset is greater than or equal to <Duration factory> #zero
-and the <Character> $- if it is less,
+is the \<Character> $+ if the offset is greater than or equal to \<Duration factory> #zero
+and the \<Character> $- if it is less,
 is the hours of the offset left zero filled to two places, and
-is the <Character> $:,
+is the \<Character> $:,
 is the minutes of the offset left zero filled to two places,
-is the <Character> $: and is present only if the seconds of the offset is non-zero,
+is the \<Character> $: and is present only if the seconds of the offset is non-zero,
 is the seconds of the offset including any fractional part and is present only if nonzero.
 
 
@@ -14953,7 +15324,7 @@ Example: 8:33:14.321 PM EST January 5, 1200 B.C.
 Example: 12 midnight UTC January 1, 2001 A.D.
 ' 2001-01-01T00:00:00+00:00'
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 none
 5.8.1.25 Message:
@@ -14962,11 +15333,11 @@ second
 
 Synopsis
 Answer the second of the minute of the local time of the receiver.
-Definition: <DateAndTime>
-Answer a <number> greater than or equal to 0 and strictly less than 60 representing the second of
+Definition: \<DateAndTime>
+Answer a \<number> greater than or equal to 0 and strictly less than 60 representing the second of
 the minute of the local time of the receiver.
 Return Values
-<number>
+\<number>
 
 unspecified
 
@@ -14979,11 +15350,11 @@ timeZoneAbbreviation
 Synopsis
 Answer the abbreviation of the name, in the local time of the receiver, of the time zone of the
 receiver.
-Definition: <DateAndTime>
-Answer a <readableString> that is the abbreviation of the name, in the local time of the receiver, of
+Definition: \<DateAndTime>
+Answer a \<readableString> that is the abbreviation of the name, in the local time of the receiver, of
 the time zone of the receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.1.27 Message:
@@ -14992,11 +15363,11 @@ timeZoneName
 
 Synopsis
 Answer the name in the local time of the receiver of the time zone of the receiver.
-Definition: <DateAndTime>
-Answer a <readableString> that is the name in the local time of the receiver of the time zone of the
+Definition: \<DateAndTime>
+Answer a \<readableString> that is the name in the local time of the receiver of the time zone of the
 receiver.
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 
@@ -15013,26 +15384,26 @@ year
 
 Synopsis
 Answer the number of the year in the local time of the receiver which includes the receiver.
-Definition: <DateAndTime>
-Answer an<integer> the number of the year which includes the receiver.
+Definition: \<DateAndTime>
+Answer an\<integer> the number of the year which includes the receiver.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 
 5.8.2 Protocol:
 
-<Duration>
+\<Duration>
 
 Conforms To
-<magnitude>
+\<magnitude>
 Description
 Represents a length of time.
 Messages:
 *
 +
 /
-<
+\<
 =
 >
 asSeconds
@@ -15052,14 +15423,14 @@ seconds
 
 Synopsis
 Answer the result of multiplying the receiver by operand.
-Definition: <Duration>
-Answer a <Duration> that is the result of multiplying the receiver by operand.
+Definition: \<Duration>
+Answer a \<Duration> that is the result of multiplying the receiver by operand.
 Parameters
 operand
 Return Values
-<Duration> new
+\<Duration> new
 
-<number>
+\<number>
 
 unspecified
 
@@ -15073,17 +15444,17 @@ None
 
 Synopsis
 Answer the result of adding operand to the receiver.
-Definition: <Duration>
-Answer a <Duration> whose value is the result of adding the receiver and operand.
+Definition: \<Duration>
+Answer a \<Duration> whose value is the result of adding the receiver and operand.
 Parameters
 operand
 
-<Duration>
+\<Duration>
 
 unspecified
 
 Return Values
-<Duration> new
+\<Duration> new
 Errors
 None
 5.8.2.3 Message:
@@ -15092,15 +15463,15 @@ None
 
 Synopsis
 Answer the result of subtracting the operand from the receiver.
-Definition: <Duration>
-Answer a <Duration> whose value is the result of subtracting operand from the receiver.
+Definition: \<Duration>
+Answer a \<Duration> whose value is the result of subtracting operand from the receiver.
 Parameters
 operand
 
-<Duration>
+\<Duration>
 
 Return Values
-<Duration>
+\<Duration>
 
 new
 
@@ -15114,17 +15485,17 @@ None
 
 Synopsis
 Answer the result of dividing the receiver by operand.
-Definition: <Duration>
-If operand is a <number> answer a new <Duration> whose value is the result of dividing the
+Definition: \<Duration>
+If operand is a \<number> answer a new \<Duration> whose value is the result of dividing the
 receiver by operand. If operand equals zero the ZeroDivide exception is signaled.
 
-If operand is a <Duration> answer a <number> whose value is the result of dividing the receiver
-by operand. If operand is <Duration factory> #zero the ZeroDivide exception is signaled.
+If operand is a \<Duration> answer a \<number> whose value is the result of dividing the receiver
+by operand. If operand is \<Duration factory> #zero the ZeroDivide exception is signaled.
 Parameters
-operand <number> | <Duration> unspecified
+operand \<number> | \<Duration> unspecified
 Return Values
-<Duration>
-<number>
+\<Duration>
+\<number>
 Errors
 none
 
@@ -15133,22 +15504,22 @@ unspecified
 
 
 
-5.8.2.5 Message Refinement: < operand
+5.8.2.5 Message Refinement: \< operand
 Synopsis
 Answer true if the receiver is less than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is less than operand with respect to the ordering defined for them.
 Answer false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <Duration>
-Answer true if operand represents a <Duration> that is larger than the receiver. Answer false
+Refinement: \<Duration>
+Answer true if operand represents a \<Duration> that is larger than the receiver. Answer false
 otherwise.
 Parameters
-operand <Duration>
+operand \<Duration>
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -15159,7 +15530,7 @@ none
 5.8.2.6 Message Refinement: = comparand
 Synopsis
 Object equivalence test.
-Definition: <Object>
+Definition: \<Object>
 This message tests whether the receiver and the comparand are equivalent objects at the time the
 message is processed. Return true if the receiver is equivalent to comparand. Otherwise return
 false.
@@ -15183,40 +15554,40 @@ The equivalence of objects need not be temporally invariant. Two independent inv
 with the same receiver and operand objects may not always yield the same results. Note that a
 collection that uses #= to discriminate objects may only reliably store objects whose hash values
 do not change while the objects are contained in the collection.
-Refinement: <Duration>
+Refinement: \<Duration>
 
 
 
-Answer true if the comparand is a <Duration> representing the same length of time as the
+Answer true if the comparand is a \<Duration> representing the same length of time as the
 receiver. Answer false otherwise.
 Parameters
 comparand
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Values
-<boolean> unspecified
+\<boolean> unspecified
 Errors
 none
 5.8.2.7 Message Refinement: > operand
 Synopsis
 Answer true if the receiver is greater than operand. Answer false otherwise.
-Definition: <magnitude>
+Definition: \<magnitude>
 Answer true if the receiver is greater than operand with respect to the natural ordering. Answer
 false otherwise.
 It is erroneous if the receiver and operand are not comparable.
 The semantics of the natural ordering must be defined by refinement, which may also restrict the
 type of operand.
-Refinement: <Duration>
+Refinement: \<Duration>
 
-Answer true if operand represents a <Duration> which is smaller than the receiver. Answer false
+Answer true if operand represents a \<Duration> which is smaller than the receiver. Answer false
 otherwise.
 Parameters
-operand <Duration> unspecified
+operand \<Duration> unspecified
 Return Values
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -15228,12 +15599,12 @@ asSeconds
 
 Synopsis
 Answer the total number of seconds in the length of time represented by the receiver.
-Definition: <Duration>
+Definition: \<Duration>
 Answer the total number of seconds in the length of time represented by the receiver including any
-fractional part of a second. If the receiver is less than <Duration factory> #zero then the result will
+fractional part of a second. If the receiver is less than \<Duration factory> #zero then the result will
 be less than 0.
 Return Values
-<number> unspecified
+\<number> unspecified
 Errors
 None
 5.8.2.9 Message:
@@ -15242,15 +15613,15 @@ abs
 
 Synopsis
 Answer the absolute value of the receiver.
-Definition: <Duration>
+Definition: \<Duration>
 
 
 
-If the receiver is greater than or equal to <Duration Factory> #zero answer a <Duration> which is
-equal to the receiver. Otherwise answer a <Duration> which has the same magnitude as the
+If the receiver is greater than or equal to \<Duration Factory> #zero answer a \<Duration> which is
+equal to the receiver. Otherwise answer a \<Duration> which has the same magnitude as the
 receiver but the opposite sign.
 Return Values
-<Duration> unspecified
+\<Duration> unspecified
 Errors
 None
 5.8.2.10 Message:
@@ -15259,11 +15630,11 @@ days
 
 Synopsis
 Answer the number of complete days in the receiver.
-Definition: <Duration>
-Answer the number of complete days in the receiver. If the receiver is less than <Duration factory>
+Definition: \<Duration>
+Answer the number of complete days in the receiver. If the receiver is less than \<Duration factory>
 #zero then the result will be less than or equal to 0.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.2.11 Message:
@@ -15272,12 +15643,12 @@ hours
 
 Synopsis
 Answer the number of complete hours in the receiver.
-Definition: <Duration>
-Answer an <integer> between -23 and 23 inclusive that represents the number of complete hours
+Definition: \<Duration>
+Answer an \<integer> between -23 and 23 inclusive that represents the number of complete hours
 in the receiver, after the number of complete days has been removed. If the receiver is less than
-<Duration factory> #zero then the result will be less than or equal to 0.
+\<Duration factory> #zero then the result will be less than or equal to 0.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.2.12 Message:
@@ -15286,12 +15657,12 @@ minutes
 
 Synopsis
 Answer the number of complete minutes in the receiver.
-Definition: <time>
-Answer an <integer> between -59 and 59 inclusive that represents the number of complete
+Definition: \<time>
+Answer an \<integer> between -59 and 59 inclusive that represents the number of complete
 minutes in the receiver, after the number of complete days and hours have been removed. If the
-receiver is less than <Duration factory> #zero then the result will be less than or equal to 0.
+receiver is less than \<Duration factory> #zero then the result will be less than or equal to 0.
 Return Values
-<integer> unspecified
+\<integer> unspecified
 Errors
 None
 5.8.2.13 Message:
@@ -15303,10 +15674,10 @@ Answer the negation of the receiver.
 
 
 
-Definition: <Duration>
-Answer a <Duration> which is of the same magnitude but opposite sign as the receiver.
+Definition: \<Duration>
+Answer a \<Duration> which is of the same magnitude but opposite sign as the receiver.
 Return Values
-<Duration> unspecified
+\<Duration> unspecified
 Errors
 None
 5.8.2.14 Message:
@@ -15314,11 +15685,11 @@ None
 negative
 
 Synopsis
-Answer true if the receiver is less than <Duration factory> #zero.
-Definition: <Duration>
-Answer true if the receiver is less than <Duration factory> #zero, false otherwise.
+Answer true if the receiver is less than \<Duration factory> #zero.
+Definition: \<Duration>
+Answer true if the receiver is less than \<Duration factory> #zero, false otherwise.
 Return Values
-<boolean> unspecified
+\<boolean> unspecified
 Errors
 None
 5.8.2.15 Message:
@@ -15326,12 +15697,12 @@ None
 positive
 
 Synopsis
-Answer true if the receiver is greater than or equal to <Duration factory> #zero.
-Definition: <Duration>
-Answer true if the receiver is greater than or equal to the <Duration factory> #zero, false
+Answer true if the receiver is greater than or equal to \<Duration factory> #zero.
+Definition: \<Duration>
+Answer true if the receiver is greater than or equal to the \<Duration factory> #zero, false
 otherwise.
 Return Values
-<boolean> unspecified
+\<boolean> unspecified
 Errors
 None
 5.8.2.16 Message Refinement:
@@ -15340,11 +15711,11 @@ printString
 
 Synopsis
 Return a string that describes the receiver.
-Definition: <Object>
+Definition: \<Object>
 A string consisting of a sequence of characters that describe the receiver are returned as the
 result.
 The exact sequence of characters that describe an object is implementation defined.
-Refinement: <Duration>
+Refinement: \<Duration>
 Answer a description of the receiver that is formatted as
 [-]D:HH:MM:SS[.S] where
 is a minus sign if the receiver represents a length of time going from the future into
@@ -15363,7 +15734,7 @@ is the fractional part of the number of seconds, if any.
 
 
 Return Values
-<readableString> unspecified
+\<readableString> unspecified
 Errors
 None
 5.8.2.17 Message:
@@ -15372,27 +15743,27 @@ seconds
 
 Synopsis
 Answer the number of seconds in the receiver.
-Definition: <Duration>
-Answer a <number> strictly greater than -60 and strictly less than 60 that represents the number of
+Definition: \<Duration>
+Answer a \<number> strictly greater than -60 and strictly less than 60 that represents the number of
 seconds in the receiver, after the complete days, hours, and minutes have been removed. If the
-receiver is less than <Duration factory> #zero then the result will be less than or equal to 0.
+receiver is less than \<Duration factory> #zero then the result will be less than or equal to 0.
 Return Values
-<number> unspecified
+\<number> unspecified
 Errors
 None
 
 5.8.3 Protocol:
 
-<Duration factory>
+\<Duration factory>
 
 Conforms To
-<Object>
+\<Object>
 Description
 Represents protocol for creating a particular length of time.
 Standard Globals
 Duration
 
-Conforms to the protocol <Duration factory>. Its language element type
+Conforms to the protocol \<Duration factory>. Its language element type
 is unspecified.
 
 Messages:
@@ -15405,17 +15776,17 @@ zero
 days: days hours: hours minutes: minutes seconds: seconds
 
 Synopsis
-Answer a <Duration> of the number of days, hours, minutes, and seconds.
-Definition: <Duration factory>
-Answer a <Duration> of the number of days, hours, minutes, and seconds. If any of the operands
+Answer a \<Duration> of the number of days, hours, minutes, and seconds.
+Definition: \<Duration factory>
+Answer a \<Duration> of the number of days, hours, minutes, and seconds. If any of the operands
 are negative, the result is smaller by that number of days, hours, minutes, or seconds as
 appropriate.
 Parameters
 days
 hours
 
-<integer>
-<integer>
+\<integer>
+\<integer>
 
 unspecified
 unspecified
@@ -15428,8 +15799,8 @@ seconds
 December, 1997
 revision 1.9
 
-<integer>
-<number>
+\<integer>
+\<number>
 
 267
 
@@ -15437,20 +15808,20 @@ unspecified
 unspecified
 
 Return Values
-<Duration> new
+\<Duration> new
 5.8.3.2 Message:
 
 seconds: seconds
 
 Synopsis
-Answer a <Duration> which is seconds in length
-Definition: <Duration factory>
-If seconds is negative, answer a <Duration> that is abs (seconds) less than <Duration factory>
+Answer a \<Duration> which is seconds in length
+Definition: \<Duration factory>
+If seconds is negative, answer a \<Duration> that is abs (seconds) less than \<Duration factory>
 #zero.
 Parameters
-seconds <number>
+seconds \<number>
 Return Values
-<Duration>
+\<Duration>
 
 new
 
@@ -15461,24 +15832,24 @@ zero
 unspecified
 
 Synopsis
-Answer a <Duration> of zero length.
-Definition: <Duration factory>
-Answer a <Duration> representing a length of no time.
+Answer a \<Duration> of zero length.
+Definition: \<Duration factory>
+Answer a \<Duration> representing a length of no time.
 Return Values
-<Duration> unspecified
+\<Duration> unspecified
 
 5.8.4 Protocol:
 
-<DateAndTime factory>
+\<DateAndTime factory>
 
 Conforms To
-<Object>
+\<Object>
 Description
 Represents protocol for creating an abstraction for a particular day of the year.
 Standard Globals
 DateTime
 
-Conforms to the protocol <DateAndTime factory>. Its language element
+Conforms to the protocol \<DateAndTime factory>. Its language element
 type is unspecified.
 
 Messages:
@@ -15501,13 +15872,13 @@ revision 1.9
 clockPrecision
 
 Synopsis
-Answer a <Duration> such that after that period of time passes, #now is guaranteed to give a
+Answer a \<Duration> such that after that period of time passes, #now is guaranteed to give a
 different result.
-Definition: <DateAndTime factory>
-Answer a <Duration> such that after that period of time passes, #now is guaranteed to give a
+Definition: \<DateAndTime factory>
+Answer a \<Duration> such that after that period of time passes, #now is guaranteed to give a
 different result. Ideally implementations should answer the least such duration.
 Return Values:
-<Duration> unspecified
+\<Duration> unspecified
 Errors
 None
 5.8.4.2 Message:
@@ -15516,18 +15887,18 @@ second: second
 year: year month: month day: dayOfMonth hour: hour minute: minute
 
 Synopsis
-Answer a <DateAndTime> which is the second second of the minute minute of the hour hour of
+Answer a \<DateAndTime> which is the second second of the minute minute of the hour hour of
 the day dayOfMonth of the month month of the year year of the astronomical Gregorian calendar
 in local time.
-Definition: <DateAndTime factory>
-Answer the least <DateAndTime> which is the second second of the minute minute of the hour
+Definition: \<DateAndTime factory>
+Answer the least \<DateAndTime> which is the second second of the minute minute of the hour
 hour of the day dayOfMonth of the month month of the year year of the astronomical Gregorian
-calendar in the local time specified by the implementation. The second must be a <number>
-greater than or equal to 0 and strictly less than 60. The minute must be an <integer> between 0
-and 59 inclusive. The hour must be an <integer> between 0 and 23 inclusive. The day must be an
-<integer> between 1 and 31 inclusive. The month must be an <integer> between 1 and 12
+calendar in the local time specified by the implementation. The second must be a \<number>
+greater than or equal to 0 and strictly less than 60. The minute must be an \<integer> between 0
+and 59 inclusive. The hour must be an \<integer> between 0 and 23 inclusive. The day must be an
+\<integer> between 1 and 31 inclusive. The month must be an \<integer> between 1 and 12
 inclusive. An implementation may not impose any limits on the year other than those imposed on
-<integer> constants.
+\<integer> constants.
 
 It is possible that the time specified does not exist in the local time defined by the implementation. If
 there is a time change such that the local time is set forward and the time specified is in the
@@ -15536,25 +15907,25 @@ April 26, 1997 there is a time change that sets local time forward one hour, the
 02:30 in California does not exist. Conversely if there is a time change that sets the locale time
 back there are times which are ambiguous. For example if instead of setting the local time forward
 from 02:00 to 03:00 it is set back to 01:00 the the local time 01:30 in California is ambiguious. The
-result is the least <DateAndTime> that conforms to the given parameters.
+result is the least \<DateAndTime> that conforms to the given parameters.
 Parameters
 year
-<integer>
+\<integer>
 unspecified
-month <integer>
+month \<integer>
 unspecified
 dayOfMonth
-<integer>
+\<integer>
 unspecified
 hour
-<integer>
+\<integer>
 unspecified
-minute <integer>
+minute \<integer>
 unspecified
-second <number>
+second \<number>
 unspecified
 Return Values
-<DateAndTime> new
+\<DateAndTime> new
 Errors
 month is not between 1 and 12 inclusive.
 
@@ -15571,17 +15942,17 @@ the time specified does not exist.
 year: year month: month day: dayOfMonth hour: hour minute: minute
 second: second offset: offset
 Synopsis
-Answer a <DateAndTime> which is the second second of the minute minute of the hour hour of
+Answer a \<DateAndTime> which is the second second of the minute minute of the hour hour of
 the day dayOfMonth of the month month of the year year of the astronomical Gregorian calendar
 offset from UTC by offset.
-Definition: <DateAndTime factory>
-Answer the least <DateAndTime> which is the second second of the minute minute of the hour
+Definition: \<DateAndTime factory>
+Answer the least \<DateAndTime> which is the second second of the minute minute of the hour
 hour of the day dayOfMonth of the month month of the year year of the astronomical Gregorian
-calendar offset from UTC by offset. The second must be a <number> greater than or equal to 0
-and strictly less than 60. The minute must be an <integer> between 0 and 59 inclusive. The hour
-must be an <integer> between 0 and 23 inclusive. The day must be an <integer> between 1 and
-31 inclusive. The month must be an <integer> between 1 and 12 inclusive. An implementation may
-not impose any limits on the year other than those imposed on <integer> constants.
+calendar offset from UTC by offset. The second must be a \<number> greater than or equal to 0
+and strictly less than 60. The minute must be an \<integer> between 0 and 59 inclusive. The hour
+must be an \<integer> between 0 and 23 inclusive. The day must be an \<integer> between 1 and
+31 inclusive. The month must be an \<integer> between 1 and 12 inclusive. An implementation may
+not impose any limits on the year other than those imposed on \<integer> constants.
 
 It is possible that the time specified does not exist in the local time defined by the implementation. If
 there is a time change such that the local time is set forward and the time specified is in the
@@ -15590,27 +15961,27 @@ April 26, 1997 there is a time change that sets local time forward one hour, the
 02:30 in California does not exist. Conversely if there is a time change that sets the locale time
 back there are times which are ambiguous. For example if instead of setting the local time forward
 from 02:00 to 03:00 it is set back to 01:00 the the local time 01:30 in California is ambiguious. The
-result is the least <DateAndTime> that conforms to the given parameters.
+result is the least \<DateAndTime> that conforms to the given parameters.
 Parameters
 year
-<integer>
+\<integer>
 unspecified
-month <integer>
+month \<integer>
 unspecified
 dayOfMonth
-<integer>
+\<integer>
 unspecified
 hour
-<integer>
+\<integer>
 unspecified
-minute <integer>
+minute \<integer>
 unspecified
-second <number>
+second \<number>
 unspecified
-offset <Duration>
+offset \<Duration>
 unspecified
 Return Values
-<DateAndTime> new
+\<DateAndTime> new
 Errors
 month is not between 1 and 12 inclusive.
 dayOfMonth greater than the number of days in the month month of year year of the
@@ -15631,16 +16002,16 @@ revision 1.9
 year: year day: dayOfYear hour: hour minute: minute second: second
 
 Synopsis
-Answer a <DateAndTime> which is the second second of the minute minute of the hour hour of
+Answer a \<DateAndTime> which is the second second of the minute minute of the hour hour of
 the day dayOfYear of the year year of the astronomical Gregorian calendar in local time.
-Definition: <DateAndTime factory>
-Answer the least <DateAndTime> which is the second second of the minute minute of the hour
+Definition: \<DateAndTime factory>
+Answer the least \<DateAndTime> which is the second second of the minute minute of the hour
 hour of the day dayOfYear of the year year of the astronomical Gregorian calendar in the local
-time specified by the implementation. The second must be a <number> greater than or equal to 0
-and strictly less than 60. The minute must be an <integer> between 0 and 59 inclusive. The hour
-must be an <integer> between 0 and 23 inclusive. The day must be an <integer> between 1 and
+time specified by the implementation. The second must be a \<number> greater than or equal to 0
+and strictly less than 60. The minute must be an \<integer> between 0 and 59 inclusive. The hour
+must be an \<integer> between 0 and 23 inclusive. The day must be an \<integer> between 1 and
 366 inclusive. An implementation may not impose any limits on the year other than those imposed
-on <integer> constants.
+on \<integer> constants.
 
 It is possible that the time specified does not exist in the local time specified by the implementation.
 If there is a time change such that the local time is set forward and the time specified is in the
@@ -15649,26 +16020,26 @@ April 26, 1997 there is a time change that sets local time forward one hour, the
 02:30 in California does not exist. Conversely if there is a time change that sets the locale time
 back there are times which are ambiguous. For example if instead of setting the local time forward
 from 02:00 to 03:00 it is set back to 01:00 the the local time 01:30 in California is ambiguious. The
-result is the least <DateAndTime> that conforms to the given parameters.
+result is the least \<DateAndTime> that conforms to the given parameters.
 It is worth noting that the year 1 B.C. is year 0 in the astronomical Gregorian calendar. Similarly the
 year 2 B.C. is year -1 in the astronomical Gregorian calendar and so on. The year 1 A.D. is year 1
 in the astronomical Gregorian calendar.
 Parameters
 year
-<integer>
+\<integer>
 unspecified
 dayOfYear
-<integer>
+\<integer>
 unspecified
 hour
-<integer>
+\<integer>
 unspecified
-minute <integer>
+minute \<integer>
 unspecified
-second <number>
+second \<number>
 unspecified
 Return Values
-<DateAndTime> new
+\<DateAndTime> new
 Errors
 month is not between 1 and 12 inclusive.
 dayOfYear greater than the number of days in the year year of the astronomical Gregorian
@@ -15683,19 +16054,19 @@ offset: offset
 year: year day: dayOfYear hour: hour minute: minute second: second
 
 Synopsis
-Answer a <DateAndTime> which is the second second of the minute minute of the hour hour of
+Answer a \<DateAndTime> which is the second second of the minute minute of the hour hour of
 the day dayOfYear of the year year of the astronomical Gregorian calendar offset from UTC by
 offset.
 
 
 
-Definition: <DateAndTime factory>
-Answer the least <DateAndTime> which is the second second of the minute minute of the hour
+Definition: \<DateAndTime factory>
+Answer the least \<DateAndTime> which is the second second of the minute minute of the hour
 hour of the day dayOfYear of the year year of the astronomical Gregorian calendar in the local
-time of the locale locale. The second must be a <number> greater than or equal to 0 and strictly
-less than 60. The minute must be an <integer> between 0 and 59 inclusive. The hour must be an
-<integer> between 0 and 23 inclusive. The day must be an <integer> between 1 and 366 inclusive.
-An implementation may not impose any limits on the year other than those imposed on <integer>
+time of the locale locale. The second must be a \<number> greater than or equal to 0 and strictly
+less than 60. The minute must be an \<integer> between 0 and 59 inclusive. The hour must be an
+\<integer> between 0 and 23 inclusive. The day must be an \<integer> between 1 and 366 inclusive.
+An implementation may not impose any limits on the year other than those imposed on \<integer>
 constants.
 
 It is possible that the time specified does not exist in the local time defined by the implementation. If
@@ -15705,25 +16076,25 @@ April 26, 1997 there is a time change that sets local time forward one hour, the
 02:30 in California does not exist. Conversely if there is a time change that sets the locale time
 back there are times which are ambiguous. For example if instead of setting the local time forward
 from 02:00 to 03:00 it is set back to 01:00 the the local time 01:30 in California is ambiguious. The
-result is the least <DateAndTime> that conforms to the given parameters.
+result is the least \<DateAndTime> that conforms to the given parameters.
 Parameters
 year
-<integer>
+\<integer>
 unspecified
 dayOfYear
-<integer>
+\<integer>
 unspecified
 hour
-<integer>
+\<integer>
 unspecified
-minute <integer>
+minute \<integer>
 unspecified
-second <number>
+second \<number>
 unspecified
-offset <Duration>
+offset \<Duration>
 unspecified
 Return Values
-<DateAndTime> new
+\<DateAndTime> new
 Errors
 month is not between 1 and 12 inclusive.
 dayOfYear greater than the number of days in the year year of the astronomical Gregorian
@@ -15737,12 +16108,12 @@ specified.
 now
 
 Synopsis
-Answer a <DateAndTime> representing the current date and time.
-Definition: <DateAndTime factory>
-Answer a <DateAndTime> representing the current date and time in the local time specified by the
+Answer a \<DateAndTime> representing the current date and time.
+Definition: \<DateAndTime factory>
+Answer a \<DateAndTime> representing the current date and time in the local time specified by the
 implementation.
 Return Values
-<DateAndTime> unspecified
+\<DateAndTime> unspecified
 Errors
 None
 
@@ -15756,14 +16127,14 @@ This section includes protocols that define the fundamental behavior of various 
 Streams produce or consume a sequence of values. Some stream classes will build sequenceable
 collections or report the values of a sequenceable collection. Other types of streams may operate
 on files, positive integers, random numbers, and so forth.
-There are seven protocols that describe stream behavior. <sequencedStream> describes a stream
-on a sequence of objects and allows for positioning of the stream.<gettableStream> allows for
-reading from a stream. <puttableStream> allows for writing to a stream. <collectionStream>
-provides for the association of a stream with a collection. <ReadStream> reads a sequence of
+There are seven protocols that describe stream behavior. \<sequencedStream> describes a stream
+on a sequence of objects and allows for positioning of the stream.\<gettableStream> allows for
+reading from a stream. \<puttableStream> allows for writing to a stream. \<collectionStream>
+provides for the association of a stream with a collection. \<ReadStream> reads a sequence of
 objects from a preexisting collection and can peek at objects prior to reading them. The objects
-written to a <WriteStream> are accumulated so they can be independently accessed as a
-collection; <ReadWriteStream> can read, peek, and write within a collection of objects.
-The protocol <Transcript> defines the behavior of the object that is the value of the global named
+written to a \<WriteStream> are accumulated so they can be independently accessed as a
+collection; \<ReadWriteStream> can read, peek, and write within a collection of objects.
+The protocol \<Transcript> defines the behavior of the object that is the value of the global named
 Transcript. Transcript is a stream that may be used to log textual message generated by a
 Smalltalk program.
 There are three factory protocols that specify the behavior of three global stream factories,
@@ -15771,34 +16142,34 @@ ReadStream, WriteStream, and ReadWriteStream, used to create various types of st
 The graph below shows the conformance relationships between the protocols defined in this
 section.
 
-<sequencedStream>
-<gettableStream>
+\<sequencedStream>
+\<gettableStream>
 
-<collectionStream>
+\<collectionStream>
 
-<ReadStream>
+\<ReadStream>
 
-<puttableStream>
+\<puttableStream>
 
-<WriteStream>
+\<WriteStream>
 
-<Transcript>
+\<Transcript>
 
-<ReadWriteStream>
+\<ReadWriteStream>
 
-<ReadStream factory>
+\<ReadStream factory>
 
-<ReadWriteStream factory>
+\<ReadWriteStream factory>
 
-<WriteStream factory>
+\<WriteStream factory>
 
 
 
-5.9.1 Protocol: <sequencedStream>
+5.9.1 Protocol: \<sequencedStream>
 Conforms To
-<Object>
+\<Object>
 Description
-An object conforming to <sequencedStream> has a finite number of past and future sequence
+An object conforming to \<sequencedStream> has a finite number of past and future sequence
 values. It maintains a position on its sequence values and allows the position to be altered.
 Messages
 close
@@ -15815,7 +16186,7 @@ close
 
 Synopsis
 Disassociate a stream from its backing store.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 If the receiver is a write-back stream update its stream backing store as if the message #flush was
 sent to the receiver. Then eliminate any association between the receiver and its stream backing
 store. Any system resources associated with the association should be released. The effect of
@@ -15830,11 +16201,11 @@ contents
 
 Synopsis
 Returns a collection containing the complete contents of the stream.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 Returns a collection that contains the receiver's past and future sequence values, in order. The
 size of the collection is the sum of the sizes of the past and future sequence values.
 Return Value
-<sequencedReadableCollection> unspecified
+\<sequencedReadableCollection> unspecified
 Errors
 none
 5.9.1.3 Message:
@@ -15843,14 +16214,14 @@ isEmpty
 
 Synopsis
 Returns a Boolean indicating whether there are any sequence values in the receiver.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 
 
 
 Returns true if both the set of past and future sequence values of the receiver are empty.
 Otherwise returns false.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -15862,10 +16233,10 @@ position
 
 Synopsis
 Returns the current position of the stream.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 Returns the number of sequence values in the receiver's past sequence values.
 Return Value
-<integer> unspecified
+\<integer> unspecified
 Errors
 none
 5.9.1.5 Message:
@@ -15874,7 +16245,7 @@ position: amount
 
 Synopsis
 Sets the current position in a stream of values.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 If the number of sequence values in the receiver's past sequence values is smaller than amount,
 move objects in sequence from the front of the receiver's future sequence values to the back of th
 receiver's past sequence values until the number of sequence values in the receiver's past
@@ -15887,7 +16258,7 @@ sequence values is equal to amount.
 If the number of sequence values in the receiver's past sequence values is equal to amount no
 action is taken.
 Parameters
-amount <integer>
+amount \<integer>
 
 unspecified
 
@@ -15904,7 +16275,7 @@ reset
 
 Synopsis
 Resets the position of the receiver to be at the beginning of the stream of values.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 Sets the receiver's future sequence values to be the current past sequence values appended with
 the current future sequence values. Make the receiver's past sequence values be empty.
 
@@ -15920,7 +16291,7 @@ setToEnd
 
 Synopsis
 Set the position of the stream to its end.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 All of the receiver's future sequence values are appended, in sequence, to the receiver's past
 sequence values. The receiver then has no future sequence values.
 Return Value
@@ -15928,11 +16299,11 @@ UNSPECIFIED
 Errors
 none
 
-5.9.2 Protocol: <gettableStream>
+5.9.2 Protocol: \<gettableStream>
 Conforms To
-<Object>
+\<Object>
 Description
-An object conforming to <gettableStream> can read objects from its future sequence values.
+An object conforming to \<gettableStream> can read objects from its future sequence values.
 Messages
 atEnd
 do:
@@ -15952,11 +16323,11 @@ atEnd
 
 Synopsis
 Returns a Boolean indicating whether the receiver is at the end of its values.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Return true if the receiver has no future sequence values available for reading. Return false
 otherwise.
 Return Value
-<boolean>
+\<boolean>
 Errors
 
 unspecified
@@ -15971,7 +16342,7 @@ do: operation
 Synopsis
 Evaluates the argument with each receiver future sequence value, terminating evaluation when
 there are no more future sequence values.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Each member of the receiver’s future sequence values is, in turn, removed from the future
 sequence values; appended to the past sequence values; and, passed as the argument to an
 evaluation of operand. The argument, operation, is evaluated as if sent the message #value:.
@@ -15982,7 +16353,7 @@ operand changes the receiver’s future sequence values
 Parameters
 operation
 
-<monadicValuable>
+\<monadicValuable>
 
 uncaptured
 
@@ -15996,13 +16367,13 @@ next
 
 Synopsis
 Return the next object in the receiver.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 The first object is removed from the receiver’s future sequence values and appended to the end of
 the receiver's past sequence values. That object is returned as the value of the message. The
 returned object must conform to the receiver's sequence value type.
 The result is undefined if there the receiver has no future sequence values.
 Return Value
-<Object> state
+\<Object> state
 Errors
 none
 5.9.2.4 Message:
@@ -16011,7 +16382,7 @@ next: amount
 
 Synopsis
 Returns a collection of the next amount objects in the stream.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 A number of objects equal to amount are removed from the receiver's future sequence values and
 appended, in order, to the end of the receiver's past sequence values. A collection whose elements
 consist of those objects, in the same order, is returned. If amount is equal to 0 an empty collection
@@ -16019,23 +16390,23 @@ is returned.
 The result is undefined if amount is larger than the number of objects in the receiver's future
 sequence values.
 Parameters
-amount <integer>
+amount \<integer>
 
 uncaptured
 
 
 
 Return Value
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
-amount < 0
+amount \< 0
 5.9.2.5 Message:
 
 nextLine
 
 Synopsis
 Reads the next line from the stream.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Each object in the receiver's future sequence values up to and including the first occurrence of the
 objects that constitute an implementation defined end-of-line sequence is removed from the future
 sequence values and appended to the receiver's past sequence values. All of the transfered
@@ -16043,9 +16414,9 @@ objects, except the end-of-line sequence objects, are collected, in order, as th
 that is the return value. The result is undefined if there are no future sequence values in the
 receiver or if the future-sequence values do not include the end-of-line sequence.
 Return Value
-<readableString> new
+\<readableString> new
 Errors
-If any of the future sequence values to be returned do not conform to the protocol <Character>.
+If any of the future sequence values to be returned do not conform to the protocol \<Character>.
 5.9.2.6 Message:
 
 nextMatchFor: anObject
@@ -16053,7 +16424,7 @@ nextMatchFor: anObject
 Synopsis
 Reads the next object from the stream and returns true if the object is equivalent to the argument
 and false if not.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 The first object is removed from the receiver's future sequence value and appended to the end of
 the receiver's past sequence values. The value that would result from sending #= to the object with
 anObject as the argument is returned.
@@ -16061,10 +16432,10 @@ The results are undefined if there are no future sequence values in the receiver
 Parameters
 anObject
 
-<Object>
+\<Object>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -16079,7 +16450,7 @@ peek
 Synopsis
 Returns the next object in the receiver's future sequence values without advancing the receiver's
 position. Returns nil if the receiver is at end of stream.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Returns the first object in the receiver's future sequence values. The object is not removed from the
 future sequence values. The returned object must conform to the receiver's sequence value type.
 Returns nil if the receiver has no future sequence values. The return value will also be nil if the first
@@ -16088,7 +16459,7 @@ Return Value
 
 
 
-<Object> state
+\<Object> state
 Errors
 none
 5.9.2.8 Message:
@@ -16097,16 +16468,16 @@ peekFor: anObject
 
 Synopsis
 Peeks at the next object in the stream and returns true if it matches the argument, and false if not.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Returns the result of sending #= to the first object in the receiver's future sequence values with
 anObject as the argument. Returns false if the receiver has no future sequence values.
 Parameters
 anObject
 
-<Object>
+\<Object>
 
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -16120,13 +16491,13 @@ skip: amount
 
 Synopsis
 Skips the next amount objects in the receiver's future sequence values.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 
 A number of objects equal to the lesser of amount and the size of the receiver's future sequence
 values are removed from the receiver's future sequence values and appended, in order, to the end of
 the receiver's past sequence values.
 Parameters
-amount <integer>
+amount \<integer>
 
 uncaptured
 
@@ -16141,7 +16512,7 @@ skipTo: anObject
 Synopsis
 Sets the stream to read the object just after the next occurrence of the argument and returns true. If
 the argument is not found before the end of the stream is encountered, false is returned.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Each object in the receiver's future sequence values up to and including the first occurrence of an
 object that is equivalent to anObject is removed from the future sequence values and appended
 to the receiver's past sequence values. If an object that is equivalent to anObject is not found in
@@ -16152,13 +16523,13 @@ Parameters
 anObject
 Return Value
 
-<Object>
+\<Object>
 
 uncaptured
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
-<boolean>
+\<boolean>
 
 December, 1997
 revision 1.9
@@ -16178,7 +16549,7 @@ Returns a collection of all of the objects in the receiver up to, but not includ
 of the argument. Sets the stream to read the object just after the next occurrence of the argument.
 If the argument is not found and the end of the stream is encountered, an ordered collection of the
 objects read is returned.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Each object in the receiver's future sequence values up to and including the first occurrence of an
 object that is equivalent to anObject is removed from the future sequence values and appended
 to the receiver's past sequence values. A collection, containing, in order, all of the transferred
@@ -16187,20 +16558,20 @@ sequence values is initially empty, an empty collection is returned.
 Parameters
 anObject
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Value
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 
-5.9.3 Protocol: <collectionStream>
+5.9.3 Protocol: \<collectionStream>
 Conforms To
-<sequencedStream>
+\<sequencedStream>
 Description
-An object conforming to <collectionStream> has a <sequencedReadableCollection> as its stream
+An object conforming to \<collectionStream> has a \<sequencedReadableCollection> as its stream
 backing store.
 Messages
 contents
@@ -16211,10 +16582,10 @@ contents
 
 Synopsis
 Returns a collection containing the complete contents of the stream.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 Returns a collection that contains the receiver’s past and future sequence values, in order. The
 size of the collection is the sum of the sizes of the past and future sequence values.
-Refinement: <collectionStream>
+Refinement: \<collectionStream>
 It is unspecified whether or not the returned collection is the same object as the backing store
 collection. However, if the returned collection is not the same object as the stream backing store
 
@@ -16223,15 +16594,15 @@ collection. However, if the returned collection is not the same object as the st
 collection then the class of the returned collection is the same class as would be returned if the
 message #select: was sent to the backing store collection.
 Return Value
-<sequencedReadableCollection> unspecified
+\<sequencedReadableCollection> unspecified
 Errors
 none
 
-5.9.4 Protocol: <puttableStream>
+5.9.4 Protocol: \<puttableStream>
 Conforms To
-<Object>
+\<Object>
 Description
-An object conforming to <puttableStream> allows objects to be added to its past sequence values.
+An object conforming to \<puttableStream> allows objects to be added to its past sequence values.
 Messages
 cr
 flush
@@ -16246,7 +16617,7 @@ cr
 
 Synopsis
 Writes an end-of-line sequence to the receiver.
-Definition: <puttableStream>
+Definition: \<puttableStream>
 A sequence of character objects that constitute the implementation-defined end-of-line sequence is
 added to the receiver in the same manner as if the message #nextPutAll: was sent to the
 receiver with an argument string whose elements are the sequence of characters.
@@ -16261,7 +16632,7 @@ flush
 
 Synopsis:
 Update a stream's backing store.
-Definition: <puttableStream>
+Definition: \<puttableStream>
 Upon return, if the receiver is a write-back stream, the state of the stream backing store must be
 consistent with the current state of the receiver.
 If the receiver is not a write-back stream, the effect of this message is unspecified.
@@ -16278,14 +16649,14 @@ nextPut: anObject
 
 Synopsis
 Writes the argument to the stream.
-Definition: <puttableStream>
+Definition: \<puttableStream>
 
 Appends anObject to the receiver's past sequence values. If the receiver's future sequence
 values is not empty, removes its first object.
 Parameters
 anObject
 
-<Object>
+\<Object>
 
 captured
 
@@ -16301,14 +16672,14 @@ nextPutAll: aCollection
 
 Synopsis
 Enumerates the argument, adding each element to the receiver
-Definition: <puttableStream>
+Definition: \<puttableStream>
 Has the effect of enumerating the aCollection with the message #do: and adding each element
 to the receiver with #nextPut:. That is,
 aCollection do: [:each | receiver nextPut: each]
 Parameters
 aCollection
 
-<collection>
+\<collection>
 
 uncaptured
 
@@ -16323,7 +16694,7 @@ space
 
 Synopsis
 Writes a space character to the receiver.
-Definition: <puttableStream>
+Definition: \<puttableStream>
 The effect is the same as sending the message #nextPut: to the receiver with an argument that
 is the object that is the value returned when the message #space is sent to the standard global
 Character.
@@ -16341,7 +16712,7 @@ tab
 
 Synopsis
 Writes a tab character to the receiver.
-Definition: <puttableStream>
+Definition: \<puttableStream>
 
 The effect is the same as sending the message #nextPut: to the receiver with an argument that is
 the object that is the value returned when the message #tab is sent to the standard global
@@ -16352,11 +16723,11 @@ Errors
 It is erroneous if the tab character is an object that does not conform to the receiver's sequence
 value type.
 
-5.9.5 Protocol: <ReadStream>
+5.9.5 Protocol: \<ReadStream>
 Conforms To
-<gettableStream> <collectionStream>
+\<gettableStream> \<collectionStream>
 Description
-An object conforming to <ReadStream> has a positionable sequence of values that can be read.
+An object conforming to \<ReadStream> has a positionable sequence of values that can be read.
 The sequence values are provided by a sequenced collection that serves as the stream backing
 store.
 Messages
@@ -16369,21 +16740,21 @@ next: amount
 
 Synopsis
 Returns a collection of the next amount objects in the stream.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 A number of objects equal to amount are removed from the receiver's future sequence values and
 appended, in order, to the end of the receiver's past sequence values. A collection whose elements
 consist of those objects, in the same order, is returned. If amount is equal to 0 an empty collection
 is returned.
 The result is undefined if amount is larger than the number of objects in the receiver's future
 sequence values.
-Refinement: <ReadStream>
+Refinement: \<ReadStream>
 The result collection will conform to the same protocols as the object that would result if the
 message #select: was sent to the object that serves as the stream backing store.
 Parameters
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
-amount <integer>
+amount \<integer>
 
 December, 1997
 revision 1.9
@@ -16393,9 +16764,9 @@ revision 1.9
 uncaptured
 
 Return Value
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
-amount < 0
+amount \< 0
 
 5.9.5.2 Message:
 
@@ -16406,76 +16777,76 @@ Returns a collection of all of the objects in the receiver up to, but not includ
 of the argument. Sets the stream to read the object just after the next occurrence of the argument.
 If the argument is not found and the end of the stream is encountered, an ordered collection of the
 objects read is returned.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Each object in the receiver's future sequence values up to and including the first occurrence of an
 object that is equivalent to anObject is removed from the future sequence values and appended
 to the receiver's past sequence values. A collection, containing, in order, all of the transferred
 objects except the object (if any) that is equivalent to anObject is returned. If the receiver's future
 sequence values is initially empty, an empty collection is returned.
-Refinement: <ReadStream>
+Refinement: \<ReadStream>
 The result collection will conform to the same protocols as the object that would result if the
 message #select: was sent to the object that serves as the stream backing store.
 Parameters
 anObject
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Value
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 
-5.9.6 Protocol: <WriteStream>
+5.9.6 Protocol: \<WriteStream>
 Conforms To
-<puttableStream> <collectionStream>
-Description: <WriteStream>
-An object conforming to <WriteStream> has a positionable sequence of values to which new
+\<puttableStream> \<collectionStream>
+Description: \<WriteStream>
+An object conforming to \<WriteStream> has a positionable sequence of values to which new
 values may be written. The initial sequence values are provided by a collection that serves as the
-stream backing store. It is implementation defined whether a <WriteStream> is a write-back
-stream. Even if a <WriteStream> is not a write-back stream, its associated collection may be
+stream backing store. It is implementation defined whether a \<WriteStream> is a write-back
+stream. Even if a \<WriteStream> is not a write-back stream, its associated collection may be
 subject to modification in an unspecified manner as long as it is associated with the stream.
 Messages
 none
 
 
 
-5.9.7 Protocol: <ReadWriteStream>
+5.9.7 Protocol: \<ReadWriteStream>
 Conforms To
-<ReadStream> <WriteStream>
+\<ReadStream> \<WriteStream>
 Description
-An object conforming to <ReadWriteStream> can read from its future sequence values or write to
+An object conforming to \<ReadWriteStream> can read from its future sequence values or write to
 its past sequence values. The sequence values are provided by a collection that serves as the
-stream backing store. It is implementation defined whether a <ReadWriteStream> is a write-back
-stream. Even if a <ReadWriteStream> is not a write-back stream, its associated collection may be
+stream backing store. It is implementation defined whether a \<ReadWriteStream> is a write-back
+stream. Even if a \<ReadWriteStream> is not a write-back stream, its associated collection may be
 subject to modification in an unspecified manner as long as it is associated with the stream.
 Messages
 none
 
-5.9.8 Protocol: <Transcript>
+5.9.8 Protocol: \<Transcript>
 Conforms To
-<puttableStream>
+\<puttableStream>
 Description
-An object conforming to <Transcript> is a <puttableStream> for logging status messages from
-Smalltalk programs. The sequence value type of <Transcript> is <Character>. There may be an
+An object conforming to \<Transcript> is a \<puttableStream> for logging status messages from
+Smalltalk programs. The sequence value type of \<Transcript> is \<Character>. There may be an
 implementation defined stream backing store that receives characters written to the stream in an
 implementatiuon defined manner.
 Standard Globals
 Transcript
 
-Conforms to the protocol <Transcript>. Its language element type is
-unspecified. This is a <Transcript> that is always available to output
+Conforms to the protocol \<Transcript>. Its language element type is
+unspecified. This is a \<Transcript> that is always available to output
 textual messages in an implementtion defined manner.
 
 Messages
 none
 
-5.9.9 Protocol: <ReadStream factory>
+5.9.9 Protocol: \<ReadStream factory>
 Conforms To
-<Object>
+\<Object>
 Description
-<ReadStream factory> provides for the creation of objects conforming to the <ReadStream>
+\<ReadStream factory> provides for the creation of objects conforming to the \<ReadStream>
 protocol whose sequence values are supplied by a collection.
 
 NCITS J20 DRAFT
@@ -16488,9 +16859,9 @@ revision 1.9
 
 286
 
-Conforms to the protocol <ReadStream factory>. Its language element
+Conforms to the protocol \<ReadStream factory>. Its language element
 type is unspecified. This is a factory for streams that conform to
-<ReadStream>.
+\<ReadStream>.
 
 Messages
 on:
@@ -16501,17 +16872,17 @@ on: aCollection
 
 Synopsis
 Returns a stream that reads from the given collection.
-Definition: <ReadStream factory>
-Returns an object conforming to <ReadStream> whose future sequence values initially consist of
+Definition: \<ReadStream factory>
+Returns an object conforming to \<ReadStream> whose future sequence values initially consist of
 the elements of aCollection and which initially has no past sequence values. The ordering of
 the sequence values is the same as the ordering used by #do: when sent to aCollection. The
 stream backing store of the returned object is aCollection.
 Parameters
 aCollection
 Return Value
-<ReadStream>
+\<ReadStream>
 
-<sequencedReadableCollection>
+\<sequencedReadableCollection>
 
 captured
 
@@ -16520,18 +16891,18 @@ new
 Errors
 none
 
-5.9.10 Protocol: <ReadWriteStream factory>
+5.9.10 Protocol: \<ReadWriteStream factory>
 Conforms To
-<Object>
+\<Object>
 Description
-<ReadWriteStreamfactory> provides for the creation of objects conforming to the <WriteStream>
+\<ReadWriteStreamfactory> provides for the creation of objects conforming to the \<WriteStream>
 protocol whose sequence values are supplied by a collection.
 Standard Globals
 ReadWriteStream
 
-Conforms to the protocol <ReadWriteStream factory>. Its language
+Conforms to the protocol \<ReadWriteStream factory>. Its language
 element type is unspecified. This is a factory for streams that conform to
-<ReadWriteStream>.
+\<ReadWriteStream>.
 
 Messages
 with:
@@ -16542,8 +16913,8 @@ with: aCollection
 
 Synopsis
 Returns a stream that reads the elements of the given collection and can write new elements.
-Definition: <ReadWriteStream factory>
-Returns an object conforming to <ReadWriteStream> whose past sequence values initially consist
+Definition: \<ReadWriteStream factory>
+Returns an object conforming to \<ReadWriteStream> whose past sequence values initially consist
 of the elements of aCollection and which initially has no future sequence values. The ordering
 of the sequence values is the same as the ordering used by #do: when sent to aCollection. The
 stream backing store of the returned object is aCollection. The sequence value type of the write
@@ -16560,28 +16931,28 @@ revision 1.9
 
 287
 
-<sequencedCollection> captured
+\<sequencedCollection> captured
 
 Return Value
-<ReadWriteStream>
+\<ReadWriteStream>
 
 new
 
 Errors
 none
 
-5.9.11 Protocol: <WriteStream factory>
+5.9.11 Protocol: \<WriteStream factory>
 Conforms To
-<Object>
+\<Object>
 Description
-<WriteStream factory> provides for the creation of objects conforming to the <WriteStream>
+\<WriteStream factory> provides for the creation of objects conforming to the \<WriteStream>
 protocol whose sequence values are supplied by a collection.
 Standard Globals
 WriteStream
 
-Conforms to the protocol <WriteStream factory >. Its language element
+Conforms to the protocol \<WriteStream factory >. Its language element
 type is unspecified. This is a factory for streams that conform to
-<WriteStream>.
+\<WriteStream>.
 
 Messages
 with:
@@ -16592,8 +16963,8 @@ with: aCollection
 
 Synopsis
 Returns a stream that appends to the given collection.
-Definition: <WriteStream factory>
-Returns an object conforming to <WriteStream> whose past sequence values initially consist of the
+Definition: \<WriteStream factory>
+Returns an object conforming to \<WriteStream> whose past sequence values initially consist of the
 elements of aCollection and which initially has no future sequence values. The ordering of the
 sequence values is the same as the ordering used by #do: when sent to aCollection. The
 stream backing store of the returned object is aCollection. The sequence value type of the write
@@ -16602,10 +16973,10 @@ aCollection also apply to the stream’s sequence elements.
 Parameters
 aCollection
 
-<sequencedCollection> captured
+\<sequencedCollection> captured
 
 Return Value
-<WriteStream>
+\<WriteStream>
 
 new
 
@@ -16618,43 +16989,43 @@ none
 
 This section includes protocols that define the behavior of streams that access the contents of files.
 The graph below shows the conformance relationships between the protocols defined in this
-section (except for <puttableStream>, <gettableStream>, and <sequencedStream>, which are
+section (except for \<puttableStream>, \<gettableStream>, and \<sequencedStream>, which are
 contained in the section on stream protocols).
-<sequencedStream>
+\<sequencedStream>
 
-<gettableStream>
+\<gettableStream>
 
-<FileStream>
+\<FileStream>
 
-<readFileStream>
+\<readFileStream>
 
-<puttableStream>
+\<puttableStream>
 
-<writeFileStream>
+\<writeFileStream>
 
-<FileStream factory>
+\<FileStream factory>
 
 
 
-5.10.1 Protocol: <FileStream>
+5.10.1 Protocol: \<FileStream>
 Conforms To
-<sequencedStream>
+\<sequencedStream>
 Description
 Provides protocol for streams over external files. The external file serves as the stream backing
 store. When objects are read or written from a file stream they must be translated from or two an
 external data representation. File streams have an external stream type that is specified when the
 stream is created. The external stream type defines the data translation and the sequence value
-type for the stream. External stream types are specified using <symbol> objects. The standard
+type for the stream. External stream types are specified using \<symbol> objects. The standard
 defines the following external stream types:
 
 The external data is treated as sequence of 8-bit bytes. The sequence
-value type is <integer> with values restricted to the range 0 to 255.
+value type is \<integer> with values restricted to the range 0 to 255.
 
 #’binary’
 
 The external data is treated as a sequenced of 8-bit characters encoded
 using an implementation defined external character set. The sequence
-value type is <Character> restricted to those specific characters that may
+value type is \<Character> restricted to those specific characters that may
 be represented in the external character set.
 Implementations may define other external stream types.
 #’text’
@@ -16685,20 +17056,20 @@ contents
 
 Synopsis
 Returns a collection containing the complete contents of the stream.
-Definition: <sequencedStream>
+Definition: \<sequencedStream>
 Returns a collection that contains the receiver's past and future sequence values, in order. The
 size of the collection is the sum of the sizes of the past and future sequence values.
-Refinement: <FileStream>
-If the external stream type is #’binary’ the returned collection conforms to <ByteArray>. If the
-external stream type is #’text’ the returned collection conforms to <String>.
+Refinement: \<FileStream>
+If the external stream type is #’binary’ the returned collection conforms to \<ByteArray>. If the
+external stream type is #’text’ the returned collection conforms to \<String>.
 Return Value
-<ByteArray>
+\<ByteArray>
 
 new
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
-<String>
+\<String>
 
 December, 1997
 revision 1.9
@@ -16715,10 +17086,10 @@ externalType
 
 Synopsis
 Returns a symbol that identifies the external stream type of the receiver.
-Definition: <FileStream>
+Definition: \<FileStream>
 Return the symbol that identifies the external stream type of the receiver.
 Return Value
-<symbol>
+\<symbol>
 
 unspecified
 
@@ -16730,10 +17101,10 @@ isBinary
 
 Synopsis:
 Answer wthether the receiver's data is binary.
-Definition: <FileStream>
-Answer true if the sequence value type conforms to <integer>. Otherwise answer false.
+Definition: \<FileStream>
+Answer true if the sequence value type conforms to \<integer>. Otherwise answer false.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
@@ -16745,19 +17116,19 @@ isText
 
 Synopsis:
 Answer whether the receiver's data is characters.
-Definition: <FileStream>
-Answer true if the sequence value type conforms to <Character>. Otherwise answer false.
+Definition: \<FileStream>
+Answer true if the sequence value type conforms to \<Character>. Otherwise answer false.
 Return Value
-<boolean>
+\<boolean>
 
 unspecified
 
 Errors
 none
 
-5.10.2 Protocol: <readFileStream>
+5.10.2 Protocol: \<readFileStream>
 Conforms To
-<FileStream> <gettableStream>
+\<FileStream> \<gettableStream>
 Description
 Provides protocol for traversing and reading elements in an external file. The sequence values are
 provided by the external file which also serves as the stream backing store.
@@ -16774,25 +17145,25 @@ next: amount
 
 Synopsis
 Returns a collection of the next amount objects in the stream.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 A number of objects equal to amount are removed from the receiver's future sequence values and
 appended, in order, to the end of the receiver's past sequence values. A collection whose elements
 consist of those objects, in the same order, is returned. If amount is equal to 0 an empty collection
 is returned.
 The result is undefined if amount is larger than the number of objects in the receiver's future
 sequence values.
-Refinement: <readFileStream>
+Refinement: \<readFileStream>
 The result collection will conform to the same protocols as the object that would result if the
 message #contents was sent to the receiver.
 Parameters
-amount <integer>
+amount \<integer>
 
 uncaptured
 
 Return Value
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
-amount < 0
+amount \< 0
 5.10.2.2 Message Refinement:
 
 upTo: anObject
@@ -16802,50 +17173,50 @@ Returns a collection of all of the objects in the receiver up to, but not includ
 of the argument. Sets the stream to read the object just after the next occurrence of the argument.
 If the argument is not found and the end of the stream is encountered, an ordered collection of the
 objects read is returned.
-Definition: <gettableStream>
+Definition: \<gettableStream>
 Each object in the receiver's future sequence values up to and including the first occurrence of an
 object that is equivalent to anObject is removed from the future sequence values and appended
 to the receiver's past sequence values. A collection, containing, in order, all of the transferred
 objects except the object (if any) that is equivalent to anObject is returned. If the receiver's future
 sequence values is initially empty, an empty collection is returned.
-Refinement: <readFileStream>
+Refinement: \<readFileStream>
 The result collection will conform to the same protocols as the object that would result if the
 message #contents was sent to the receiver.
 Parameters
 anObject
 
-<Object>
+\<Object>
 
 uncaptured
 
 Return Value
-<sequencedReadableCollection> new
+\<sequencedReadableCollection> new
 Errors
 none
 
 
 
-5.10.3 Protocol: <writeFileStream>
+5.10.3 Protocol: \<writeFileStream>
 Conforms To
-<FileStream> <puttableStream>
+\<FileStream> \<puttableStream>
 Description
 Provides protocol for storing elements in an external file. The sequence values are provided by the
-external file which also serves as the stream backing store. A <writeFileStream> is a write-back
+external file which also serves as the stream backing store. A \<writeFileStream> is a write-back
 stream.
 Messages
 none
 
-5.10.4 Protocol: <FileStream factory>
+5.10.4 Protocol: \<FileStream factory>
 Conforms To
-<Object>
+\<Object>
 Description
-<FileStream factory> provides for the creation of objects conforming to the <readFileStream> or
-<writeFileStream> protocols.
+\<FileStream factory> provides for the creation of objects conforming to the \<readFileStream> or
+\<writeFileStream> protocols.
 Standard Globals
-Conforms to the protocol <FileStream factory>. Its program element type is
+Conforms to the protocol \<FileStream factory>. Its program element type is
 FileStream
-unspecified. This is a factory for collections that conform to <readFileStream> and
-<writeFileStream>.
+unspecified. This is a factory for collections that conform to \<readFileStream> and
+\<writeFileStream>.
 Messages
 read:
 read:type:
@@ -16859,16 +17230,16 @@ read: fileId
 
 Synopsis
 Returns a read file stream that reads text from the file with the given name.
-Definition: <FileStream factory>
+Definition: \<FileStream factory>
 The result is the same as if the message #read:type: was sent to the receiver with fileId as
 the first argument and the symbol #’text’ as the second argument.
 Parameters
 
 NCITS J20 DRAFT
 of ANSI Smalltalk Standard
-aString <String>
+aString \<String>
 Return Value
-<readFileStream>
+\<readFileStream>
 
 December, 1997
 revision 1.9
@@ -16879,26 +17250,26 @@ unspecified
 new
 
 Errors
-As defined by <FileStream factory> #read:type:
+As defined by \<FileStream factory> #read:type:
 5.10.4.2 Message:
 
 read: fileId type: fileType
 
 Synopsis
 Returns a read file stream that reads from the file with the given name.
-Definition: <FileStream factory>
+Definition: \<FileStream factory>
 Locate an external file that is identified by the value of fileID. The syntax of the fileID string is
 implementation defined.
-Return an object conforming to <readFileStream> whose future sequence values initially consist of
+Return an object conforming to \<readFileStream> whose future sequence values initially consist of
 the elements of the external file and which initially has no past sequence values. The ordering of
 the sequence values is the same as the ordering within the external file. The external file serves as
 the stream backing store of the returned object. The value of fileType determines the external
 stream type and sequence value type of the result object.
 Parameters
-fileId <readableString>
-fileType<symbol>
+fileId \<readableString>
+fileType\<symbol>
 Return Value
-<readFileStream>
+\<readFileStream>
 
 unspecified
 unspecified
@@ -16913,28 +17284,28 @@ write: fileId
 
 Synopsis
 Returns a write file stream that writes text to the file with the given name.
-Definition: <FileStream factory>
+Definition: \<FileStream factory>
 The result is the same as if the message #write:mode:check:type: was sent to the receiver
 with fileId as the first argument, #’create’ as the second argument, false as the third
 argument, and the symbol #’text’ as the fourth argument.
 Parameters
-fileId <readableString>
+fileId \<readableString>
 Return Value
-<writeFileStream>
+\<writeFileStream>
 
 unspecified
 
 new
 
 Errors
-As defined by <FileStream factory> #write:mode:check:type:
+As defined by \<FileStream factory> #write:mode:check:type:
 5.10.4.4 Message:
 
 write: fileId mode: mode
 
 Synopsis
 Returns a write file stream that writes text to the file with the given name.
-Definition: <FileStream factory>
+Definition: \<FileStream factory>
 
 
 
@@ -16942,14 +17313,14 @@ The result is the same as if the message #write:mode:check:type: was sent to the
 with fileId as the first argument, mode as the second argument, false as the third argument, and
 the symbol #’text’ as the fourth argument.
 Parameters
-fileId <readableString>
+fileId \<readableString>
 
-<symbol>
+\<symbol>
 
 mode
 
 Return Value
-<writeFileStream>
+\<writeFileStream>
 
 unspecified
 unspecified
@@ -16957,23 +17328,30 @@ unspecified
 new
 
 Errors
-As defined by <FileStream factory> #write:mode:check:type:
-5.10.4.5 Message:
+
+As defined by \<FileStream factory> #write:mode:check:type:
+
+#### Message:
 
 write: fileId mode: mode check: check type: fileType
 
 Synopsis
+
 Returns a write file stream that writes to the file with the given name.
-Definition: <FileStream factory>
+
+Definition: \<FileStream factory>
+
 Depending upon the values of check and mode, either create a new external file or locate an
 existing external file that is identified by the value of fileID. The syntax of the fileID string is
 implementation defined.
-Return an object conforming to <writeFileStream>. The external file serves as the stream backing
+
+Return an object conforming to \<writeFileStream>. The external file serves as the stream backing
 store of the returned object. The returned object is a write-back stream. The value of fileType
 determines the external stream type and sequence value type of the result object.
 
 Valid values for mode are: #’create’, #’append’, and #’truncate’. The meaning of these
 values are:
+
 #’create’
 create a new file, with initial position at the beginning
 #’append’
@@ -16995,33 +17373,35 @@ If mode = #’append’ and check = false and the file does not exist, then it i
 If mode = #’truncate’ and check = false and the file does not exist, then it is created.
 This operation is undefined if a value other than #’create’, #’append’ or #’truncate’ is
 used as the mode argument.
+
 Parameters
+
 fileID
 
-<readableString>
+\<readableString>
 
 unspecified
 
 mode
 
-<symbol>
+\<symbol>
 
 unspecified
 
 check
 
-<boolean>
+\<boolean>
 
 unspecified
 
 fileType
 
-<symbol>
+\<symbol>
 
 unspecified
 
 Return Value
-<writeFileStream>
+\<writeFileStream>
 Errors
 
 new
@@ -17031,9 +17411,6 @@ If mode = #append and check = true and the file does not exist.
 If mode = #truncate and check = true and the file does not exist.
 If the user does not have write permissions for the file.
 If the user does not have creation permissions for a file that is to be created.
-
-295
-
 
 
 6. Glossary
@@ -17047,7 +17424,7 @@ action external to the block permanently and irrevocably terminates
 evaluation of the block.
 advance
 
-To move a stream forward. Reading from a <readableStream> adds the
+To move a stream forward. Reading from a \<readableStream> adds the
 read object to the stream's past sequence values and removes it from
 the stream's future sequence values.
 
@@ -17112,8 +17489,8 @@ them. While there is no precise way to define which objects have such
 
 
 an ordering, it is generally the case that such objects must both conform
-to another common protocol in addition to <magnitude>. For example, all
-objects that conform to the protocol <number> are comparable.
+to another common protocol in addition to \<magnitude>. For example, all
+objects that conform to the protocol \<number> are comparable.
 context
 
 The values of variables defined within a block during a particular
@@ -17133,7 +17510,7 @@ argument to the argument of the message #do:.
 element type
 
 A set of acceptable objects for elements of a collection. Unless
-otherwise specified, the element type of a collection is <Object>.
+otherwise specified, the element type of a collection is \<Object>.
 
 equivalent
 
@@ -17148,7 +17525,7 @@ the continuation at a point of execution in the program.
 
 exception action
 
-The object conforming to the protocol <valuable> that will be evaluated if
+The object conforming to the protocol \<valuable> that will be evaluated if
 its containing exception handler is selected to service an exception.
 
 exception environment
@@ -17169,7 +17546,7 @@ the first argument and the exception action as the second argument.
 
 exception selector
 
-An object conforming to the protocol <exceptionSelector> that is
+An object conforming to the protocol \<exceptionSelector> that is
 contained in an exception handler and used to determine whether the
 handler should be used to service an exception.
 
@@ -17252,7 +17629,7 @@ elements.
 key equivalence
 
 The operation used to compare keys in a dictionary. Protocols that
-refine <abstractDictionary> must define the meaning of this term.
+refine \<abstractDictionary> must define the meaning of this term.
 
 key lookup
 
@@ -17324,7 +17701,7 @@ A description of the data and operations that comprise a computation.
 
 protected block
 
-An object conforming to the protocol <valuable> that is the scope over
+An object conforming to the protocol \<valuable> that is the scope over
 which an exception handler is active.
 
 pseudo variable name
@@ -17368,7 +17745,7 @@ A value in a stream.
 signaled exception
 
 During the signaling of an exception, the object conforming to the
-protocol <exceptionDescription> that describes the exception and which
+protocol \<exceptionDescription> that describes the exception and which
 is used to select an exception handler.
 
 signaling environment
@@ -17378,8 +17755,8 @@ exception is signaled.
 
 sort block
 
-A <dyadicValuable> object used by <SortedCollection> objects to order
-their elements. The sort block must return a <boolean> result.
+A \<dyadicValuable> object used by \<SortedCollection> objects to order
+their elements. The sort block must return a \<boolean> result.
 
 stream backing store
 
@@ -17418,7 +17795,7 @@ represent all numbers conforming to its protocol.
 
 value
 
-The result of evaluating an object conforming to the protocol <valuable>.
+The result of evaluating an object conforming to the protocol \<valuable>.
 
 variable name
 
@@ -17428,14 +17805,6 @@ white space
 
 Characters that serve as token separators; ignored in a program parse.
 
-NCITS J20 DRAFT
-of ANSI Smalltalk Standard
-write-back stream
-
-December, 1997
-revision 1.9
-
-301
 
 A stream that supports the writing of objects and that has a stream
 backing store that receives the objects written to the stream. A buffer
@@ -17447,23 +17816,15 @@ stream and its appearance in the backing store.
 
 7. Index of Protocols
 
-A
 abstractDictionary, 165
 Array, 211
 Array factory, 231
-
-G
 gettableStream, 276
-
-I
-B
-
 Bag, 176
 Bag factory, 234
 boolean, 62
 ByteArray, 211
 ByteArray factory, 236
-
 IdentityDictionary, 173
 IdentityDictionary factory, 229
 initializableCollection factory, 230
@@ -17471,22 +17832,17 @@ instantiator, 77
 integer, 137
 Interval, 193
 Interval factory, 225
-
-C
 Character, 67
 Character factory, 71
 classDescription, 75
 collection, 157
 collection factory, 226
 collectionStream, 280
-
 magnitude, 115
 MessageNotUnderstood, 111
 MessageNotUnderstoodSelector, 110
 monadicBlock, 86
 monadicValuable, 85
-
-D
 DateAndTime factory, 267
 DateAndTime, 250
 Dictionary, 173
@@ -17494,18 +17850,12 @@ Dictionary factory, 227
 Duration, 260
 Duration factory, 266
 dyadicValuable, 86
-
-N
 nil, 61
 niladicBlock, 83
 niladicValuable, 81
 Notification, 103
 Notification class, 102
 number, 117
-
-O
-E
-
 Error, 106
 Error class, 105
 Exception, 101
@@ -17517,18 +17867,11 @@ exceptionSelector, 97
 exceptionSet, 113
 exceptionSignaler, 90
 extensibleCollection, 174
-
 Object, 52
 Object class, 77
 OrderedCollection, 219
 OrderedCollection factory, 238
-
-P
 puttableStream, 281
-
-R
-
-F
 failedMessage, 73
 FileStream, 289
 FileStream factory, 292
@@ -17536,9 +17879,6 @@ Float, 145
 floatCharacterization, 151
 Fraction, 136
 Fraction factory, 155
-
-M
-
 rational, 135
 readableString, 200
 readFileStream, 290
@@ -17546,13 +17886,8 @@ ReadStream, 283
 ReadStream factory, 285
 ReadWriteStream, 285
 ReadWriteStream factory, 286
-
-S
 scaledDecimal, 144
 selector, 74
-
-NCITS J20 DRAFT
-of ANSI Smalltalk Standard
 sequencedCollection, 207
 sequencedContractibleCollection, 212
 sequencedReadableCollection, 180
@@ -17565,26 +17900,13 @@ SortedCollection factory, 243
 String, 210
 String factory, 246
 symbol, 206
-
-T
 Transcript, 285
-
-December, 1997
-revision 1.9
-
-303
-
-V
 valuable, 80
-
-W
 Warning, 104
 Warning class, 104
 writeFileStream, 292
 WriteStream, 284
 WriteStream factory, 287
-
-Z
 ZeroDivide, 109
 ZeroDivide factory, 107
 

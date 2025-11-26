@@ -85,7 +85,7 @@ fn test_statements_with_block() {
 
 #[test]
 fn test_statements_with_nested_blocks_and_vars() {
-let src = r#"self withAllSuperclassesDo: [:behavior | | classSpaces |
+    let src = r#"self withAllSuperclassesDo: [:behavior | | classSpaces |
 	    aBlock value: behavior classPool.
 
 	    "Extract the spaces of this class from superclassSpaces into
@@ -109,7 +109,6 @@ let src = r#"self withAllSuperclassesDo: [:behavior | | classSpaces |
         }
     }
 }
-
 
 #[test]
 fn test_statements_with_nested_blocks() {
@@ -181,4 +180,52 @@ fn read_big_file() {
     time_and_trace("Load Number", || vm.compile_file("kernel", "Temp.st")).unwrap();
     let m = vm.get_static_method("Number", "readFrom:radix:").unwrap();
     m.dump_to_trace();
+}
+
+fn load_prerequisites(vm: &VirtualMachine) -> Result<(), Box<dyn std::error::Error>> {
+    time_and_trace("Load Object", || vm.compile_file("kernel", "Object.st"))?;
+    time_and_trace("Load Behavior", || vm.compile_file("kernel", "Behavior.st"))?;
+    time_and_trace("Load ClassDesc", || {
+        vm.compile_file("kernel", "ClassDesc.st")
+    })?;
+    time_and_trace("Load Class", || vm.compile_file("kernel", "Class.st"))?;
+    time_and_trace("Load Matnitude", || {
+        vm.compile_file("kernel", "Magnitude.st")
+    })?;
+    time_and_trace("Load Number", || vm.compile_file("kernel", "Number.st"))?;
+    time_and_trace("Load Integer", || vm.compile_file("kernel", "Integer.st"))?;
+    time_and_trace("Load Iterable", || vm.compile_file("kernel", "Iterable.st"))?;
+    time_and_trace("Load Collection", || {
+        vm.compile_file("kernel", "Collection.st")
+    })?;
+    time_and_trace("Load SeqCollect", || {
+        vm.compile_file("kernel", "SeqCollect.st")
+    })?;
+    time_and_trace("Load ArrayColl", || {
+        vm.compile_file("kernel", "ArrayColl.st")
+    })?;
+    time_and_trace("Load Interval", || vm.compile_file("kernel", "Interval.st"))?;
+    time_and_trace("Load Boolean", || vm.compile_file("kernel", "Boolean.st"))?;
+    time_and_trace("Load True", || vm.compile_file("kernel", "True.st"))?;
+    time_and_trace("Load False", || vm.compile_file("kernel", "False.st"))?;
+    time_and_trace("Load Array", || vm.compile_file("kernel", "Array.st"))?;
+    time_and_trace("Load HashedColl", || {
+        vm.compile_file("kernel", "HashedColl.st")
+    })?;
+    time_and_trace("Load Dictionary", || {
+        vm.compile_file("kernel", "Dictionary.st")
+    })?;
+    Ok(())
+}
+
+#[test]
+fn read_builtins() {
+    let vm = Box::leak(Box::new(VirtualMachine::new()));
+    match load_prerequisites(&vm) {
+        Ok(_) => {
+            init_tracing();
+            time_and_trace("Load Builtins", || vm.compile_file("kernel", "Builtins.st")).unwrap();
+        }
+        Err(e) => panic!("failed loading file. [{e}]"),
+    };
 }
