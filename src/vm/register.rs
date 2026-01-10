@@ -9,6 +9,9 @@ pub enum Register {
 impl Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Register::Number(0, 0) => write!(f, "r-result"),
+            Register::Number(0, 1) => write!(f, "r-self"),
+            Register::Number(0, index) => write!(f, "r{}", index),
             Register::Number(level, index) => write!(f, "r{}-{}", level, index),
             Register::Receiver => write!(f, "@receiver"),
             Register::Result => write!(f, "@result"),

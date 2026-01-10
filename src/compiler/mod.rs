@@ -87,7 +87,7 @@ struct SmalltalkCompiler {
     var_allocation: VariableAllocation,
     blocks: Vec<CompiledBlock>,
     instance_vars: Vec<&'static str>,
-    block_offset: usize,
+    // block_offset: usize,
     block_depth: usize,
 }
 
@@ -102,7 +102,7 @@ impl SmalltalkCompiler {
             var_allocation,
             blocks: vec![],
             instance_vars: vec![],
-            block_offset: 0,
+            // block_offset: 0,
             block_depth: 0,
         };
         s
@@ -299,7 +299,7 @@ impl SmalltalkCompiler {
             None => self.allocate_register(),
         };
         let mut block = SmalltalkCompiler::new();
-        block.set_offset(1);
+        // block.set_offset(1);
         block.set_depth(self.block_depth + 1);
         block.instance_vars = self.instance_vars.clone();
         block.var_allocation = self.var_allocation.create_child()?;
@@ -355,9 +355,9 @@ impl SmalltalkCompiler {
         }
     }
 
-    fn set_offset(&mut self, offset: usize) {
-        self.block_offset = offset;
-    }
+    // fn set_offset(&mut self, offset: usize) {
+    //     self.block_offset = offset;
+    // }
 
     fn set_depth(&mut self, depth: usize) {
         self.block_depth = depth;

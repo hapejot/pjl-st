@@ -153,9 +153,10 @@ fn execution_value0(
     receiver: Value,
     args: Vec<Value>,
 ) -> Result<Value, Box<dyn Error>> {
+    let _ = args;
     match receiver {
         Value::Execution(a) => a.execute(),
-        _ => Err("Execution value0 requires execution arguments".into()),
+        _ => Err("Execution value requires execution context".into()),
     }
 }
 

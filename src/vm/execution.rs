@@ -134,6 +134,7 @@ impl Execution {
     }
 
     // #[tracing::instrument(skip(self))]
+    /// returns the value in the Result register after execution or error if the register is not set
     pub fn execute(&self) -> Result<Value, Box<dyn Error>> {
         let (instructions, debugger) = {
             let exec = self.0.try_lock().unwrap();
@@ -296,6 +297,15 @@ impl Execution {
         block
     }
 
+    /// Execute method call (send message)
+    /// dst: destination register
+    /// receiver: receiver register
+    /// args: argument registers
+    /// selector: method selector
+    /// Returns: Result<(), Box<dyn Error>>
+    /// Errors:
+    /// - RuntimeError::RegisterNotAssigned if receiver or any argument register is not assigned
+    /// - String error if method not found or other errors occur
     fn execute_send_message(
         &self,
         dst: Register,

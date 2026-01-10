@@ -10,7 +10,6 @@ use std::{
     sync::Mutex,
 };
 
-
 use crate::vm::execution::Execution;
 
 use super::Debugger;
@@ -35,9 +34,8 @@ impl Debugger for TerminalDebugger {
         }
     }
 
-    fn after_execute(&self, _execution: Execution) {
-        let _data = self.0.try_lock().unwrap();
-        // Implement post-execution debugging UI here
+    fn after_execute(&self, execution: Execution) {
+        let _ = execution;
     }
 }
 
@@ -97,7 +95,7 @@ impl TerminalDebuggerData {
             stdout,
             Print("\n"),
             SetForegroundColor(Color::Green),
-            Print("Controls: [n]ext, [s]tep, [r]egisters toggle, [c]ontinue, [q]uit\n"),
+            Print("Controls: [n]ext, [r]egisters toggle, [c]ontinue, [q]uit\n"),
             ResetColor
         )?;
 
@@ -158,7 +156,11 @@ impl TerminalDebuggerData {
         {
             let registers = execution.registers();
             for (i, value) in registers.iter().enumerate() {
-                queue!(stdout, Print(format!("  r{}: {}\n", i, value)))?;
+                match i {
+                    0 => queue!(stdout, Print(format!("  r-result: {}\n", value)))?,
+                    1 => queue!(stdout, Print(format!("  r-self  : {}\n", value)))?,
+                    _ => queue!(stdout, Print(format!("  r{:<3}    : {}\n", i, value)))?,
+                }
             }
         }
         queue!(stdout, ResetColor)?;
@@ -178,12 +180,12 @@ impl TerminalDebuggerData {
                         // Next instruction (stay in step mode)
                         break;
                     }
-                    KeyCode::Char('s') => {
-                        // Step mode toggle
-                        self.step_mode = !self.step_mode;
-                        println!("Step mode: {}", if self.step_mode { "ON" } else { "OFF" });
-                        break;
-                    }
+                    // KeyCode::Char('s') => {
+                    //     // Step mode toggle
+                    //     self.step_mode = !self.step_mode;
+                    //     println!("Step mode: {}", if self.step_mode { "ON" } else { "OFF" });
+                    //     break;
+                    // }
                     KeyCode::Char('r') => {
                         // Toggle register display
                         self.show_registers = !self.show_registers;

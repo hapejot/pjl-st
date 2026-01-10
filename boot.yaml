@@ -12,3 +12,4 @@ kernel:
 - Boolean.st
 - True.st
 - False.st
+- Array.st

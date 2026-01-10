@@ -110,6 +110,9 @@ impl Display for Instruction {
             Instruction::Return { src } => {
                 write!(f, "Return {}", src)
             }
+            Instruction::LoadInstanceVar { dst, index } => {
+                write!(f, "{} <- ivar[{}]", dst, index)
+            }
             _ => write!(f, "{:?}", self),
         }
     }
