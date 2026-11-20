@@ -96,37 +96,37 @@ In the Pascal-S system, which implements static links, the pointer to the p3 fra
 
 There is another situation where one frame accesses another: that is, when parameters are used. Pascal and Pascal-S have only two parameter passing mechanisms, namely those required to implement value and variable parameters. With value parameters there is no difficulty as the actual parameter, which may be an expression, variable or constant, is evaluated at the point of call and stored in the space allocated in the called routine's stack frame. With a variable parameter the address is to the stack frame of the actual parameter, which can only be a variable, is stored in the space allocated in the called routine's stack frame. Thus if a variable parameter is assigned a value, instructions will be required to store the assigned value into the location in the stack whose address is in the space allocated for the parameter.
 
-![alt text](stack-1.png)
+![alt text](img/stack-1.png)
 
-![alt text](stack-2.png)
+![alt text](img/stack-2.png)
 Fig. 2
 
-![alt text](stack-3.png)
+![alt text](img/stack-3.png)
 Fig. 3
 
-![alt text](stack-4.png)
+![alt text](img/stack-4.png)
 Fig. 4
 
-![alt text](stack-5.png)
+![alt text](img/stack-5.png)
 Fig. 5
 
-![alt text](stack-6.png)
+![alt text](img/stack-6.png)
 Fig. 6
 
-![alt text](stack-7.png)
+![alt text](img/stack-7.png)
 Fig. 7
 
-![alt text](stack-8.png)
+![alt text](img/stack-8.png)
 Fig. 8
 
-![alt text](stack-9.png)
+![alt text](img/stack-9.png)
 Fig. 9
 
-![alt text](stack-10.png)
+![alt text](img/stack-10.png)
 Fig. 10
 
-![alt text](stack-11.png)
+![alt text](img/stack-11.png)
 Fig. 11
 
-![alt text](stack-12.png)
+![alt text](img/stack-12.png)
 Fig. 12

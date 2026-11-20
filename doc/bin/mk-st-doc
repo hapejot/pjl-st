@@ -1,0 +1,2 @@
+pandoc smalltalk.md -t json | jq | pandoc -s -f json -o st.md
+
