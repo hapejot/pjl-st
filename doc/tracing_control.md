@@ -1,23 +1,44 @@
 # Tracing Control Guide
 
+Runtime errors already include a Smalltalk call stack, innermost frame first.
+Each frame shows the method or block, bytecode instruction pointer (`ip`), and
+the operation at that point. For message sends, it shows the selector and
+receiver. No trace configuration is needed for this output.
+
+The CLI runs directly by default. Pass `--debug` to start the interactive
+fullscreen debugger, for example `cargo run -- --debug --expression "^1+2"`.
+The debugger requires terminals on both stdin and stdout; `q` cancels execution.
+Debugger errors and cancellation are returned to the caller.
+
+When a method has a `<primitive: ...>` pragma, the VM attempts the supported
+primitive before its Smalltalk body. If the primitive is unavailable or cannot
+handle the receiver and arguments, execution continues with the body; enable
+`st::vm=trace` to see this fallback. Only primitives explicitly implemented by
+the VM are available.
+Source-loading events and the `compile_file` span also use the `st::vm` target.
+Instruction-execution and message-dispatch traces use `st::vm::execution`.
+
 ## Method 1: Environment Variable Control (RUST_LOG)
 
-With the updated `init_tracing()` function, you can control tracing using the `RUST_LOG` environment variable:
+The CLI uses `RUST_LOG` to control its subscriber. Tests do not install a global
+subscriber or write `st.trace`; tests that exercise tracing use a scoped
+subscriber instead. Calling the library's `init_tracing()` explicitly still
+creates or truncates `st.trace` in the current directory.
 
 ### Basic Usage
 
 ```bash
 # Enable all tracing for the entire application
 set RUST_LOG=trace
-cargo test
+cargo run -- --expression "^1+2"
 
 # Enable specific modules at different levels
 set RUST_LOG=st::parser=debug,st::compiler=info,st::vm=warn
-cargo test
+cargo run -- --expression "^1+2"
 
 # Complex filtering
 set RUST_LOG=st=trace,st::parser::topdown=debug,st::compiler=off
-cargo test
+cargo run -- --expression "^1+2"
 ```
 
 ### Filtering Syntax
@@ -156,27 +177,27 @@ For different tracing in tests:
 ```rust
 #[cfg(test)]
 mod tests {
-    use super::*;
-    
-    fn init_test_tracing(filter: &str) {
-        use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
-        
-        let _ = tracing_subscriber::registry()
+    fn with_test_tracing<T>(filter: &str, f: impl FnOnce() -> T) -> T {
+        use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
+
+        let subscriber = tracing_subscriber::registry()
             .with(EnvFilter::new(filter))
-            .with(tracing_subscriber::fmt::layer().with_test_writer())
-            .try_init();
+            .with(tracing_subscriber::fmt::layer().with_test_writer());
+        tracing::subscriber::with_default(subscriber, f)
     }
     
     #[test]
     fn test_parser_only() {
-        init_test_tracing("st::parser=trace");
-        // your test code
+        with_test_tracing("st::parser=trace", || {
+            // your test code
+        });
     }
     
     #[test] 
     fn test_compiler_debug() {
-        init_test_tracing("st::compiler=debug,st::parser=info");
-        // your test code
+        with_test_tracing("st::compiler=debug,st::parser=info", || {
+            // your test code
+        });
     }
 }
 ```
@@ -186,25 +207,25 @@ mod tests {
 ### PowerShell (Windows):
 ```powershell
 # Parser debugging
-$env:RUST_LOG="st::parser=trace"; cargo test test_grammar
+$env:RUST_LOG="st::parser=trace"; cargo run -- --expression "^1+2"
 
 # Compiler focus
-$env:RUST_LOG="st::compiler=debug,st::parser=warn"; cargo run
+$env:RUST_LOG="st::compiler=debug,st::parser=warn"; cargo run -- --expression "^1+2"
 
 # Everything verbose
-$env:RUST_LOG="trace"; cargo test
+$env:RUST_LOG="trace"; cargo run -- --expression "^1+2"
 
 # Quiet mode
-$env:RUST_LOG="error"; cargo test
+$env:RUST_LOG="error"; cargo run -- --expression "^1+2"
 ```
 
 ### Bash/Linux:
 ```bash
 # Parser debugging  
-RUST_LOG=st::parser=trace cargo test test_grammar
+RUST_LOG=st::parser=trace cargo run -- --expression "^1+2"
 
 # Multiple modules
-RUST_LOG="st::parser=debug,st::vm=info" cargo test
+RUST_LOG="st::parser=debug,st::vm=info" cargo run -- --expression "^1+2"
 ```
 
 ## Best Practices

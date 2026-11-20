@@ -33,7 +33,7 @@
 
 
 ArrayedCollection subclass: Array [
-    
+
     <shape: #pointer>
     <category: 'Collections-Sequenceable'>
     <comment: 'My instances are objects that have array-like properties: they are directly 
@@ -41,6 +41,14 @@ indexable by integers starting at 1, and they are fixed in size.  I inherit
 object creation behavior messages such as #with:, as well as iteration
 and general access behavior from SequenceableCollection.'>
 
+	Array class >> new: anInteger [
+		"Answer a new instance of the receiver with anInteger number of
+		indexed slots"
+	
+		^self basicNew: anInteger
+	]
+
+	
     Array class >> from: anArray [
 	"Answer anArray, which is expected to be an array specified with a
 	 brace-syntax expression per my inherited protocol."

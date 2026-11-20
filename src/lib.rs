@@ -4,28 +4,39 @@ use std::time::{Duration, Instant};
 
 pub mod compiler;
 pub mod debug;
+pub mod interpreter;
 pub mod memory;
 pub mod parser;
 pub mod vm;
 
-/// Get the project root directory (where Cargo.toml is located)
-pub fn get_project_root() -> PathBuf {
+pub use interpreter::{Interpreter, InterpreterError};
+
+/// Find the project root directory (where Cargo.toml is located).
+pub fn try_get_project_root() -> std::io::Result<PathBuf> {
     // Try CARGO_MANIFEST_DIR first (available during build)
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
-        return PathBuf::from(manifest_dir);
+        return Ok(PathBuf::from(manifest_dir));
     }
 
     // Fallback: walk up from current directory looking for Cargo.toml
-    let mut current_dir = env::current_dir().expect("Failed to get current directory");
+    let mut current_dir = env::current_dir()?;
     loop {
         if current_dir.join("Cargo.toml").exists() {
-            return current_dir;
+            return Ok(current_dir);
         }
 
         if !current_dir.pop() {
-            panic!("Could not find project root (Cargo.toml not found)");
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Could not find project root (Cargo.toml not found)",
+            ));
         }
     }
+}
+
+/// Get the project root directory (where Cargo.toml is located).
+pub fn get_project_root() -> PathBuf {
+    try_get_project_root().expect("Failed to find project root")
 }
 
 /// Get path to a file relative to project root
@@ -71,9 +82,9 @@ where
 /// use st::time_and_print;
 ///
 /// let result = time_and_print("Computing factorial", || {
-///     // Some computation
-///     factorial(10)
+///     (1..=10).product::<u64>()
 /// });
+/// assert_eq!(result, 3_628_800);
 /// ```
 pub fn time_and_print<F, R>(description: &str, f: F) -> R
 where
@@ -91,9 +102,9 @@ where
 /// use st::time_and_trace;
 ///
 /// let result = time_and_trace("expensive_operation", || {
-///     // Some computation
-///     do_something_expensive()
+///     2 + 2
 /// });
+/// assert_eq!(result, 4);
 /// ```
 pub fn time_and_trace<F, R>(operation_name: &str, f: F) -> R
 where

@@ -17,7 +17,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct VariableAllocation {
     parent: Option<Box<VariableAllocation>>,
-    allocation: Vec<&'static str>,
+    allocation: Vec<Option<&'static str>>,
 }
 
 impl VariableAllocation {
@@ -30,17 +30,17 @@ impl VariableAllocation {
 
     pub fn add(&mut self, var_name: &'static str) -> Result<usize, String> {
         let index = self.allocation.len();
-        if self.allocation.contains(&var_name) {
+        if self.allocation.contains(&Some(var_name)) {
             Err(format!("Variable {} already allocated", var_name))
         } else {
-            self.allocation.push(var_name);
+            self.allocation.push(Some(var_name));
             Ok(index)
         }
     }
 
     pub fn get(&self, var_name: &'static str) -> Option<Register> {
         match self.parent {
-            Some(ref parent) => match self.allocation.iter().position(|&x| x == var_name) {
+            Some(ref parent) => match self.allocation.iter().position(|&x| x == Some(var_name)) {
                 Some(index) => Some(Register::Number(0, index)),
                 None => {
                     if let Some(Register::Number(level, pos)) = parent.get(var_name) {
@@ -53,7 +53,7 @@ impl VariableAllocation {
             None => self
                 .allocation
                 .iter()
-                .position(|&x| x == var_name)
+                .position(|&x| x == Some(var_name))
                 .map(|index| Register::Number(0, index)),
         }
     }
@@ -74,7 +74,7 @@ impl VariableAllocation {
             None => {}
         }
         for (v, k) in self.allocation.iter().enumerate() {
-            trace!("  var {} -> r{}.{}", k, level, v);
+            trace!("  var {} -> r{}.{}", k.unwrap_or("<temporary>"), level, v);
         }
     }
     pub fn dump_to_trace(&self) {
@@ -91,12 +91,54 @@ struct SmalltalkCompiler {
     block_depth: usize,
 }
 
+fn literal_array_value(node: &SmalltalkNode) -> Option<Value> {
+    match node {
+        SmalltalkNode::Value(value) => Some(value.clone()),
+        SmalltalkNode::Symbol(symbol) => Some(Value::Symbol(symbol)),
+        SmalltalkNode::Identifier("nil") | SmalltalkNode::Nil => Some(Value::Nil),
+        SmalltalkNode::Identifier("true") => Some(Value::Boolean(true)),
+        SmalltalkNode::Identifier("false") => Some(Value::Boolean(false)),
+        SmalltalkNode::Identifier(name) => {
+            Some(Value::Symbol(StringTable::get(&format!("#{name}"))))
+        }
+        SmalltalkNode::Array(elements) => {
+            let values = elements
+                .iter()
+                .map(literal_array_value)
+                .collect::<Option<Vec<_>>>()?;
+            Some(Value::Array(Arc::new(Mutex::new(values))))
+        }
+        SmalltalkNode::ByteArray(elements) => {
+            let values = elements
+                .iter()
+                .map(|element| match element {
+                    SmalltalkNode::Value(value) => Some(value.clone()),
+                    _ => None,
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(Value::Array(Arc::new(Mutex::new(values))))
+        }
+        _ => None,
+    }
+}
+
+fn literal_array_contains_string(node: &SmalltalkNode) -> bool {
+    match node {
+        SmalltalkNode::Value(Value::String(_)) => true,
+        SmalltalkNode::Array(elements) | SmalltalkNode::ByteArray(elements) => {
+            elements.iter().any(literal_array_contains_string)
+        }
+        _ => false,
+    }
+}
+
 impl SmalltalkCompiler {
     pub fn new() -> Self {
         let code = Vec::new();
-        let mut var_allocation = VariableAllocation::new();
-        var_allocation.add("@result").unwrap();
-        var_allocation.add("self").unwrap();
+        let var_allocation = VariableAllocation {
+            parent: None,
+            allocation: vec![Some("@result"), Some("self")],
+        };
         let s = Self {
             code,
             var_allocation,
@@ -110,19 +152,14 @@ impl SmalltalkCompiler {
 
     fn allocate_register(&mut self) -> Register {
         let n = self.var_allocation.allocation.len();
-        let q = self
-            .var_allocation
-            .add(StringTable::get(format!("r{}", n).as_str()))
-            .unwrap();
-        Register::Number(0, q)
+        self.var_allocation.allocation.push(None);
+        Register::Number(0, n)
     }
 
-    fn allocate_var(&mut self, var_name: &'static str) -> Register {
-        let q = self.var_allocation.add(var_name).unwrap();
-        Register::Number(0, q)
+    fn allocate_var(&mut self, var_name: &'static str) -> Result<Register, String> {
+        let q = self.var_allocation.add(var_name)?;
+        Ok(Register::Number(0, q))
     }
-
-    fn free_register(&mut self, reg: Register) {}
 
     #[instrument(skip(self, node))]
     fn compile_node(
@@ -191,12 +228,9 @@ impl SmalltalkCompiler {
                         let inst = Instruction::CallMethod {
                             dst,
                             receiver: r,
-                            args: args.clone(),
+                            args,
                             selector,
                         };
-                        for a in args.iter() {
-                            self.free_register(*a);
-                        }
                         self.add_instruction(inst);
                     }
                 }
@@ -209,7 +243,7 @@ impl SmalltalkCompiler {
                 };
                 self.add_instruction(Instruction::LoadImm {
                     dst,
-                    value: Value::String(*s),
+                    value: Value::Symbol(*s),
                 });
                 Ok(dst)
             }
@@ -218,36 +252,80 @@ impl SmalltalkCompiler {
                     Some(d) => d,
                     None => self.allocate_register(),
                 };
-                self.add_instruction(Instruction::LoadImm {
-                    dst,
-                    value: value.clone(),
-                });
+                match value {
+                    Value::String(value) => self.add_instruction(Instruction::CreateString {
+                        dst,
+                        value: value.to_rust_string()?,
+                    }),
+                    _ => self.add_instruction(Instruction::LoadImm {
+                        dst,
+                        value: value.clone(),
+                    }),
+                }
                 Ok(dst)
             }
-            SmalltalkNode::Array(a) => {
+            SmalltalkNode::DynamicArray(elements) => {
                 let dst = match dst {
                     Some(d) => d,
                     None => self.allocate_register(),
                 };
-                let elements = a
-                    .iter()
-                    .map(|x| {
-                        if let SmalltalkNode::Value(v) = x {
-                            v.clone()
-                        } else {
-                            Value::Undefined
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                self.add_instruction(Instruction::LoadImm {
+                let mut registers = Vec::with_capacity(elements.len());
+                for element in elements {
+                    let slot = self.allocate_register();
+                    let result = self.compile_node(Some(slot), element)?;
+                    if result != slot {
+                        self.add_instruction(Instruction::Move {
+                            dst: slot,
+                            src: result,
+                        });
+                    }
+                    registers.push(slot);
+                }
+                self.add_instruction(Instruction::CreateArray {
                     dst,
-                    value: Value::Array(Arc::new(Mutex::new(elements))),
+                    elements: registers,
+                });
+                Ok(dst)
+            }
+            SmalltalkNode::Array(elements) | SmalltalkNode::ByteArray(elements) => {
+                let dst = match dst {
+                    Some(d) => d,
+                    None => self.allocate_register(),
+                };
+                let Some(value) = literal_array_value(node) else {
+                    self.add_instruction(Instruction::Unsupported {
+                        message: "Non-literal array elements are not implemented",
+                    });
+                    return Ok(dst);
+                };
+                if !literal_array_contains_string(node) {
+                    self.add_instruction(Instruction::LoadImm { dst, value });
+                    return Ok(dst);
+                }
+                let mut registers = Vec::with_capacity(elements.len());
+                for element in elements {
+                    let slot = self.allocate_register();
+                    match element {
+                        SmalltalkNode::Identifier(_) | SmalltalkNode::Nil => {
+                            let value = literal_array_value(element)
+                                .ok_or("Invalid literal array element")?;
+                            self.add_instruction(Instruction::LoadImm { dst: slot, value });
+                        }
+                        _ => {
+                            self.compile_node(Some(slot), element)?;
+                        }
+                    }
+                    registers.push(slot);
+                }
+                self.add_instruction(Instruction::CreateArray {
+                    dst,
+                    elements: registers,
                 });
                 Ok(dst)
             }
             SmalltalkNode::Statements(loc, ls) => {
                 for n in loc.iter() {
-                    let _r = self.var_allocation.add(n).unwrap();
+                    self.var_allocation.add(n)?;
                 }
                 let mut last_reg: Register = Register::Number(0, 0);
                 for stmt in ls.iter() {
@@ -282,7 +360,7 @@ impl SmalltalkCompiler {
                 Ok(dst.unwrap_or(Register::Number(0, 0)))
             }
             x => {
-                todo!("{:?}", x);
+                return Err(format!("Unsupported expression: {x:?}"));
             }
         }
     }
@@ -306,16 +384,16 @@ impl SmalltalkCompiler {
 
         let block_dst = block.allocate_register();
         for x in parameters {
-            let _n = block.allocate_var(x);
+            block.allocate_var(x)?;
         }
         for temp_name in temps {
-            let _n = block.allocate_var(temp_name);
+            block.allocate_var(temp_name)?;
         }
 
         let r = block.compile_node(Some(block_dst), body)?;
         if r != block_dst {
             block.add_instruction(Instruction::Move {
-                dst: Register::Result,
+                dst: Register::Number(0, 0),
                 src: r,
             });
         }
@@ -339,20 +417,6 @@ impl SmalltalkCompiler {
 
     fn add_instruction(&mut self, inst: Instruction) {
         self.code.push(inst);
-    }
-
-    pub fn dump_to_trace(&self) {
-        trace!("Compiled Method:");
-
-        self.var_allocation.dump_to_trace();
-        for (i, x) in self.code.iter().enumerate() {
-            trace!("  {:04}: {:}", i, x);
-        }
-
-        for (i, b) in self.blocks.iter().enumerate() {
-            trace!("Block #{}:", i);
-            b.dump_to_trace();
-        }
     }
 
     // fn set_offset(&mut self, offset: usize) {
@@ -386,6 +450,7 @@ pub fn compile_method(
 ) -> Result<CompiledMethod, String> {
     let mut c = SmalltalkCompiler::new();
     c.instance_vars = instance_vars;
+    let parameter_count = par.len();
     for p in par {
         c.var_allocation.add(p)?;
     }
@@ -395,6 +460,6 @@ pub fn compile_method(
     // });
     let _r = c.compile_node(None, node)?;
 
-    let m = CompiledMethod::new(c.code, c.blocks, c.var_allocation.allocation.len());
+    let m = CompiledMethod::new(c.code, c.blocks, parameter_count);
     return Ok(m);
 }

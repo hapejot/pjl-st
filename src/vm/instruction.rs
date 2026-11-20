@@ -8,6 +8,9 @@ pub enum Instruction {
     /// Load immediate value into register: LOAD_IMM dst, value
     LoadImm { dst: Register, value: Value },
 
+    /// Create a fresh mutable string from a literal.
+    CreateString { dst: Register, value: String },
+
     /// load the receiver into the register: LOAD_RECEIVER dst
     LoadReceiver { dst: Register },
 
@@ -28,6 +31,12 @@ pub enum Instruction {
 
     /// Store to instance variable by index: STORE_IVAR src, index
     StoreInstanceVar { src: Register, index: usize },
+
+    /// Construct a new array from registers
+    CreateArray {
+        dst: Register,
+        elements: Vec<Register>,
+    },
 
     /// Copy register to register: MOVE dst, src
     Move { dst: Register, src: Register },
@@ -69,6 +78,9 @@ pub enum Instruction {
     /// No operation: NOP
     Nop,
 
+    /// Report a feature that cannot yet be executed.
+    Unsupported { message: &'static str },
+
     /// Halt execution: HALT
     End,
 }
@@ -77,8 +89,9 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Instruction::LoadImm { dst, value } => {
-                write!(f, "{} <- '{:?}'", dst, value)
+                write!(f, "{} <- '{}'", dst, value)
             }
+            Instruction::CreateString { dst, value } => write!(f, "{} <- String {:?}", dst, value),
             Instruction::Move { dst, src } => {
                 write!(f, "{} <- {}", dst, src)
             }
@@ -106,6 +119,18 @@ impl Display for Instruction {
             Instruction::LoadGlobal { dst, var_name } => write!(f, "{} <- {}", dst, var_name),
             Instruction::CreateBlock { dst, prog_id } => {
                 write!(f, "{} <- Block #{}", dst, prog_id)
+            }
+            Instruction::CreateArray { dst, elements } => {
+                write!(
+                    f,
+                    "{} <- Array [{}]",
+                    dst,
+                    elements
+                        .iter()
+                        .map(|r| r.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
             }
             Instruction::Return { src } => {
                 write!(f, "Return {}", src)

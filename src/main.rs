@@ -1,6 +1,6 @@
 use clap::Parser;
-use st::{parser::topdown::parse_eval};
-use tracing::instrument;
+use std::io::IsTerminal;
+use std::sync::Arc;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
@@ -10,6 +10,9 @@ struct Args {
     expression: Option<String>,
     #[clap(long, default_value = "boot.yaml")]
     boot_file: String,
+    /// Run with the interactive fullscreen debugger
+    #[clap(long)]
+    debug: bool,
     #[clap(
         long,
         default_value = "st=warn,st::parser=warn,st::compiler=warn,st::vm=warn"
@@ -44,42 +47,27 @@ fn main() {
 }
 
 fn run_main(args: Args) -> Result<(), Box<dyn std::error::Error + 'static>> {
-    let boot_src = std::fs::read_to_string(args.boot_file).unwrap();
-    let boot = serde_yaml::from_str::<serde_yaml::Value>(&boot_src).unwrap();
-    let debugger = Box::leak(Box::new(st::debug::terminal::TerminalDebugger::new()));
-    let vm = Box::leak(Box::new(st::vm::VirtualMachine::new()));
-    vm.set_debugger(debugger);
-    if let Some(boot_map) = boot.as_mapping() {
-        for (package, value) in boot_map {
-            if let Some(files) = value.as_sequence() {
-                for file in files {
-                    let file_str = file.as_str().unwrap();
-                    vm.compile_file(package.as_str().unwrap(), file_str)?;
-                }
-            }
-        }
-    } else {
-        panic!("Boot file is not a valid YAML mapping");
+    if args.debug && !(std::io::stdin().is_terminal() && std::io::stdout().is_terminal()) {
+        return Err("--debug requires a terminal on stdin and stdout".into());
+    }
+
+    let interpreter = st::Interpreter::with_boot_file(
+        &args.boot_file,
+        st::try_get_project_root()?.join("smalltalk"),
+    )?;
+    if args.debug {
+        interpreter.set_debugger(Arc::new(st::debug::terminal::TerminalDebugger::new()))?;
     }
 
     let src = if let Some(file) = args.input_file {
-        std::fs::read_to_string(file).expect("Failed to read input file")
+        std::fs::read_to_string(file)?
     } else if let Some(expr) = args.expression {
         expr
     } else {
         println!("Please provide an input file or an expression to evaluate.");
         return Ok(());
     };
-    let cm = st::compiler::compile_statements(&parse_eval(&src).unwrap())?;
-    execute(vm, cm)
-}
-
-#[instrument(skip(vm, cm))]
-fn execute(
-    vm: &'static mut st::vm::VirtualMachine,
-    cm: st::vm::block::CompiledMethod,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let result = vm.execute_method(cm)?;
+    let result = interpreter.eval(&src)?;
     println!("{}", result);
     Ok(())
 }

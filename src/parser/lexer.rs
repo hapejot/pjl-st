@@ -1,4 +1,4 @@
-use std::{ffi::os_str::Display, ops::Index, rc::Rc, slice::SliceIndex};
+use std::{ops::Index, rc::Rc};
 
 use santiago::lexer::{LexerRules, Position};
 
@@ -10,9 +10,9 @@ impl std::fmt::Display for Tokens {
         for l in &self.0 {
             match &**l {
                 santiago::lexer::Lexeme {
-                    kind,
                     raw,
                     position: Position { line, column },
+                    ..
                 } => {
                     if pos.line == 0 {
                         pos = Position {
@@ -111,7 +111,10 @@ pub fn lexer_rules() -> LexerRules {
     )
 }
 
-pub fn tokenize(rules: &LexerRules, src: &str) -> Result<Tokens, Box<dyn std::error::Error>> {
+pub fn tokenize(
+    rules: &LexerRules,
+    src: &str,
+) -> Result<Tokens, Box<dyn std::error::Error + Send + Sync>> {
     let lexemes = santiago::lexer::lex(rules, src).map_err(|x| x.to_string())?;
     Ok(Tokens(lexemes))
 }

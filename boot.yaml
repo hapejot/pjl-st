@@ -13,3 +13,8 @@ kernel:
 - True.st
 - False.st
 - Array.st
+local:
+- Execution.st
+- Character.st
+- String.st
+- Symbol.st

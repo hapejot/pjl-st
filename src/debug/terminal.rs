@@ -27,15 +27,22 @@ impl TerminalDebugger {
 }
 
 impl Debugger for TerminalDebugger {
-    fn before_execute(&self, execution: Execution) {
-        let mut data = self.0.try_lock().unwrap();
-        if let Err(e) = data.display_execution_state(execution) {
-            eprintln!("Terminal debugger error: {}", e);
-        }
+    fn before_execute(
+        &self,
+        execution: Execution,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut data = self
+            .0
+            .lock()
+            .map_err(|e| format!("Terminal debugger lock: {e}"))?;
+        data.display_execution_state(execution)
     }
 
-    fn after_execute(&self, execution: Execution) {
-        let _ = execution;
+    fn after_execute(
+        &self,
+        _execution: Execution,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
     }
 }
 
@@ -50,7 +57,7 @@ impl TerminalDebuggerData {
     fn display_execution_state(
         &mut self,
         execution: Execution,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut stdout = io::stdout();
 
         // Clear screen and move to top
@@ -68,17 +75,20 @@ impl TerminalDebuggerData {
             ResetColor
         )?;
 
+        let instruction_count = execution.instructions()?.len();
+        let ip = execution.ip()?;
+        let level = execution.level()?;
+        let register_count = execution.reg_count()?;
         // Display current instruction pointer and method info
         queue!(
             stdout,
             SetForegroundColor(Color::Yellow),
             Print(format!(
-                "Method: {} instructions, IP: {} Step-Mode:{}\n",
-                execution.instructions().len(),
-                execution.ip(),
-                self.step_mode
+                "Method: {} instructions, IP: {} Step-Mode:{} Level: {}\n",
+                instruction_count, ip, self.step_mode, level
             )),
-            Print(format!("Registers: {} allocated\n", execution.reg_count())),
+            Print(format!("Execution: {}\n", execution)),
+            Print(format!("Registers: {} allocated\n", register_count)),
             ResetColor
         )?;
 
@@ -113,9 +123,9 @@ impl TerminalDebuggerData {
         &self,
         execution: Execution,
         stdout: &mut io::Stdout,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let instructions = execution.instructions();
-        let current_ip = execution.ip();
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let instructions = execution.instructions()?;
+        let current_ip = execution.ip()?;
 
         queue!(stdout, Print("\nInstructions:\n"))?;
 
@@ -146,7 +156,7 @@ impl TerminalDebuggerData {
         &self,
         execution: Execution,
         stdout: &mut io::Stdout,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         queue!(
             stdout,
             Print("\nRegisters:\n"),
@@ -154,7 +164,7 @@ impl TerminalDebuggerData {
         )?;
 
         {
-            let registers = execution.registers();
+            let registers = execution.registers()?;
             for (i, value) in registers.iter().enumerate() {
                 match i {
                     0 => queue!(stdout, Print(format!("  r-result: {}\n", value)))?,
@@ -167,7 +177,7 @@ impl TerminalDebuggerData {
         Ok(())
     }
 
-    fn handle_input(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_input(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
             if let Event::Key(KeyEvent {
                 code,
@@ -201,8 +211,7 @@ impl TerminalDebuggerData {
                         break;
                     }
                     KeyCode::Char('q') => {
-                        // Quit
-                        std::process::exit(0);
+                        return Err("Execution cancelled by debugger".into());
                     }
                     _ => {}
                 }

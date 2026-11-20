@@ -1,9 +1,8 @@
-use st::{init_tracing, parser::topdown::parse_eval, vm::VirtualMachine};
+use st::{parser::topdown::parse_eval, vm::VirtualMachine};
 use tracing::trace;
 
 #[test]
 fn test_grammar() {
-    init_tracing();
     trace!("Starting test_grammar");
     let src = "[:x | x + 1]";
     match parse_eval(src) {
@@ -17,7 +16,7 @@ fn test_grammar() {
 
 #[test]
 fn class_variables() {
-    let mut vm = Box::leak(Box::new(VirtualMachine::new()));
+    let vm = VirtualMachine::new();
     let src = r#"
 nil subclass: Object [
     
@@ -38,6 +37,5 @@ All classes in the system are subclasses of me.'>
 	FinalizableObjects := nil
     ] ]
 "#;
-    init_tracing();
-    let r = vm.compile_src(src);
+    let _result = vm.compile_src(src);
 }

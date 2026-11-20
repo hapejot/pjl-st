@@ -13,19 +13,19 @@ fn weird_identifier() {
     }
 }
 
-
 #[test]
 fn assignments_and_blocks() {
-    let input =   "| adder1 adder2 |
+    let input = "| adder1 adder2 |
         adder1 := [:x :y | x + y ].
         adder2 := [:x | adder1 value: 1 value: x].
         ^adder2 value: 2";
     let rules = lexer_rules();
     let l = tokenize(&rules, input).unwrap();
-    let exp = vec!["|", "adder1", "adder2", "|", 
-                            "adder1", ":=", "[", ":", "x", ":", "y", "|", "x", "+", "y", "]", ".", 
-                            "adder2", ":=", "[", ":", "x", "|", "adder1", "value:", "1", "value:", "x", "]", ".", 
-                            "^", "adder2", "value:", "2"];
+    let exp = vec![
+        "|", "adder1", "adder2", "|", "adder1", ":=", "[", ":", "x", ":", "y", "|", "x", "+", "y",
+        "]", ".", "adder2", ":=", "[", ":", "x", "|", "adder1", "value:", "1", "value:", "x", "]",
+        ".", "^", "adder2", "value:", "2",
+    ];
     for (i, e) in exp.iter().enumerate() {
         let x = l[i].clone();
         assert_eq!(&x.raw, e, "{}: {}", i, &x.position);
@@ -199,14 +199,14 @@ fn test_escaped_quotes_in_strings() {
     %1 isNil ifTrue: [ %1 := %2 ].
     ^%1
     ]'"#;
-    
+
     let rules = lexer_rules();
     let l = tokenize(&rules, input).unwrap();
-    
+
     // The string should be tokenized as a single STRING token
     assert_eq!(l.len(), 1);
     assert_eq!(l[0].kind, "STRING");
-    
+
     // Verify the content includes the escaped quotes
     let expected_content = r#"'%1 [
     "Answer the receiver''s %1. Its default value is %2"
@@ -221,7 +221,7 @@ fn test_simple_escaped_quotes() {
     let input = r#"'don''t'"#;
     let rules = lexer_rules();
     let l = tokenize(&rules, input).unwrap();
-    
+
     assert_eq!(l.len(), 1);
     assert_eq!(l[0].kind, "STRING");
     assert_eq!(l[0].raw, "'don''t'");
@@ -232,7 +232,7 @@ fn test_multiple_escaped_quotes() {
     let input = r#"'He said ''Hello'' and ''Goodbye'''"#;
     let rules = lexer_rules();
     let l = tokenize(&rules, input).unwrap();
-    
+
     assert_eq!(l.len(), 1);
     assert_eq!(l[0].kind, "STRING");
     assert_eq!(l[0].raw, "'He said ''Hello'' and ''Goodbye'''");
@@ -243,7 +243,7 @@ fn test_comments_with_escaped_quotes() {
     let input = r#""This is a comment with ""escaped quotes"" inside""#;
     let rules = lexer_rules();
     let l = tokenize(&rules, input).unwrap();
-    
+
     // Comments should be skipped, so no tokens
     assert_eq!(l.len(), 0);
 }
@@ -264,18 +264,16 @@ fn test_smalltalk_method_template() {
         ]' 
             % {what. value}
 ]"#;
-    
+
     let rules = lexer_rules();
     let l = tokenize(&rules, input).unwrap();
-    
+
     // Verify that the string containing escaped quotes is parsed correctly
-    let string_tokens: Vec<_> = l.iter()
-        .filter(|token| token.kind == "STRING")
-        .collect();
-    
+    let string_tokens: Vec<_> = l.iter().filter(|token| token.kind == "STRING").collect();
+
     // Should have exactly one string token (the template string)
     assert_eq!(string_tokens.len(), 1);
-    
+
     let template_string = &string_tokens[0].raw;
     assert!(template_string.contains("receiver''s"));
     assert!(template_string.starts_with("'%1 ["));
