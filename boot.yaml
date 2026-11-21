@@ -15,6 +15,13 @@ kernel:
 - Array.st
 local:
 - Execution.st
+- ArrayedCollection.st
 - Character.st
 - String.st
 - Symbol.st
+- Dictionary.st
+- ByteArray.st
+- OrderedCollection.st
+- Streams.st
+- Hashing.st
+- Terminal.st

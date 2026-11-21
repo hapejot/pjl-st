@@ -6,11 +6,10 @@ use std::{
 use crate::memory::{SmalltalkClass, Value};
 
 use super::{
-    VirtualMachine, VirtualMachineState,
+    VirtualMachine, VirtualMachineState, numbers,
     primitives::{
-        execution_value0, execution_value1, execution_value2, integer_add, integer_bit_and,
-        integer_bit_shift, integer_div, integer_eq, integer_ge, integer_gt, integer_lt,
-        integer_mul, integer_sub, meta_class_new,
+        execution_value0, execution_value1, execution_value2, integer_bit_and, integer_bit_shift,
+        meta_class_new,
     },
 };
 
@@ -59,16 +58,23 @@ impl VirtualMachine {
         let undefined_class =
             SmalltalkClass::new("UndefinedObject", Some(object_class.clone()), vec![])?;
 
-        integer_class.insert_method("+", Value::NativeMethod(integer_add))?;
-        integer_class.insert_method("-", Value::NativeMethod(integer_sub))?;
-        integer_class.insert_method("*", Value::NativeMethod(integer_mul))?;
-        integer_class.insert_method("/", Value::NativeMethod(integer_div))?;
-        integer_class.insert_method(">", Value::NativeMethod(integer_gt))?;
-        integer_class.insert_method("<", Value::NativeMethod(integer_lt))?;
-        integer_class.insert_method(">=", Value::NativeMethod(integer_ge))?;
+        for class in [&integer_class, &float_class] {
+            class.insert_method("+", Value::NativeMethod(numbers::add))?;
+            class.insert_method("-", Value::NativeMethod(numbers::subtract))?;
+            class.insert_method("*", Value::NativeMethod(numbers::multiply))?;
+            class.insert_method("/", Value::NativeMethod(numbers::divide))?;
+            class.insert_method("<", Value::NativeMethod(numbers::less))?;
+            class.insert_method("<=", Value::NativeMethod(numbers::less_equal))?;
+            class.insert_method(">", Value::NativeMethod(numbers::greater))?;
+            class.insert_method(">=", Value::NativeMethod(numbers::greater_equal))?;
+            class.insert_method("=", Value::NativeMethod(numbers::equal))?;
+        }
+        float_class
+            .meta()?
+            .class()?
+            .insert_method("basicNew", Value::NativeMethod(numbers::float_basic_new))?;
         integer_class.insert_method("bitAnd:", Value::NativeMethod(integer_bit_and))?;
         integer_class.insert_method("bitShift:", Value::NativeMethod(integer_bit_shift))?;
-        integer_class.insert_method("=", Value::NativeMethod(integer_eq))?;
         execution_class.insert_method("value", Value::NativeMethod(execution_value0))?;
         execution_class.insert_method("value:", Value::NativeMethod(execution_value1))?;
         execution_class.insert_method("value:value:", Value::NativeMethod(execution_value2))?;
@@ -87,6 +93,7 @@ impl VirtualMachine {
 
         st.insert("Magnitude", magnitude_class.clone().into());
         st.insert("Integer", integer_class.clone().into());
+        st.insert("Float", float_class.clone().into());
         st.insert("Number", number_class.clone().into());
         st.insert("Execution", execution_class.clone().into());
         st.insert("Nil", nil_class.clone().into());

@@ -81,11 +81,18 @@ pub(super) fn concatenate(
     receiver: Value,
     args: Vec<Value>,
 ) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    let (Value::String(value), [Value::String(other)]) = (receiver, args.as_slice()) else {
+    let [other] = args.as_slice() else {
         return Err("String , requires a string argument".into());
     };
-    let mut result = value.to_rust_string()?;
-    let other = other.to_rust_string()?;
+    let text = |value: &Value| -> Result<String, Box<dyn Error + Send + Sync>> {
+        match value {
+            Value::String(value) => Ok(value.to_rust_string()?),
+            Value::Symbol(value) => Ok(super::symbols::text(value)?.to_owned()),
+            _ => Err("String , requires a string argument".into()),
+        }
+    };
+    let mut result = text(&receiver)?;
+    let other = text(other)?;
     result.try_reserve(other.len())?;
     result.push_str(&other);
     Ok(Value::String(SmalltalkString::new(&result)?))

@@ -121,6 +121,42 @@ impl Execution {
             ("VMpr_Object_identity", _, [other]) => {
                 Ok(Some(Value::Boolean(receiver.same_identity(other))))
             }
+            (name, _, _) if name.starts_with("VMpr_Terminal_") => Ok(Some(
+                crate::vm::terminal::primitive(self, name, receiver, args)?,
+            )),
+            ("VMpr_Dictionary_bucketHash", _, [key]) => {
+                let vm = self.vm()?;
+                let builtins = [
+                    ("Integer", Value::NativeMethod(crate::vm::numbers::equal)),
+                    ("Float", Value::NativeMethod(crate::vm::numbers::equal)),
+                    ("Symbol", Value::NativeMethod(crate::vm::symbols::equal)),
+                ];
+                for (class, expected) in builtins {
+                    let (_, method) = self.lookup_method_in_class(vm.get_class(class)?, "=")?;
+                    if !method.same_identity(&expected) {
+                        return Ok(Some(Value::Nil));
+                    }
+                }
+                Ok(Some(
+                    crate::vm::hashing::bucket_hash(key)?
+                        .map(Value::Integer)
+                        .unwrap_or(Value::Nil),
+                ))
+            }
+            ("VMpr_Value_hash", _, []) => Ok(Some(Value::Integer(crate::vm::hashing::value_hash(
+                receiver,
+            )?))),
+            ("VMpr_Object_bootstrapError", _, [Value::String(message)]) => {
+                Err(format!("Smalltalk error: {}", message.to_rust_string()?).into())
+            }
+            ("VMpr_Object_bootstrapError", _, [_]) => {
+                Err("Smalltalk error: requires a string message".into())
+            }
+            ("VMpr_Block_whileTrue", Value::Execution(condition), [Value::Execution(body)]) => {
+                Ok(Some(crate::vm::primitives::execution_while_true(
+                    self, condition, body,
+                )?))
+            }
             _ => Ok(None),
         }
     }
@@ -147,6 +183,7 @@ impl Execution {
                 Err("Message dispatch for Dictionary is not implemented".into())
             }
             Value::Array(_) => self.vm()?.get_class("Array"),
+            Value::ByteArray(_) => self.vm()?.get_class("ByteArray"),
             Value::Method(_) | Value::NativeMethod(_) => {
                 Err("Message dispatch for method values is not implemented".into())
             }

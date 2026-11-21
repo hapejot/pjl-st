@@ -8,4 +8,8 @@ String subclass: Symbol [
     isSymbol [
         ^true
     ]
+
+    species [
+        ^String
+    ]
 ]

@@ -16,8 +16,10 @@ compiles method bodies; it does not execute them as scripts.
 - [VM](../src/vm/mod.rs): shared VM state and class registration.
   [Bootstrap](../src/vm/bootstrap.rs) initializes built-in classes;
   [source](../src/vm/source.rs) loads definitions; and
-  [primitives](../src/vm/primitives.rs), [characters](../src/vm/characters.rs),
-  [strings](../src/vm/strings.rs), and [symbols](../src/vm/symbols.rs)
+  [primitives](../src/vm/primitives.rs), [numbers](../src/vm/numbers.rs),
+  [characters](../src/vm/characters.rs), [byte arrays](../src/vm/byte_arrays.rs),
+  [strings](../src/vm/strings.rs),
+  and [symbols](../src/vm/symbols.rs)
   implement native methods.
 - [Execution](../src/vm/execution.rs): frames, instruction loop, debugger
   callbacks, execution limits, and error stacks.

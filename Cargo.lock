@@ -558,6 +558,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "crossterm",
+ "crossterm_winapi",
  "pjl-static-strings",
  "santiago",
  "serde_yaml",

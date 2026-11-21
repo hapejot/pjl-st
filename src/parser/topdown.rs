@@ -438,12 +438,27 @@ impl SmalltalkParser {
             }
             "[" => self.parse_block(),
             "#" => {
-                // Array literal
                 self.advance();
                 match self.current_token() {
                     "[" => self.parse_array_literal("[", "]"), // byte array
                     "(" => self.parse_array_literal("(", ")"), // regular array
-                    _ => return Err(self.error_msg("Expected an array literal after #").into()),
+                    "STRING" => {
+                        let text =
+                            self.current_raw[1..self.current_raw.len() - 1].replace("''", "'");
+                        if text.chars().any(|character| u32::from(character) > 0xffff) {
+                            return Err(self
+                                .error_msg("Symbol contains a character outside the BMP")
+                                .into());
+                        }
+                        let symbol = StringTable::get(&format!("#{text}"));
+                        self.advance();
+                        Ok(SmalltalkNode::Symbol(symbol))
+                    }
+                    _ => {
+                        return Err(self
+                            .error_msg("Expected an array or quoted symbol after #")
+                            .into());
+                    }
                 }
             }
             "{" => self.parse_array_literal_dyn(),

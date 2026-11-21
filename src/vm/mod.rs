@@ -12,11 +12,15 @@ use crate::{
 use self::primitives::{array_at, array_at_put, array_new, array_size};
 
 mod bootstrap;
+mod byte_arrays;
 mod characters;
+mod hashing;
+mod numbers;
 mod primitives;
 mod source;
 mod strings;
 mod symbols;
+pub(crate) mod terminal;
 
 pub mod block;
 pub mod error;
@@ -123,6 +127,20 @@ impl VirtualMachine {
                     class.insert_method("at:put:", Value::NativeMethod(array_at_put))?;
                     class.insert_method("size", Value::NativeMethod(array_size))?;
                     class.insert_method("basicSize", Value::NativeMethod(array_size))?;
+                }
+                if name == "ByteArray" {
+                    class
+                        .meta()?
+                        .class()?
+                        .insert_method("basicNew:", Value::NativeMethod(byte_arrays::new))?;
+                    class.insert_method("size", Value::NativeMethod(byte_arrays::size))?;
+                    class.insert_method("basicSize", Value::NativeMethod(byte_arrays::size))?;
+                    class.insert_method("at:", Value::NativeMethod(byte_arrays::at))?;
+                    class.insert_method("basicAt:", Value::NativeMethod(byte_arrays::at))?;
+                    class.insert_method("at:put:", Value::NativeMethod(byte_arrays::at_put))?;
+                    class
+                        .insert_method("basicAt:put:", Value::NativeMethod(byte_arrays::at_put))?;
+                    class.insert_method("copy", Value::NativeMethod(byte_arrays::copy))?;
                 }
                 if name == "Character" {
                     class

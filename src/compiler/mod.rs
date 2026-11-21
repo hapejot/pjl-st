@@ -108,26 +108,28 @@ fn literal_array_value(node: &SmalltalkNode) -> Option<Value> {
                 .collect::<Option<Vec<_>>>()?;
             Some(Value::Array(Arc::new(Mutex::new(values))))
         }
-        SmalltalkNode::ByteArray(elements) => {
-            let values = elements
-                .iter()
-                .map(|element| match element {
-                    SmalltalkNode::Value(value) => Some(value.clone()),
-                    _ => None,
-                })
-                .collect::<Option<Vec<_>>>()?;
-            Some(Value::Array(Arc::new(Mutex::new(values))))
-        }
+        SmalltalkNode::ByteArray(elements) => Some(Value::ByteArray(Arc::new(Mutex::new(
+            literal_bytes(elements)?,
+        )))),
         _ => None,
     }
 }
 
-fn literal_array_contains_string(node: &SmalltalkNode) -> bool {
+fn literal_bytes(elements: &[SmalltalkNode]) -> Option<Vec<u8>> {
+    elements
+        .iter()
+        .map(|element| match element {
+            SmalltalkNode::Value(Value::Integer(value)) => u8::try_from(*value).ok(),
+            _ => None,
+        })
+        .collect()
+}
+
+fn literal_array_contains_mutable(node: &SmalltalkNode) -> bool {
     match node {
-        SmalltalkNode::Value(Value::String(_)) => true,
-        SmalltalkNode::Array(elements) | SmalltalkNode::ByteArray(elements) => {
-            elements.iter().any(literal_array_contains_string)
-        }
+        SmalltalkNode::Value(Value::String(_) | Value::ByteArray(_))
+        | SmalltalkNode::ByteArray(_) => true,
+        SmalltalkNode::Array(elements) => elements.iter().any(literal_array_contains_mutable),
         _ => false,
     }
 }
@@ -257,6 +259,13 @@ impl SmalltalkCompiler {
                         dst,
                         value: value.to_rust_string()?,
                     }),
+                    Value::ByteArray(value) => self.add_instruction(Instruction::CreateByteArray {
+                        dst,
+                        value: value
+                            .lock()
+                            .map_err(|error| format!("ByteArray lock: {error}"))?
+                            .clone(),
+                    }),
                     _ => self.add_instruction(Instruction::LoadImm {
                         dst,
                         value: value.clone(),
@@ -287,7 +296,18 @@ impl SmalltalkCompiler {
                 });
                 Ok(dst)
             }
-            SmalltalkNode::Array(elements) | SmalltalkNode::ByteArray(elements) => {
+            SmalltalkNode::ByteArray(elements) => {
+                let dst = dst.unwrap_or_else(|| self.allocate_register());
+                if let Some(value) = literal_bytes(elements) {
+                    self.add_instruction(Instruction::CreateByteArray { dst, value });
+                } else {
+                    self.add_instruction(Instruction::Unsupported {
+                        message: "ByteArray literal requires integers between 0 and 255",
+                    });
+                }
+                Ok(dst)
+            }
+            SmalltalkNode::Array(elements) => {
                 let dst = match dst {
                     Some(d) => d,
                     None => self.allocate_register(),
@@ -298,7 +318,7 @@ impl SmalltalkCompiler {
                     });
                     return Ok(dst);
                 };
-                if !literal_array_contains_string(node) {
+                if !literal_array_contains_mutable(node) {
                     self.add_instruction(Instruction::LoadImm { dst, value });
                     return Ok(dst);
                 }
@@ -398,9 +418,12 @@ impl SmalltalkCompiler {
             });
         }
 
-        for b in block.blocks.iter() {
-            self.blocks.push(b.clone());
+        let offset = self.blocks.len();
+        for mut compiled in block.blocks {
+            Self::relocate_blocks(&mut compiled.instructions, offset)?;
+            self.blocks.push(compiled);
         }
+        Self::relocate_blocks(&mut block.code, offset)?;
 
         self.blocks.push(CompiledBlock {
             instructions: block.code,
@@ -413,6 +436,15 @@ impl SmalltalkCompiler {
         });
 
         Ok(dst)
+    }
+
+    fn relocate_blocks(instructions: &mut [Instruction], offset: usize) -> Result<(), String> {
+        for instruction in instructions {
+            if let Instruction::CreateBlock { prog_id, .. } = instruction {
+                *prog_id = prog_id.checked_add(offset).ok_or("Block index overflow")?;
+            }
+        }
+        Ok(())
     }
 
     fn add_instruction(&mut self, inst: Instruction) {

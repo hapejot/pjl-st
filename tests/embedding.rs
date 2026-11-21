@@ -614,10 +614,10 @@ fn literal_arrays_support_symbols_pseudovariables_and_nested_arrays() {
     assert!(
         matches!(&array[15], Value::String(value) if value.to_rust_string().unwrap() == "don't")
     );
-    let Value::Array(bytes) = &array[16] else {
-        panic!("expected array")
+    let Value::ByteArray(bytes) = &array[16] else {
+        panic!("expected byte array")
     };
-    assert!(matches!(bytes.lock().unwrap()[1], Value::Integer(2)));
+    assert_eq!(bytes.lock().unwrap()[1], 2);
     assert!(
         matches!(interpreter.eval("^'don''t'"), Ok(Value::String(value)) if value.to_rust_string().unwrap() == "don't")
     );
@@ -748,6 +748,670 @@ fn escaped_block_does_not_keep_interpreter_or_debugger_alive() {
             .unwrap_err()
             .to_string()
             .contains("Virtual machine has been dropped")
+    );
+}
+
+#[test]
+fn streams_read_write_seek_and_copy_contents() {
+    let interpreter = interpreter();
+    interpreter
+        .load_source("OrderedCollection subclass: StreamCollection []")
+        .unwrap();
+    for (source, expected) in [
+        ("| s | s := 'abc' readStream. s peek. ^s next", 'a'),
+        (
+            "| s | s := 'abc' readStream. s next. s position: 2. ^s next",
+            'c',
+        ),
+        ("| s | s := 'abc' readStream. s next. s reset. ^s next", 'a'),
+    ] {
+        let result = interpreter.eval(source);
+        assert!(
+            matches!(result, Ok(Value::Character(value)) if value == expected),
+            "{source}: {result:?}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| s | s := 'a' readStream. s next. ^s atEnd"),
+        Ok(Value::Boolean(true))
+    ));
+    assert!(matches!(
+        interpreter.eval("| s | s := 'a' readStream. s next. ^s next"),
+        Ok(Value::Nil)
+    ));
+    assert!(matches!(
+        interpreter.eval("| s | s := 'a' readStream. s next. ^s peek"),
+        Ok(Value::Nil)
+    ));
+    for (source, expected) in [
+        (
+            "| s | s := (String new: 0) writeStream. s nextPutAll: 'hello'. ^s contents",
+            "hello",
+        ),
+        ("| s | s := 'abc' readStream. s next. ^s contents", "abc"),
+        (
+            "| s | s := 'abc' readWriteStream. s next. s nextPut: $z. ^s contents",
+            "azc",
+        ),
+        (
+            "| s | s := 'ab' readWriteStream. s position: 2. s nextPut: $c. s reset. ^s contents",
+            "abc",
+        ),
+        (
+            "| text s | text := 'abc'. s := text writeStream. s nextPut: $z. ^text",
+            "zbc",
+        ),
+        (
+            "| s result | s := (String new: 0) writeStream. s nextPut: $a. result := s contents. result at: 1 put: $z. ^s contents",
+            "a",
+        ),
+    ] {
+        let result = interpreter.eval(source);
+        assert!(
+            matches!(result, Ok(Value::String(value)) if value.to_rust_string().unwrap() == expected),
+            "{source}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| s | s := (ByteArray new: 0) writeStream. s nextPutAll: #[1 2 255]. ^s contents"),
+        Ok(Value::ByteArray(bytes)) if *bytes.lock().unwrap() == [1, 2, 255]
+    ));
+    assert!(matches!(
+        interpreter.eval("| s | s := (Array new: 0) writeStream. s nextPut: 1. s nextPut: 2. ^s contents"),
+        Ok(Value::Array(array)) if matches!(array.lock().unwrap().as_slice(), [Value::Integer(1), Value::Integer(2)])
+    ));
+    assert!(matches!(
+        interpreter.eval("| c s | c := OrderedCollection new: 0. s := c writeStream. s nextPut: 1. s nextPut: 2. ^s contents asArray"),
+        Ok(Value::Array(array)) if matches!(array.lock().unwrap().as_slice(), [Value::Integer(1), Value::Integer(2)])
+    ));
+    assert!(matches!(
+        interpreter.eval("| s | s := (StreamCollection new: 0) writeStream. s nextPut: 1. ^s contents asArray"),
+        Ok(Value::Array(array)) if matches!(array.lock().unwrap().as_slice(), [Value::Integer(1)])
+    ));
+    let error = interpreter
+        .eval_with_limits(
+            "| s | s := (String new: 0) writeStream. s nextPutAll: 'hello world'",
+            ExecutionLimits {
+                max_instructions: Some(50),
+                max_call_depth: None,
+            },
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("Instruction limit exceeded"),
+        "{error}"
+    );
+    for source in [
+        "^('a' readStream) position: -1",
+        "^('a' readStream) position: 2",
+        "^('a' readStream) position: 1.0",
+        "^((String new: 0) writeStream) next",
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Err(InterpreterError::Runtime(_))),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn ordered_collections_grow_and_preserve_order() {
+    let interpreter = interpreter();
+    for (source, expected) in [
+        (
+            "| c | c := OrderedCollection new: 0. c add: 2. c addFirst: 1. c addLast: 3. ^c size",
+            3,
+        ),
+        (
+            "| c | c := OrderedCollection new: 0. c add: 2. c addFirst: 1. c addLast: 3. ^c at: 1",
+            1,
+        ),
+        (
+            "| c | c := OrderedCollection new: 0. c add: 2. c addFirst: 1. c addLast: 3. ^c removeFirst",
+            1,
+        ),
+        (
+            "| c | c := OrderedCollection new. c add: 1. c add: 2. c removeFirst. ^c removeLast",
+            2,
+        ),
+        (
+            "| c | c := OrderedCollection new: 0. 1 to: 20 do: [:i | c add: i]. ^c at: 20",
+            20,
+        ),
+        (
+            "| c | c := OrderedCollection new. c add: 1. c at: 1 put: 9. ^c at: 1",
+            9,
+        ),
+        (
+            "| c d | c := OrderedCollection new. c add: 1. d := c copy. c at: 1 put: 9. ^d at: 1",
+            1,
+        ),
+        (
+            "| c | c := OrderedCollection new. c add: 1. c add: 2. ^(c collect: [:each | each * 2]) at: 2",
+            4,
+        ),
+        (
+            "| c | c := OrderedCollection new. c add: 1. c add: 2. ^(c select: [:each | each > 1]) at: 1",
+            2,
+        ),
+        (
+            "| c | c := OrderedCollection new. c add: 1. c add: 2. ^(c reject: [:each | each > 1]) at: 1",
+            1,
+        ),
+    ] {
+        let result = interpreter.eval(source);
+        assert!(
+            matches!(result, Ok(Value::Integer(value)) if value == expected),
+            "{source}: {result:?}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| c | c := OrderedCollection new. c add: 1. c add: 2. ^c asArray"),
+        Ok(Value::Array(array)) if matches!(array.lock().unwrap().as_slice(), [Value::Integer(1), Value::Integer(2)])
+    ));
+    for source in [
+        "^(OrderedCollection new) removeFirst",
+        "^(OrderedCollection new) removeLast",
+        "^(OrderedCollection new: 5) at: 1",
+        "^(OrderedCollection new) at: 0 put: 1",
+        "^OrderedCollection new: -1",
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Err(InterpreterError::Runtime(_))),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn arrayed_collections_reject_matching_elements() {
+    let interpreter = interpreter();
+    assert!(matches!(
+        interpreter.eval("^{1. 2. 3} reject: [:each | each > 1]"),
+        Ok(Value::Array(array)) if matches!(array.lock().unwrap().as_slice(), [Value::Integer(1)])
+    ));
+    assert!(matches!(
+        interpreter.eval("^'abc' reject: [:each | each = $b]"),
+        Ok(Value::String(value)) if value.to_rust_string().unwrap() == "ac"
+    ));
+    assert!(matches!(
+        interpreter.eval("^#'abc' reject: [:each | each = $b]"),
+        Ok(Value::String(value)) if value.to_rust_string().unwrap() == "ac"
+    ));
+    assert!(matches!(
+        interpreter.eval("^#[1 2 3] reject: [:each | each > 1]"),
+        Ok(Value::ByteArray(bytes)) if *bytes.lock().unwrap() == [1]
+    ));
+    assert!(matches!(
+        interpreter.eval(
+            "| calls | calls := 0. {1. 2. 3} reject: [:each | calls := calls + 1. false]. ^calls"
+        ),
+        Ok(Value::Integer(3))
+    ));
+}
+
+#[test]
+fn dictionary_removes_keys_and_returns_independent_key_value_arrays() {
+    let interpreter = interpreter();
+    for (source, expected) in [
+        (
+            "| d | d := Dictionary new. d at: #a put: 1. d at: #b put: 2. ^d removeKey: #a",
+            1,
+        ),
+        (
+            "| d | d := Dictionary new. d at: #a put: 1. d at: #b put: 2. d removeKey: #a. ^d at: #b",
+            2,
+        ),
+        (
+            "| d | d := Dictionary new. d at: nil put: 9. d removeKey: nil. d at: nil put: 8. ^d at: nil",
+            8,
+        ),
+        (
+            "| d | d := Dictionary new. ^d removeKey: #none ifAbsent: [42]",
+            42,
+        ),
+        (
+            "| d k | d := Dictionary new. d at: #a put: 1. k := d keys. k at: 1 put: #b. ^d at: #a",
+            1,
+        ),
+        (
+            "| d v | d := Dictionary new. d at: #a put: 1. v := d values. v at: 1 put: 99. ^d at: #a",
+            1,
+        ),
+    ] {
+        let result = interpreter.eval(source);
+        assert!(
+            matches!(result, Ok(Value::Integer(value)) if value == expected),
+            "{source}: {result:?}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| d | d := Dictionary new. d at: #a put: 1. d at: #b put: 2. d removeKey: #a. ^d includesKey: #a"),
+        Ok(Value::Boolean(false))
+    ));
+    for source in [
+        "^(Dictionary new) removeKey: #missing",
+        "^(Dictionary new) removeKey: #missing ifAbsent: [1 / 0]",
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Err(InterpreterError::Runtime(_))),
+            "{source}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| d | d := Dictionary new. d at: #a put: 1. d at: #b put: 2. ^(d keys size = 2) & (d values size = 2)"),
+        Ok(Value::Boolean(true))
+    ));
+}
+
+#[test]
+fn byte_arrays_are_distinct_mutable_and_range_checked() {
+    let interpreter = interpreter();
+    assert!(matches!(
+        interpreter.eval("^#[0 255]"),
+        Ok(Value::ByteArray(bytes)) if *bytes.lock().unwrap() == [0, 255]
+    ));
+    assert!(matches!(
+        interpreter.eval("^ByteArray new: 2"),
+        Ok(Value::ByteArray(bytes)) if *bytes.lock().unwrap() == [0, 0]
+    ));
+    assert!(matches!(
+        interpreter.eval("^#[0 255] class == ByteArray"),
+        Ok(Value::Boolean(true))
+    ));
+    assert!(matches!(
+        interpreter.eval("| bytes | bytes := #[0 255]. bytes at: 1 put: 42. ^bytes basicAt: 1"),
+        Ok(Value::Integer(42))
+    ));
+    assert!(matches!(
+        interpreter.eval(
+            "| bytes copy | bytes := #[1 2]. copy := bytes copy. bytes at: 1 put: 9. ^copy at: 1"
+        ),
+        Ok(Value::Integer(1))
+    ));
+    assert!(matches!(
+        interpreter.eval("^#[1 2 3] select: [:each | each > 1]"),
+        Ok(Value::ByteArray(bytes)) if *bytes.lock().unwrap() == [2, 3]
+    ));
+    assert!(matches!(
+        interpreter.eval("^#[1 2] = #[1 2]"),
+        Ok(Value::Boolean(true))
+    ));
+    assert!(matches!(
+        interpreter.eval("^#[1 2] == #[1 2]"),
+        Ok(Value::Boolean(false))
+    ));
+    for (source, expected) in [
+        ("^#[1] at: 0", "out of bounds"),
+        ("^#[1] at: 2", "out of bounds"),
+        ("^#[1] at: true", "integer index"),
+        ("^#[1] at: 1 put: 256", "between 0 and 255"),
+        ("^#[1] basicAt: 1 put: -1", "between 0 and 255"),
+        ("^#[1] at: 1 put: $a", "integer index and byte"),
+        ("^#[256]", "integers between 0 and 255"),
+        ("^#[-1]", "integers between 0 and 255"),
+        ("^#[1.5]", "integers between 0 and 255"),
+        ("^#[1] collect: [:each | 256]", "between 0 and 255"),
+    ] {
+        let error = interpreter.eval(source).unwrap_err();
+        assert!(error.to_string().contains(expected), "{source}: {error}");
+    }
+}
+
+#[test]
+fn byte_array_literals_are_fresh_even_inside_literal_arrays() {
+    let interpreter = interpreter();
+    interpreter
+        .load_source(
+            "Object subclass: ByteArrayMaker [ bytes [ ^#[1 2] ] nested [ ^#((#[1 2])) ] ]",
+        )
+        .unwrap();
+    for source in [
+        "| maker first second | maker := ByteArrayMaker basicNew. first := maker bytes. second := maker bytes. first at: 1 put: 9. ^second at: 1",
+        "| block first second | block := [#[1 2]]. first := block value. second := block value. first at: 1 put: 9. ^second at: 1",
+        "| maker first second | maker := ByteArrayMaker basicNew. first := maker nested. second := maker nested. ((first at: 1) at: 1) at: 1 put: 9. ^((second at: 1) at: 1) at: 1",
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Ok(Value::Integer(1))),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn quoted_symbols_and_string_collection_operations_work() {
+    let interpreter = interpreter();
+    for (source, expected) in [
+        ("^#'hello world' asString", "hello world"),
+        ("^#'don''t' asString", "don't"),
+        ("^#'' asString", ""),
+        ("^#'äΩ' asString", "äΩ"),
+        ("^'ab' , #cd", "abcd"),
+        ("^#ab , 'cd'", "abcd"),
+        ("^#ab , #cd", "abcd"),
+        ("^'abc' select: [:each | each = $b]", "b"),
+        ("^#'abc' select: [:each | each = $b]", "b"),
+        ("^#'abc' collect: [:each | each]", "abc"),
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Ok(Value::String(value)) if value.to_rust_string().unwrap() == expected),
+            "{source}"
+        );
+    }
+    for source in [
+        "^#'named' == #named",
+        "^#'hello world' == 'hello world' asSymbol",
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Ok(Value::Boolean(true))),
+            "{source}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("^(#(#'hello world' #'don''t') at: 2) asString"),
+        Ok(Value::String(value)) if value.to_rust_string().unwrap() == "don't"
+    ));
+    let error = interpreter.eval("^#'😀'").unwrap_err();
+    assert!(matches!(error, InterpreterError::Parse(_)), "{error}");
+    assert!(error.to_string().contains("outside the BMP"), "{error}");
+}
+
+#[test]
+fn float_and_mixed_numeric_operations_preserve_integer_behavior() {
+    let interpreter = interpreter();
+    for (source, expected) in [
+        ("^1.5 + 2.5", 4.0),
+        ("^2 + 0.5", 2.5),
+        ("^5.0 - 2", 3.0),
+        ("^2 * 1.5", 3.0),
+        ("^5 / 2.0", 2.5),
+        ("^5.0 / 2", 2.5),
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Ok(Value::Float(value)) if value == expected),
+            "{source}"
+        );
+    }
+    assert!(matches!(interpreter.eval("^5 / 2"), Ok(Value::Integer(2))));
+    assert!(matches!(
+        interpreter.eval("^1.5 class == Float"),
+        Ok(Value::Boolean(true))
+    ));
+    for (source, expected) in [
+        ("^1 = 1.0", true),
+        ("^1.0 = 1", true),
+        ("^1 = '1'", false),
+        ("^1.0 = '1'", false),
+        ("^9007199254740993 = 9007199254740992.0", false),
+        ("^9007199254740993 > 9007199254740992.0", true),
+        ("^9223372036854775807 < 9223372036854775808.0", true),
+        ("^-1 > -1.5", true),
+        ("^-1.5 < -1", true),
+        ("^1.5 <= 1.5", true),
+        ("^1.5 >= 2", false),
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Ok(Value::Boolean(value)) if value == expected),
+            "{source}"
+        );
+    }
+    for source in ["^1.0 / 0", "^1 / 0.0", "^1.0 + 'a'", "^Float basicNew"] {
+        let error = interpreter.eval(source).unwrap_err();
+        assert!(
+            matches!(error, InterpreterError::Runtime(_)),
+            "{source}: {error}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| d | d := Dictionary new. d at: 1 put: 5. ^d at: 1.0"),
+        Ok(Value::Integer(5))
+    ));
+}
+
+#[test]
+fn dictionary_hashing_preserves_equality_mutation_and_insertion_order() {
+    let interpreter = interpreter();
+    interpreter
+        .load_source(
+            "Object subclass: MutableDictionaryKey [
+                | target |
+                target: value [ target := value. ^self ]
+                = other [ ^target = other ]
+            ]",
+        )
+        .unwrap();
+    for (source, expected) in [
+        (
+            "| d | d := Dictionary new: 0. 1 to: 80 do: [:i | d at: i put: i * 2]. 1 to: 40 do: [:i | d removeKey: i]. ^d at: 80",
+            160,
+        ),
+        (
+            "| d | d := Dictionary new. d at: 1 put: 10. d at: 1.0 put: 20. ^d size",
+            1,
+        ),
+        ("| d | d := Dictionary new. d at: 1.0 put: 20. ^d at: 1", 20),
+        (
+            "| d key | d := Dictionary new. key := 'abc'. d at: key put: 7. key at: 1 put: $z. ^d at: 'zbc'",
+            7,
+        ),
+        (
+            "| d key | d := Dictionary new. key := MutableDictionaryKey basicNew target: 0. d at: key put: 7. d at: 1 put: 9. key target: 1. ^d at: 1",
+            7,
+        ),
+        (
+            "| d key | d := Dictionary new. d at: 1 put: 9. key := MutableDictionaryKey basicNew target: 0. d at: key put: 7. key target: 1. ^d at: 1",
+            9,
+        ),
+        (
+            "| d key | d := Dictionary new. key := #[1 2]. d at: key put: 7. key at: 1 put: 3. ^d at: key",
+            7,
+        ),
+        (
+            "| d | d := Dictionary new. 1 to: 40 do: [:i | d at: i put: i]. 1 to: 40 do: [:i | d removeKey: i]. 1 to: 40 do: [:i | d at: i put: i * 3]. ^d at: 29",
+            87,
+        ),
+        (
+            "| d seen first second bucket previous | d := Dictionary new. seen := Array new: 8. first := 0. second := 0. 1 to: 9 do: [:i | bucket := (i hash bitAnd: 7) + 1. previous := seen at: bucket. (previous == nil) ifTrue: [seen at: bucket put: i] ifFalse: [first := previous. second := i]]. d at: first put: 1. d at: second put: 2. d removeKey: first. ^d at: second",
+            2,
+        ),
+    ] {
+        let result = interpreter.eval(source);
+        assert!(
+            matches!(result, Ok(Value::Integer(value)) if value == expected),
+            "{source}: {result:?}"
+        );
+    }
+    for source in [
+        "^1 hash = 1.0 hash",
+        "^0 hash = (0.0 * -1) hash",
+        "^9007199254740992 hash = 9007199254740992.0 hash",
+        "^'same' hash = 'same' hash",
+        "^#same hash = #'same' hash",
+    ] {
+        let result = interpreter.eval(source);
+        assert!(
+            matches!(result, Ok(Value::Boolean(true))),
+            "{source}: {result:?}"
+        );
+    }
+}
+
+#[test]
+fn dictionary_falls_back_when_builtin_equality_is_redefined() {
+    let interpreter = interpreter();
+    interpreter
+        .load_source("Symbol extend [ = other [ ^true ] ]")
+        .unwrap();
+    let result =
+        interpreter.eval("| d | d := Dictionary new. d at: #a put: 10. d at: #b put: 20. ^d size");
+    assert!(matches!(result, Ok(Value::Integer(1))), "{result:?}");
+}
+
+#[test]
+fn dictionary_numeric_lookup_uses_bounded_instruction_budget() {
+    let interpreter = interpreter();
+    let result = interpreter.eval_with_limits(
+        "| d | d := Dictionary new. 1 to: 128 do: [:i | d at: i put: i]. 1 to: 100 do: [:i | d at: 128]. ^d size",
+        ExecutionLimits {
+            max_instructions: Some(100_000),
+            max_call_depth: None,
+        },
+    );
+    assert!(matches!(result, Ok(Value::Integer(128))), "{result:?}");
+}
+
+#[test]
+fn dictionary_supports_equal_keys_missing_values_and_growth() {
+    let interpreter = interpreter();
+    let result = interpreter.eval("| d | d := Dictionary new: 0. d at: 1 put: 10. d at: 'key' put: 20. d at: #key put: 30. d at: nil put: nil. d at: 'key' put: 21. ^d size");
+    assert!(matches!(result, Ok(Value::Integer(4))), "{result:?}");
+    for (source, expected) in [
+        (
+            "| d | d := Dictionary new. d at: 1 put: 10. d at: 'key' put: 20. ^d at: 'key'",
+            20,
+        ),
+        (
+            "| d | d := Dictionary new. d at: #key put: 30. ^d at: 'key' ifAbsent: [42]",
+            42,
+        ),
+        (
+            "| d | d := Dictionary new: 0. 1 to: 20 do: [:i | d at: i put: i * 2]. ^d at: 20",
+            40,
+        ),
+        (
+            "| d called | d := Dictionary new. called := 0. d at: #key put: 7. d at: #key ifAbsent: [called := 1]. ^called",
+            0,
+        ),
+    ] {
+        assert!(
+            matches!(interpreter.eval(source), Ok(Value::Integer(value)) if value == expected),
+            "{source}"
+        );
+    }
+    assert!(matches!(
+        interpreter.eval("| d | d := Dictionary new. d at: nil put: nil. ^d includesKey: nil"),
+        Ok(Value::Boolean(true))
+    ));
+    assert!(matches!(
+        interpreter.eval("| d | d := Dictionary new. d at: 'same' put: 5. ^d at: 'same'"),
+        Ok(Value::Integer(5))
+    ));
+    let error = interpreter
+        .eval("^(Dictionary new) at: #missing")
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("Dictionary key not found"),
+        "{error}"
+    );
+}
+
+#[test]
+fn dictionary_enumerates_keys_and_values_and_uses_key_equality() {
+    let interpreter = interpreter();
+    interpreter
+        .load_source("Object subclass: DictionaryKey [ | number | number: value [ number := value. ^self ] number [ ^number ] = other [ ^number = other number ] ]")
+        .unwrap();
+    let result = interpreter.eval("| d a b | d := Dictionary new. a := DictionaryKey basicNew number: 7. b := DictionaryKey basicNew number: 7. d at: a put: 42. ^d at: b");
+    assert!(matches!(result, Ok(Value::Integer(42))), "{result:?}");
+    assert!(matches!(
+        interpreter.eval("| d total | d := Dictionary new. d at: 1 put: 10. d at: 2 put: 20. total := 0. d keysAndValuesDo: [:key :value | total := total + key + value]. ^total"),
+        Ok(Value::Integer(33))
+    ));
+    assert!(matches!(
+        interpreter.eval("| d total | d := Dictionary new. d at: #a put: 10. d at: #b put: 20. total := 0. d do: [:value | total := total + value]. ^total"),
+        Ok(Value::Integer(30))
+    ));
+}
+
+#[test]
+fn array_collection_protocol_evaluates_blocks_in_order() {
+    let interpreter = interpreter();
+    assert!(matches!(
+        interpreter.eval(
+            "| total | total := 0. {1. 2. 3} do: [:each | total := total * 10 + each]. ^total"
+        ),
+        Ok(Value::Integer(123))
+    ));
+    assert!(matches!(
+        interpreter.eval("^{1. 2. 3} inject: 10 into: [:sum :each | sum + each]"),
+        Ok(Value::Integer(16))
+    ));
+    assert!(matches!(
+        interpreter.eval("^(Array new: 0) inject: 42 into: [:sum :each | sum + each]"),
+        Ok(Value::Integer(42))
+    ));
+    assert!(matches!(
+        interpreter.eval(
+            "| calls | calls := 0. {1. 2. 3} select: [:each | calls := calls + 1. each > 1]. ^calls"
+        ),
+        Ok(Value::Integer(3))
+    ));
+    for (source, expected) in [
+        ("^{1. 2. 3} collect: [:each | each * 2]", vec![2, 4, 6]),
+        ("^{1. 2. 3} select: [:each | each > 1]", vec![2, 3]),
+        ("^{1. 2. 3} select: [:each | false]", vec![]),
+        ("^(Array new: 0) collect: [:each | each]", vec![]),
+    ] {
+        let Value::Array(array) = interpreter
+            .eval(source)
+            .unwrap_or_else(|error| panic!("{source}: {error}"))
+        else {
+            panic!("{source}: expected Array");
+        };
+        let array = array.lock().unwrap();
+        assert_eq!(array.len(), expected.len(), "{source}");
+        for (actual, expected) in array.iter().zip(expected) {
+            assert!(
+                matches!(actual, Value::Integer(value) if *value == expected),
+                "{source}: {actual:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn collection_iteration_preserves_nonlocal_returns_and_execution_limits() {
+    let interpreter = interpreter();
+    assert!(matches!(
+        interpreter.eval("| first | first := [1]. ^[[42] value] value"),
+        Ok(Value::Integer(42))
+    ));
+    interpreter
+        .load_source("Object subclass: CollectionReturn [ find [ {1. 2. 3} do: [:each | each = 2 ifTrue: [^each]]. ^0 ] ]")
+        .unwrap();
+    assert!(matches!(
+        interpreter.eval("^(CollectionReturn basicNew) find"),
+        Ok(Value::Integer(2))
+    ));
+    assert!(matches!(
+        interpreter.eval_with_limits(
+            "| total | total := 0. (Array new: 128) do: [:each | total := total + 1]. ^total",
+            ExecutionLimits {
+                max_instructions: None,
+                max_call_depth: Some(20),
+            },
+        ),
+        Ok(Value::Integer(128))
+    ));
+    let error = interpreter
+        .eval_with_limits(
+            "(Array new: 100) do: [:each | each]",
+            ExecutionLimits {
+                max_instructions: Some(100),
+                max_call_depth: None,
+            },
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("Instruction limit exceeded"),
+        "{error}"
+    );
+    let error = interpreter.eval("^[1] whileTrue: []").unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("condition must answer a Boolean"),
+        "{error}"
     );
 }
 

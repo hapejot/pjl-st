@@ -28,6 +28,13 @@ impl Execution {
                 self.set(*dst, Value::String(SmalltalkString::new(value)?))?;
                 Ok(())
             }
+            Instruction::CreateByteArray { dst, value } => {
+                let mut bytes = Vec::new();
+                bytes.try_reserve_exact(value.len())?;
+                bytes.extend_from_slice(value);
+                self.set(*dst, Value::ByteArray(Arc::new(Mutex::new(bytes))))?;
+                Ok(())
+            }
             Instruction::LoadReceiver { .. } => Err("LoadReceiver is not implemented".into()),
             Instruction::LoadGlobal { dst, var_name } => {
                 self.set(*dst, self.get_global(var_name)?)?;

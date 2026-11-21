@@ -292,6 +292,7 @@ pub enum Value {
     Object(SmalltalkObject),
     Dictionary(Arc<Mutex<HashMap<&'static str, Value>>>),
     Array(Arc<Mutex<Vec<Value>>>),
+    ByteArray(Arc<Mutex<Vec<u8>>>),
     Method(CompiledMethod),
     NativeMethod(
         fn(
@@ -317,6 +318,7 @@ impl Value {
             (Value::Object(a), Value::Object(b)) => Arc::ptr_eq(&a.0, &b.0),
             (Value::Dictionary(a), Value::Dictionary(b)) => Arc::ptr_eq(a, b),
             (Value::Array(a), Value::Array(b)) => Arc::ptr_eq(a, b),
+            (Value::ByteArray(a), Value::ByteArray(b)) => Arc::ptr_eq(a, b),
             (Value::Method(a), Value::Method(b)) => a.same_identity(b),
             (Value::NativeMethod(a), Value::NativeMethod(b)) => std::ptr::fn_addr_eq(*a, *b),
             (Value::Class(a), Value::Class(b)) => Arc::ptr_eq(&a.0, &b.0),

@@ -11,6 +11,9 @@ pub enum Instruction {
     /// Create a fresh mutable string from a literal.
     CreateString { dst: Register, value: String },
 
+    /// Create a fresh mutable byte array from a literal.
+    CreateByteArray { dst: Register, value: Vec<u8> },
+
     /// load the receiver into the register: LOAD_RECEIVER dst
     LoadReceiver { dst: Register },
 

@@ -36,6 +36,20 @@ fn format_value(
             ancestors.pop();
             write!(f, ")")
         }
+        Value::ByteArray(bytes) => {
+            let bytes = match bytes.try_lock() {
+                Ok(bytes) => bytes,
+                Err(error) => return write!(f, "<ByteArray unavailable: {error}>"),
+            };
+            write!(f, "#[")?;
+            for (index, byte) in bytes.iter().enumerate() {
+                if index > 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{byte}")?;
+            }
+            write!(f, "]")
+        }
         Value::Object(object) => {
             let (class, values) = match object.0.try_lock() {
                 Ok(data) => (data.class.clone(), data.values.clone()),

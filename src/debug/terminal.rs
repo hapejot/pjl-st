@@ -31,6 +31,7 @@ impl Debugger for TerminalDebugger {
         &self,
         execution: Execution,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let _terminal = crate::vm::terminal::acquire()?;
         let mut data = self
             .0
             .lock()

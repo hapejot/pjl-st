@@ -8,117 +8,6 @@ use crate::{
     vm::execution::Execution,
 };
 
-pub(super) fn integer_add(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer addition requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => a
-            .checked_add(*b)
-            .map(Value::Integer)
-            .ok_or_else(|| "Integer addition overflow".into()),
-        _ => Err("Integer addition requires integer arguments".into()),
-    }
-}
-
-pub(super) fn integer_sub(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer subtraction requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => a
-            .checked_sub(*b)
-            .map(Value::Integer)
-            .ok_or_else(|| "Integer subtraction overflow".into()),
-        _ => Err("Integer subtraction requires integer arguments".into()),
-    }
-}
-
-pub(super) fn integer_mul(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer multiplication requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => a
-            .checked_mul(*b)
-            .map(Value::Integer)
-            .ok_or_else(|| "Integer multiplication overflow".into()),
-        _ => Err("Integer multiplication requires integer arguments".into()),
-    }
-}
-
-pub(super) fn integer_div(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer division requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(_), Value::Integer(0)) => Err("Integer division by zero".into()),
-        (Value::Integer(a), Value::Integer(b)) => a
-            .checked_div(*b)
-            .map(Value::Integer)
-            .ok_or_else(|| "Integer division overflow".into()),
-        _ => Err("Integer division requires integer arguments".into()),
-    }
-}
-
-pub(super) fn integer_gt(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer greater than requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Boolean(a > b)),
-        _ => Err("Integer greater than requires integer arguments".into()),
-    }
-}
-
-pub(super) fn integer_lt(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer less than requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Boolean(a < b)),
-        _ => Err("Integer less than requires integer arguments".into()),
-    }
-}
-
-pub(super) fn integer_ge(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer greater than requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Boolean(a >= b)),
-        _ => Err("Integer greater than requires integer arguments".into()),
-    }
-}
-
 pub(super) fn integer_bit_and(
     _vm: &Execution,
     receiver: Value,
@@ -156,20 +45,6 @@ pub(super) fn integer_bit_shift(
     Ok(Value::Integer(result))
 }
 
-pub(super) fn integer_eq(
-    _vm: &Execution,
-    receiver: Value,
-    args: Vec<Value>,
-) -> Result<Value, Box<dyn Error + Send + Sync>> {
-    if args.len() != 1 {
-        return Err("Integer equality requires 1 argument".into());
-    }
-    match (&receiver, &args[0]) {
-        (Value::Integer(a), Value::Integer(b)) => Ok(Value::Boolean(a == b)),
-        _ => Err("Integer equality requires integer arguments".into()),
-    }
-}
-
 pub(super) fn execution_value0(
     caller: &Execution,
     receiver: Value,
@@ -200,6 +75,22 @@ pub(super) fn execution_value2(
     match receiver {
         Value::Execution(a) => a.invoke_block(caller, &args),
         _ => Err("Execution value1 requires execution arguments".into()),
+    }
+}
+
+pub(super) fn execution_while_true(
+    caller: &Execution,
+    receiver: &Execution,
+    body: &Execution,
+) -> Result<Value, Box<dyn Error + Send + Sync>> {
+    loop {
+        match receiver.invoke_block(caller, &[])? {
+            Value::Boolean(true) => {
+                body.invoke_block(caller, &[])?;
+            }
+            Value::Boolean(false) => return Ok(Value::Nil),
+            _ => return Err("whileTrue: condition must answer a Boolean".into()),
+        }
     }
 }
 

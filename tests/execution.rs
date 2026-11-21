@@ -131,6 +131,41 @@ fn send_message(
 }
 
 #[test]
+fn byte_array_messages_report_poisoned_locks() {
+    let vm = VirtualMachine::new();
+    vm.define_class("ByteArray", Some("Object"), vec![])
+        .unwrap();
+    let bytes = Arc::new(Mutex::new(vec![1_u8]));
+    let other = bytes.clone();
+    assert!(
+        std::thread::spawn(move || {
+            let _guard = other.lock().unwrap();
+            panic!("poison ByteArray lock");
+        })
+        .join()
+        .is_err()
+    );
+    let error = send_message(&vm, Value::ByteArray(bytes), "size", vec![]).unwrap_err();
+    assert!(error.to_string().contains("ByteArray lock"), "{error}");
+}
+
+#[test]
+fn floating_point_comparisons_handle_non_finite_values() {
+    let vm = VirtualMachine::new();
+    for (receiver, selector, argument, expected) in [
+        (f64::NAN, "=", 0, false),
+        (f64::NAN, "<=", 0, false),
+        (f64::INFINITY, ">", i64::MAX, true),
+        (f64::NEG_INFINITY, "<", i64::MIN, true),
+    ] {
+        assert!(matches!(
+            send_message(&vm, Value::Float(receiver), selector, vec![Value::Integer(argument)]),
+            Ok(Value::Boolean(value)) if value == expected
+        ));
+    }
+}
+
+#[test]
 fn malformed_host_symbols_are_rejected_on_dispatch() {
     let vm = VirtualMachine::new();
     for (symbol, expected) in [

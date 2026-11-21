@@ -172,6 +172,10 @@ impl Execution {
             .map_err(|error| RuntimeError::ExecutionLock(error.to_string()))
     }
 
+    pub(crate) fn terminal_run_id(&self) -> Result<Arc<()>, RuntimeError> {
+        Ok(self.lock()?.run_id.clone())
+    }
+
     pub fn home(&self) -> Result<Option<Execution>, RuntimeError> {
         Ok(self.lock()?.home.clone())
     }

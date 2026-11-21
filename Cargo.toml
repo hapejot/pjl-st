@@ -3,6 +3,10 @@ name = "st"
 version = "0.1.0"
 edition = "2024"
 
+[[bench]]
+name = "interpreter"
+harness = false
+
 [dependencies]
 santiago = { git = "https://github.com/hapejot/santiago.git", version = "1.3.1" }
 pjl-static-strings = { git = "https://github.com/hapejot/pjl.rs.git", version = "0.1.0" }
@@ -11,3 +15,6 @@ tracing-subscriber = { version = "*", features = ["env-filter"] }
 clap = { version = "*", features = ["derive"] }
 serde_yaml = { git = "https://github.com/hapejot/serde-yaml.git", version = "0.9.35" }
 crossterm = "*"
+
+[target.'cfg(windows)'.dependencies]
+crossterm_winapi = "0.9"
